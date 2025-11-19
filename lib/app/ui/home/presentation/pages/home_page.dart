@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:fitness/app/core/common/common_lib.dart';
+import 'package:fitness/app/core/routes/app_router.dart';
 import 'package:fitness/app/core/theme/app_pallet.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -503,46 +505,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       // Bottom Navigation Bar
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppPallete.backgroundColorBk,
-          border: Border(
-            top: BorderSide(
-              color: AppPallete.borderColor.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-        ),
-        child: SafeArea(
-          child: Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _BottomNavItem(
-                  icon: Icons.home,
-                  label: 'Home',
-                  isSelected: true,
-                  onTap: () {},
-                ),
-                _BottomNavItem(
-                  icon: Icons.bar_chart,
-                  label: 'Progress',
-                  isSelected: false,
-                  onTap: () {},
-                ),
-                _BottomNavItem(
-                  icon: Icons.settings,
-                  label: 'Settings',
-                  isSelected: false,
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      bottomNavigationBar: _bottomBar(),
       // Floating Action Button
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -556,6 +519,58 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+}
+
+class _bottomBar extends StatelessWidget {
+  const _bottomBar({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppPallete.backgroundColorBk,
+        border: Border(
+          top: BorderSide(
+            color: AppPallete.borderColor.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        child: Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _BottomNavItem(
+                icon: Icons.home,
+                label: 'Home',
+                isSelected: true,
+                onTap: () {},
+              ),
+              _BottomNavItem(
+                icon: Icons.bar_chart,
+                label: 'Progress',
+                isSelected: false,
+                onTap: () {},
+              ),
+              _BottomNavItem(
+                icon: Icons.settings,
+                label: 'Settings',
+                isSelected: false,
+                onTap: () {
+                  context.go(ScreenPaths.settings);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

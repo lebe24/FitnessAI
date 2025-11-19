@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:fitness/app/core/common/common_lib.dart';
 import 'package:fitness/app/core/common/widget/RoundbuttonText.dart';
+import 'package:fitness/app/core/di.dart' as di;
 import 'package:fitness/app/core/routes/app_router.dart';
+import 'package:fitness/app/storage/domain/usecases/save_fitness_plan_usecase.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -469,8 +471,21 @@ class _ResultModalPageState extends State<ResultModalPage> {
       );
       case ModalState.generating:
         return BlocListener<UploadBloc, UploadState>(
-          listener: (context, state) {
+          listener: (context, state) async {
             if (state is UploadSeverSuccess && state.workoutPlan != null) {
+              // Save the plan and image to storage
+              try {
+                final saveFitnessPlanUsecase = di.sl<SaveFitnessPlanUsecase>();
+                await saveFitnessPlanUsecase(
+                  workoutPlan: state.workoutPlan!,
+                  imageFilePath: widget.image.path,
+                );
+                debugPrint('Fitness plan and image saved successfully');
+              } catch (e) {
+                debugPrint('Error saving fitness plan: $e');
+                // Still show success even if storage fails
+              }
+
               setState(() {
                 _currentState = ModalState.success;
                 _workoutPlan = state.workoutPlan;

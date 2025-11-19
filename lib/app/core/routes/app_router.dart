@@ -1,6 +1,7 @@
 import 'package:fitness/app/ui/home/presentation/pages/analysis_page.dart';
 import 'package:fitness/app/core/common/common_lib.dart';
 import 'package:fitness/app/ui/home/presentation/pages/home_page.dart';
+import 'package:fitness/app/ui/home/presentation/pages/settings_page.dart';
 import 'package:fitness/app/ui/onboarding/presentation/onboarding_screen.dart';
 import 'package:fitness/app/ui/splash/splash.dart';
 import 'package:fitness/app/ui/welcome/welcome.dart';
@@ -11,6 +12,7 @@ class ScreenPaths {
   static String onboarding = '/onboarding';
   static String analysis = '/analysis';
   static String home = '/home';
+  static String settings = '/settings';
 
   static final appRouter = GoRouter(
     initialLocation: analysis,
@@ -34,6 +36,10 @@ class ScreenPaths {
       GoRoute(
         path: analysis,
         builder: (context, state) =>  AnalysisPage(),
+      ),
+      GoRoute(
+        path: settings,
+        builder: (context, state) => const SettingsPage(),
       ),
     ],
   );

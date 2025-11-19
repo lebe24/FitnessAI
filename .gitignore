@@ -34,6 +34,9 @@ migrate_working_dir/
 /coverage/
 /.env
 /lib/tem.txt
+/lib/temp/
+/lib/app/storage/
+/lib/app/
 
 
 # Symbolication related
