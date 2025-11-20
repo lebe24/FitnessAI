@@ -11,6 +11,7 @@ import 'package:fitness/app/storage/domain/usecases/get_fitness_plan_by_id_useca
 import 'package:fitness/app/storage/domain/usecases/get_unsynced_plans_usecase.dart';
 import 'package:fitness/app/storage/domain/usecases/save_fitness_plan_usecase.dart';
 import 'package:fitness/app/storage/domain/usecases/update_sync_status_usecase.dart';
+import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -92,4 +93,11 @@ Future<void> initDI() async {
   sl.registerLazySingleton(() => DeleteFitnessPlanUsecase(sl()));
   sl.registerLazySingleton(() => UpdateSyncStatusUsecase(sl()));
   sl.registerLazySingleton(() => GetUnsyncedPlansUsecase(sl()));
+
+  // --- Fitness Bloc ---
+  sl.registerFactory(
+    () => FitnessBloc(
+      getAllFitnessPlansUsecase: sl(),
+    ),
+  );
 }

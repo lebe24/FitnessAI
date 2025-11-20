@@ -1,6 +1,7 @@
+import 'package:fitness/app/ui/fitness/page/sample_page.dart';
 import 'package:fitness/app/ui/home/presentation/pages/analysis_page.dart';
 import 'package:fitness/app/core/common/common_lib.dart';
-import 'package:fitness/app/ui/home/presentation/pages/home_page.dart';
+import 'package:fitness/app/ui/home/presentation/pages/home_screen.dart';
 import 'package:fitness/app/ui/home/presentation/pages/settings_page.dart';
 import 'package:fitness/app/ui/onboarding/presentation/onboarding_screen.dart';
 import 'package:fitness/app/ui/splash/splash.dart';
@@ -35,7 +36,7 @@ class ScreenPaths {
       ),
       GoRoute(
         path: analysis,
-        builder: (context, state) =>  AnalysisPage(),
+        builder: (context, state) =>  SamplePage(),
       ),
       GoRoute(
         path: settings,
