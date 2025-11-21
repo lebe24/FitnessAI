@@ -1,3 +1,4 @@
+import 'package:fitness/app/core/common/common_lib.dart';
 import 'package:fitness/app/core/theme/app_pallet.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:flutter/material.dart';
@@ -198,7 +199,16 @@ class WorkoutModal extends StatelessWidget {
           ],
       
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () {
+              Navigator.of(context).pop();
+              context.push(
+                '/workout',
+                extra: {
+                  'workoutDay': workoutDay,
+                  'date': date,
+                },
+              );
+            },
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 16),

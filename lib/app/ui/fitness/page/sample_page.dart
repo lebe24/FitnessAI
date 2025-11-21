@@ -126,8 +126,8 @@ class _SamplePageState extends State<SamplePage> {
                         ),
                         const SizedBox(height: 8),
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 18,
+                          height: 18,
                           decoration: BoxDecoration(
                             color: const Color(0xFF4DD0E1),
                             shape: BoxShape.circle,
@@ -283,24 +283,24 @@ class _SamplePageState extends State<SamplePage> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'Be of good courage, and he shall strengthen your heart, All ye that hope in the LORD.',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: AppPallete.whiteColor,
-                height: 1.5,
-              ),
-            ),
+            // Text(
+            //   'Be of good courage, and he shall strengthen your heart, All ye that hope in the LORD.',
+            //   style: GoogleFonts.inter(
+            //     fontSize: 16,
+            //     fontWeight: FontWeight.w500,
+            //     color: AppPallete.whiteColor,
+            //     height: 1.5,
+            //   ),
+            // ),
             const SizedBox(height: 20),
             // Engagement metrics
             Row(
               children: [
-                _buildEngagementIcon(Icons.favorite, '1.095M'),
-                const SizedBox(width: 20),
-                _buildEngagementIcon(Icons.chat_bubble_outline, '15,534'),
-                const SizedBox(width: 20),
-                _buildEngagementIcon(Icons.share_outlined, '414.3k'),
+                // _buildEngagementIcon(Icons.favorite, '1.095M'),
+                // const SizedBox(width: 20),
+                // _buildEngagementIcon(Icons.chat_bubble_outline, '15,534'),
+                // const SizedBox(width: 20),
+                // _buildEngagementIcon(Icons.share_outlined, '414.3k'),
                 const Spacer(),
                 Icon(
                   Icons.more_vert,

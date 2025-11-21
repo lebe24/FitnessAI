@@ -88,6 +88,13 @@ class _FitnessPageState extends State<FitnessPage> {
     return days[date.weekday - 1];
   }
 
+  String _shortenDisplayName(String name, {int maxLength = 15}) {
+    if (name.length <= maxLength) {
+      return name;
+    }
+    return '${name.substring(0, maxLength)}...';
+  }
+
   @override
   void dispose() {
     _greetingTimer?.cancel();
@@ -167,13 +174,13 @@ class _FitnessPageState extends State<FitnessPage> {
                   "$_greeting ",
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 22, fontWeight: FontWeight.w600),
+                    fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 Text(
                   _emoji,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 22),
+                    fontSize: 14),
                 ),
                 const SizedBox(width: 8),
                 Builder(
@@ -184,10 +191,10 @@ class _FitnessPageState extends State<FitnessPage> {
                                         user?.email ?? 
                                         'User';
                     return Text(
-                      displayName,
+                      _shortenDisplayName(displayName),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 22, fontWeight: FontWeight.bold),
+                        fontSize: 14, fontWeight: FontWeight.bold),
                     );
                   },
               ),

@@ -1,4 +1,6 @@
 import 'package:fitness/app/ui/fitness/page/sample_page.dart';
+import 'package:fitness/app/ui/fitness/page/workout_page.dart';
+import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:fitness/app/ui/home/presentation/pages/analysis_page.dart';
 import 'package:fitness/app/core/common/common_lib.dart';
 import 'package:fitness/app/ui/home/presentation/pages/home_screen.dart';
@@ -14,6 +16,7 @@ class ScreenPaths {
   static String analysis = '/analysis';
   static String home = '/home';
   static String settings = '/settings';
+  static String workout = '/workout';
 
   static final appRouter = GoRouter(
     initialLocation: analysis,
@@ -36,11 +39,27 @@ class ScreenPaths {
       ),
       GoRoute(
         path: analysis,
-        builder: (context, state) =>  SamplePage(),
+        builder: (context, state) =>  AnalysisPage(),
       ),
       GoRoute(
         path: settings,
         builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: workout,
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return WorkoutPage(
+              workoutDay: extra['workoutDay'] as WorkoutDay?,
+              date: extra['date'] as DateTime?,
+            );
+          }
+          return const WorkoutPage(
+            workoutDay: null,
+            date: null,
+          );
+        },
       ),
     ],
   );
