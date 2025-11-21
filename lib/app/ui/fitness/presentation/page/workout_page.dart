@@ -1,4 +1,9 @@
+import 'package:fitness/app/core/di.dart';
 import 'package:fitness/app/core/theme/app_pallet.dart';
+import 'package:fitness/app/chat/data/helpers/workout_plan_serializer.dart';
+import 'package:fitness/app/chat/presentation/bloc/chat_bloc.dart';
+import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
+import 'package:fitness/app/ui/fitness/presentation/widget/chat_method.dart';
 import 'package:fitness/app/ui/fitness/presentation/widget/exercise_hero_page.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:flutter/material.dart';
@@ -27,13 +32,50 @@ class _WorkoutPageState extends State<WorkoutPage> {
   AiChat _aiChatState = AiChat.none;
   final Set<int> _completedExercises = {};
   int _currentExerciseIndex = 0;
+  final TextEditingController _messageController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+  late final ChatBloc _chatBloc;
 
   @override
   void initState() {
     super.initState();
+    _chatBloc = sl<ChatBloc>();
     if (widget.workoutDay?.exercises.isEmpty ?? true) {
       _currentExerciseIndex = -1;
     }
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _chatScrollController.dispose();
+    _chatBloc.close();
+    super.dispose();
+  }
+
+  void _scrollChatToBottom() {
+    if (_chatScrollController.hasClients) {
+      _chatScrollController.animateTo(
+        _chatScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void _sendChatMessage(String userId) {
+    final message = _messageController.text.trim();
+    if (message.isEmpty) return;
+
+    _chatBloc.add(
+      SendMessage(
+        message: message,
+        userId: userId,
+      ),
+    );
+
+    _messageController.clear();
+    _scrollChatToBottom();
   }
 
   void _completeExercise(int index) {
@@ -119,116 +161,49 @@ class _WorkoutPageState extends State<WorkoutPage> {
   }
 
   void _showChatModal() {
-    showModalBottomSheet(
+    final getCurrentUser = sl<GetCurrentUser>();
+    final user = getCurrentUser();
+    final userId = user?.id ?? '';
+
+    if (userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to use chat')),
+      );
+      setState(() {
+        _aiChatState = AiChat.none;
+      });
+      return;
+    }
+
+    // Prepare workout plan data if available
+    Map<String, dynamic>? workoutPlanData;
+    if (widget.workoutDay != null) {
+      workoutPlanData = WorkoutPlanSerializer.workoutDayToJson(widget.workoutDay!);
+      // Add date information
+      if (widget.date != null) {
+        workoutPlanData['date'] = widget.date!.toIso8601String();
+      }
+    }
+
+    // Connect to chat when modal opens with workout plan
+    _chatBloc.add(ConnectChat(userId, workoutPlan: workoutPlanData));
+
+    chatModal(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: AppPallete.backgroundColorBk,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppPallete.whiteColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Chat header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'AI-Chat Assistant',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppPallete.whiteColor,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _toggleAiChat,
-                      icon: const Icon(
-                        Icons.close,
-                        color: AppPallete.whiteColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.white24),
-              // Chat content
-              Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'You Can Doubletap on your Excercise Card to See More Details',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        color: AppPallete.whiteColor.withOpacity(0.7),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Chat input area
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        style: GoogleFonts.inter(color: AppPallete.whiteColor),
-                        decoration: InputDecoration(
-                          hintText: 'Type your message...',
-                          hintStyle: GoogleFonts.inter(
-                            color: AppPallete.whiteColor.withOpacity(0.5),
-                          ),
-                          filled: true,
-                          fillColor: AppPallete.whiteColor.withOpacity(0.1),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FloatingActionButton(
-                      mini: true,
-                      onPressed: () {
-                        // Send message
-                      },
-                      backgroundColor: AppPallete.borderColor,
-                      child: const Icon(Icons.send, color: AppPallete.whiteColor),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      chatBloc: _chatBloc,
+      userId: userId,
+      onClose: () {
+        setState(() {
+          _aiChatState = AiChat.none;
+        });
+      },
+      onSendMessage: _sendChatMessage,
+      scrollController: _chatScrollController,
+      messageController: _messageController,
+      scrollToBottom: _scrollChatToBottom,
     ).then((_) {
-      // Reset state when modal is dismissed
+      // Disconnect and reset state when modal is dismissed
+      _chatBloc.add(const DisconnectChat());
       if (_aiChatState == AiChat.active) {
         setState(() {
           _aiChatState = AiChat.none;
@@ -237,24 +212,26 @@ class _WorkoutPageState extends State<WorkoutPage> {
     });
   }
 
+  
+
   @override
   Widget build(BuildContext context) {
     final exercises = widget.workoutDay?.exercises ?? [];
     return Scaffold(
-      floatingActionButton: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (child, animation) {
-          return ScaleTransition(
-            scale: animation,
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-          );
-        },
-        child: _buildFloatingActionButton(),
-      ),
-      backgroundColor: AppPallete.backgroundColorBk,
+        floatingActionButton: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, animation) {
+            return ScaleTransition(
+              scale: animation,
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+            );
+          },
+          child: _buildFloatingActionButton(),
+        ),
+        backgroundColor: AppPallete.backgroundColorBk,
       body: SafeArea(
         child: Column(
           children: [
@@ -321,7 +298,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
             )
           ],
         )
-      )
+      ),
     );
   }
 

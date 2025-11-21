@@ -12,6 +12,13 @@ import 'package:fitness/app/storage/domain/usecases/get_unsynced_plans_usecase.d
 import 'package:fitness/app/storage/domain/usecases/save_fitness_plan_usecase.dart';
 import 'package:fitness/app/storage/domain/usecases/update_sync_status_usecase.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
+import 'package:fitness/app/chat/data/datasources/chat_remote_datasource.dart';
+import 'package:fitness/app/chat/data/repositories/chat_repository_impl.dart';
+import 'package:fitness/app/chat/domain/repositories/chat_repository.dart';
+import 'package:fitness/app/chat/domain/usecases/connect_chat_usecase.dart';
+import 'package:fitness/app/chat/domain/usecases/disconnect_chat_usecase.dart';
+import 'package:fitness/app/chat/domain/usecases/send_message_usecase.dart';
+import 'package:fitness/app/chat/presentation/bloc/chat_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -98,6 +105,31 @@ Future<void> initDI() async {
   sl.registerFactory(
     () => FitnessBloc(
       getAllFitnessPlansUsecase: sl(),
+    ),
+  );
+
+  // --- Chat Data source ---
+  sl.registerLazySingleton<ChatRemoteDataSource>(
+    () => ChatRemoteDataSourceImpl(),
+  );
+
+  // --- Chat Repository ---
+  sl.registerLazySingleton<ChatRepository>(
+    () => ChatRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // --- Chat Use cases ---
+  sl.registerLazySingleton(() => ConnectChatUsecase(sl()));
+  sl.registerLazySingleton(() => DisconnectChatUsecase(sl()));
+  sl.registerLazySingleton(() => SendMessageUsecase(sl()));
+
+  // --- Chat Bloc ---
+  sl.registerFactory(
+    () => ChatBloc(
+      connectChatUsecase: sl(),
+      disconnectChatUsecase: sl(),
+      sendMessageUsecase: sl(),
+      chatRepository: sl(),
     ),
   );
 }

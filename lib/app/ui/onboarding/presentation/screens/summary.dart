@@ -38,7 +38,7 @@ class SummaryStep extends StatelessWidget {
         Text("Date of Birth: ${data.dob ?? '-'}", style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 8),
       ],
-      onContinue: () => context.go('/home'),
+      onContinue: () => context.go('/analysis'),
     );
   }
 }

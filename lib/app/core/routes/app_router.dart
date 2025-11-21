@@ -1,5 +1,4 @@
-import 'package:fitness/app/ui/fitness/page/sample_page.dart';
-import 'package:fitness/app/ui/fitness/page/workout_page.dart';
+import 'package:fitness/app/ui/fitness/presentation/page/workout_page.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:fitness/app/ui/home/presentation/pages/analysis_page.dart';
 import 'package:fitness/app/core/common/common_lib.dart';
