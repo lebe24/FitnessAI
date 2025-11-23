@@ -47,6 +47,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   @override
   void dispose() {
+    // Disconnect chat only when page is disposed (user exits)
+    _chatBloc.add(const DisconnectChat());
     _messageController.dispose();
     _chatScrollController.dispose();
     _chatBloc.close();
@@ -99,6 +101,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     if (_isExerciseActive(index)) {
       // Navigate to hero page for active exercise
       final exercise = widget.workoutDay?.exercises[index];
+
       if (exercise != null) {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -129,12 +132,12 @@ class _WorkoutPageState extends State<WorkoutPage> {
     ];
   }
 
-  Widget? _buildFloatingActionButton() {
+  Widget? _buildFloatingActionButton(dynamic exercise) {
     switch (_aiChatState) {
       case AiChat.none:
         return FloatingActionButton(
           key: const ValueKey('fab_none'),
-          onPressed: _toggleAiChat,
+          onPressed: () => _toggleAiChat(exercise),
           backgroundColor: AppPallete.backgroundColorBk,
           child: const Icon(Icons.chat_bubble, color: Colors.white),
         );
@@ -143,12 +146,16 @@ class _WorkoutPageState extends State<WorkoutPage> {
     }
   }
 
-  void _toggleAiChat() {
+  void _toggleAiChat(
+    dynamic exercise
+  ) {
     if (_aiChatState == AiChat.none) {
       setState(() {
         _aiChatState = AiChat.active;
       });
-      _showChatModal();
+      _showChatModal(
+        exercise
+      );
     } else {
 
       setState(() {
@@ -160,10 +167,12 @@ class _WorkoutPageState extends State<WorkoutPage> {
     }
   }
 
-  void _showChatModal() {
+  void _showChatModal(dynamic exercise) {
+    final exercises = exercise as List<Exercise>;
     final getCurrentUser = sl<GetCurrentUser>();
     final user = getCurrentUser();
     final userId = user?.id ?? '';
+    final userName = user?.name ?? 'Guest';
 
     if (userId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -175,18 +184,33 @@ class _WorkoutPageState extends State<WorkoutPage> {
       return;
     }
 
-    // Prepare workout plan data if available
+    // Serialize exercises to JSON format
     Map<String, dynamic>? workoutPlanData;
-    if (widget.workoutDay != null) {
-      workoutPlanData = WorkoutPlanSerializer.workoutDayToJson(widget.workoutDay!);
-      // Add date information
-      if (widget.date != null) {
-        workoutPlanData['date'] = widget.date!.toIso8601String();
-      }
+    if (exercises.isNotEmpty) {
+      workoutPlanData = {
+        'exercises': exercises.map((ex) => {
+          'name': ex.name,
+          'sets': ex.sets,
+          'reps': ex.reps,
+          if (ex.notes != null) 'notes': ex.notes,
+        }).toList(),
+        if (widget.workoutDay != null) 'day': widget.workoutDay!.day,
+        if (widget.workoutDay != null) 'focus': widget.workoutDay!.focus,
+        if (widget.workoutDay?.tip != null) 'tip': widget.workoutDay!.tip,
+        if (widget.date != null) 'date': widget.date!.toIso8601String(),
+      };
     }
 
+    // Get the date for this workout (use widget.date or current date)
+    final workoutDate = widget.date ?? DateTime.now();
+    
     // Connect to chat when modal opens with workout plan
-    _chatBloc.add(ConnectChat(userId, workoutPlan: workoutPlanData));
+    _chatBloc.add(ConnectChat(
+      userId: userId,
+      userName: userName,
+      date: workoutDate,
+      workoutPlan: workoutPlanData,
+    ));
 
     chatModal(
       context: context,
@@ -196,14 +220,14 @@ class _WorkoutPageState extends State<WorkoutPage> {
         setState(() {
           _aiChatState = AiChat.none;
         });
+        // Don't disconnect here - only disconnect when page is disposed
       },
       onSendMessage: _sendChatMessage,
       scrollController: _chatScrollController,
       messageController: _messageController,
       scrollToBottom: _scrollChatToBottom,
     ).then((_) {
-      // Disconnect and reset state when modal is dismissed
-      _chatBloc.add(const DisconnectChat());
+      // Just reset state when modal is dismissed, don't disconnect
       if (_aiChatState == AiChat.active) {
         setState(() {
           _aiChatState = AiChat.none;
@@ -217,6 +241,11 @@ class _WorkoutPageState extends State<WorkoutPage> {
   @override
   Widget build(BuildContext context) {
     final exercises = widget.workoutDay?.exercises ?? [];
+
+    final names = exercises.map((e) => e.name).toList();
+    final reps = exercises.map((e) => e.reps).toList();
+    debugPrint(names.toString());
+    debugPrint(reps.toString());
     return Scaffold(
         floatingActionButton: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -229,7 +258,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
               ),
             );
           },
-          child: _buildFloatingActionButton(),
+          child: _buildFloatingActionButton(exercises),
         ),
         backgroundColor: AppPallete.backgroundColorBk,
       body: SafeArea(

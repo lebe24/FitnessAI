@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:equatable/equatable.dart';
+import 'package:fitness/app/chat/data/helpers/chat_history_storage.dart';
+import 'package:fitness/app/chat/data/models/chat_message_model.dart';
 import 'package:fitness/app/chat/domain/entities/chat_message_entity.dart';
 import 'package:fitness/app/chat/domain/repositories/chat_repository.dart';
 import 'package:fitness/app/chat/domain/usecases/connect_chat_usecase.dart';
@@ -19,6 +21,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final _uuid = const Uuid();
 
   StreamSubscription<ChatMessageEntity>? _messageSubscription;
+  String? _currentUserId;
+  DateTime? _currentDate;
 
   ChatBloc({
     required this.connectChatUsecase,
@@ -39,8 +43,38 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     emit(ChatConnecting());
     try {
-      await connectChatUsecase(event.userId, workoutPlan: event.workoutPlan);
-      emit(ChatConnected());
+      // Initialize chat history storage
+      await ChatHistoryStorage.init();
+      
+      // Store current user and date for saving history
+      _currentUserId = event.userId;
+      _currentDate = event.date;
+      
+      // Load chat history for this date
+      final savedMessages = await ChatHistoryStorage.loadChatHistory(
+        event.userId,
+        event.date,
+      );
+      
+      // Convert saved messages to entities (ChatMessageModel extends ChatMessageEntity)
+      final savedMessageEntities = savedMessages
+          .map((model) => ChatMessageEntity(
+                id: model.id,
+                message: model.message,
+                userId: model.userId,
+                timestamp: model.timestamp,
+                isFromUser: model.isFromUser,
+              ))
+          .toList();
+      
+      // If we have saved messages, emit them
+      if (savedMessageEntities.isNotEmpty) {
+        emit(ChatConnected(messages: savedMessageEntities));
+      } else {
+        emit(ChatConnected());
+      }
+      
+      await connectChatUsecase(event.userId, event.userName, workoutPlan: event.workoutPlan);
 
       // Listen to incoming messages
       _messageSubscription?.cancel();
@@ -97,11 +131,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       // Message sent successfully, keep the user message in state
       // AI response will come through MessageReceived event
+      final updatedMessages = [...currentMessages, userMessage];
       emit(ChatMessageSent(
-        messages: [...currentMessages, userMessage],
+        messages: updatedMessages,
         planUpdated: false,
         updatedPlanData: null,
       ));
+      
+      // Save chat history
+      _saveChatHistory(updatedMessages);
     } catch (e) {
       // On error, remove the user message we just added
       emit(ChatError('Failed to send message: $e', messages: currentMessages));
@@ -125,10 +163,35 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
       
       if (!messageExists) {
+        final updatedMessages = [...currentMessages, event.message];
         emit(ChatMessageReceived(
-          messages: [...currentMessages, event.message],
+          messages: updatedMessages,
         ));
+        
+        // Save chat history
+        _saveChatHistory(updatedMessages);
       }
+    }
+  }
+  
+  /// Save chat history to local storage
+  void _saveChatHistory(List<ChatMessageEntity> messages) {
+    if (_currentUserId != null && _currentDate != null) {
+      final messageModels = messages.map((entity) {
+        return ChatMessageModel(
+          id: entity.id,
+          message: entity.message,
+          userId: entity.userId,
+          timestamp: entity.timestamp,
+          isFromUser: entity.isFromUser,
+        );
+      }).toList();
+      
+      ChatHistoryStorage.saveChatHistory(
+        _currentUserId!,
+        _currentDate!,
+        messageModels,
+      );
     }
   }
 

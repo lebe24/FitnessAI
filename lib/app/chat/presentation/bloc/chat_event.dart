@@ -9,12 +9,19 @@ abstract class ChatEvent extends Equatable {
 
 class ConnectChat extends ChatEvent {
   final String userId;
+  final String userName;
+  final DateTime date;
   final Map<String, dynamic>? workoutPlan;
 
-  const ConnectChat(this.userId, {this.workoutPlan});
+  const ConnectChat({
+    required this.userId,
+    required this.userName,
+    required this.date,
+    this.workoutPlan,
+  });
 
   @override
-  List<Object?> get props => [userId, workoutPlan];
+  List<Object?> get props => [userId, userName, date, workoutPlan];
 }
 
 class DisconnectChat extends ChatEvent {

@@ -6,8 +6,8 @@ class ConnectChatUsecase {
 
   ConnectChatUsecase(this.repository);
 
-  Future<void> call(String userId, {Map<String, dynamic>? workoutPlan}) async {
-    return await repository.connect(userId, workoutPlan: workoutPlan);
+  Future<void> call(String userId, String userName, {Map<String, dynamic>? workoutPlan}) async {
+    return await repository.connect(userId, userName, workoutPlan: workoutPlan);
   }
 }
 

@@ -12,8 +12,8 @@ class ChatRepositoryImpl implements ChatRepository {
   ChatRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<void> connect(String userId, {Map<String, dynamic>? workoutPlan}) async {
-    return await remoteDataSource.connect(userId, workoutPlan: workoutPlan);
+  Future<void> connect(String userId, String userName, {Map<String, dynamic>? workoutPlan}) async {
+    return await remoteDataSource.connect(userId, userName, workoutPlan: workoutPlan);
   }
 
   @override

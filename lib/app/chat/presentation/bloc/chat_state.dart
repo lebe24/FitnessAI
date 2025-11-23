@@ -18,7 +18,7 @@ class ChatConnecting extends ChatState {
 }
 
 class ChatConnected extends ChatState {
-  const ChatConnected({super.messages});
+  const ChatConnected({super.messages = const []});
 }
 
 class ChatDisconnected extends ChatState {

@@ -7,8 +7,9 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// Data source interface for chat WebSocket communication
 abstract class ChatRemoteDataSource {
   /// Connect to the WebSocket server
+  /// [userName] is the user's name
   /// [workoutPlan] is optional workout plan data to send when connecting
-  Future<void> connect(String userId, {Map<String, dynamic>? workoutPlan});
+  Future<void> connect(String userId, String userName, {Map<String, dynamic>? workoutPlan});
 
   /// Disconnect from the WebSocket server
   Future<void> disconnect();
@@ -34,7 +35,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   bool _isConnected = false;
 
   @override
-  Future<void> connect(String userId, {Map<String, dynamic>? workoutPlan}) async {
+  Future<void> connect(String userId, String userName, {Map<String, dynamic>? workoutPlan}) async {
     if (_isConnected && _channel != null) {
       return;
     }
@@ -44,16 +45,18 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
       _channel = WebSocketChannel.connect(uri);
       _isConnected = true;
 
-      // Wait for connection to be established before sending workout plan
+      // Wait for connection to be established before sending user info and workout plan
       await Future.delayed(const Duration(milliseconds: 100));
       
-      // Send workout plan data if provided
-      if (workoutPlan != null && _channel != null) {
-        final workoutPlanMessage = {
-          'type': 'workout_plan',
-          'workoutPlan': workoutPlan,
+      // Send user info and workout plan data if provided
+      if (_channel != null) {
+        final connectionMessage = {
+          'type': 'connection',
+          'userId': userId,
+          'userName': userName,
+          if (workoutPlan != null) 'workoutPlan': workoutPlan,
         };
-        _channel!.sink.add(jsonEncode(workoutPlanMessage));
+        _channel!.sink.add(jsonEncode(connectionMessage));
       }
 
       // Listen to incoming messages

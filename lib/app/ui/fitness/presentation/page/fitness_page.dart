@@ -113,24 +113,7 @@ class _FitnessPageState extends State<FitnessPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.apple,
-                      color: AppPallete.whiteColor,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'BeFit',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppPallete.whiteColor,
-                      ),
-                    ),
-                  ],
-                ),
+                _fitnessHeader(),
                 GestureDetector(
                   onTap: () {
                     // Handle tap event
@@ -357,5 +340,26 @@ class _FitnessPageState extends State<FitnessPage> {
         ),
       ),
     );
+  }
+
+  Row _fitnessHeader() {
+    return Row(
+                children: [
+                  const Icon(
+                    Icons.apple,
+                    color: AppPallete.whiteColor,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'BeFit',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppPallete.whiteColor,
+                    ),
+                  ),
+                ],
+              );
   }
 }

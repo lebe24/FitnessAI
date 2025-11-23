@@ -60,7 +60,7 @@ Future<dynamic> chatModal({
                         ),
                         IconButton(
                           onPressed: () {
-                            chatBloc.add(const DisconnectChat());
+                            // Don't disconnect, just close the modal
                             Navigator.of(context).pop();
                             onClose();
                           },
