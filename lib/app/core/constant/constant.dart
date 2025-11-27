@@ -13,4 +13,15 @@ class Constant {
   static final oauthWebClient = dotenv.env['Oauth_webClientId'];
   static final iosClient = dotenv.env['OAUTH_IOS_CLIENT'];
   static final oauthAndroidClient = dotenv.env['OAUTH_ANDROID_CLIENT'];
+
+  // API Keys
+  static final youtubeApiKey = dotenv.env['YOUTUBE_API_KEY'];
+  
+  // API Base URLs
+  static const String exerciseDbBaseUrl = 'https://api.exercisedb.io';
+  
+  // Add RapidAPI YouTube constants
+  static const youtubeRapidApiBaseUrl = "https://youtube138.p.rapidapi.com";
+  static const youtubeRapidApiHost = "youtube138.p.rapidapi.com";
+  static final youtubeRapidApiKey = "23724cec06msh87881299a984296p1d1ef2jsn577eca766cea" ?? '';
 }

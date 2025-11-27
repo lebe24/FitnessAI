@@ -52,7 +52,7 @@ class AppTheme {
   static final whiteThemeMode = ThemeData.light().copyWith(
     useMaterial3: true,
     colorScheme: ColorScheme.light(
-      primary: AppPallete.gradient1,
+      // primary: AppPallete.gradient1,
       secondary: AppPallete.gradient2,
       surface: AppPallete.whiteColor,
       background: AppPallete.backgroundColorWH,
@@ -175,7 +175,7 @@ class AppTheme {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppPallete.gradient1,
+        // backgroundColor: AppPallete.gradient1,
         foregroundColor: AppPallete.whiteColor,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -206,7 +206,7 @@ class AppTheme {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: AppPallete.gradient1,
+        // foregroundColor: AppPallete.gradient1,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -222,7 +222,7 @@ class AppTheme {
       backgroundColor: AppPallete.whiteColor,
       deleteIconColor: Colors.black54,
       disabledColor: Colors.grey.shade300,
-      selectedColor: AppPallete.gradient1.withOpacity(0.2),
+      // selectedColor: AppPallete.gradient1.withOpacity(0.2),
       secondarySelectedColor: AppPallete.gradient2.withOpacity(0.2),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       labelStyle: const TextStyle(
@@ -231,7 +231,7 @@ class AppTheme {
         fontWeight: FontWeight.w500,
       ),
       secondaryLabelStyle: const TextStyle(
-        color: AppPallete.gradient1,
+        // color: AppPallete.gradient1,
         fontSize: 14,
         fontWeight: FontWeight.w600,
       ),
@@ -270,7 +270,7 @@ class AppTheme {
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: AppPallete.gradient1,
+      // backgroundColor: AppPallete.gradient1,
       foregroundColor: AppPallete.whiteColor,
       elevation: 6,
       shape: RoundedRectangleBorder(
@@ -279,7 +279,7 @@ class AppTheme {
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: AppPallete.whiteColor,
-      selectedItemColor: AppPallete.gradient1,
+      // selectedItemColor: AppPallete.gradient1,
       unselectedItemColor: Colors.black54,
       selectedLabelStyle: const TextStyle(
         fontSize: 12,
@@ -313,7 +313,7 @@ class AppTheme {
   static final darkThemeMode = ThemeData.dark().copyWith(
     useMaterial3: true,
     colorScheme: ColorScheme.dark(
-      primary: AppPallete.gradient1,
+      // primary: AppPallete.gradient1,
       secondary: AppPallete.gradient2,
       surface: AppPallete.backgroundColorBk,
       background: AppPallete.backgroundColorBk,
@@ -436,7 +436,7 @@ class AppTheme {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppPallete.gradient1,
+        // backgroundColor: AppPallete.gradient1,
         foregroundColor: AppPallete.whiteColor,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -483,7 +483,7 @@ class AppTheme {
       backgroundColor: AppPallete.backgroundColorBk.withOpacity(0.6),
       deleteIconColor: Colors.white70,
       disabledColor: Colors.grey.shade800,
-      selectedColor: AppPallete.gradient1.withOpacity(0.3),
+      // selectedColor: AppPallete.gradient1.withOpacity(0.3),
       secondarySelectedColor: AppPallete.gradient2.withOpacity(0.3),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       labelStyle: const TextStyle(
@@ -531,7 +531,7 @@ class AppTheme {
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: AppPallete.gradient1,
+      // backgroundColor: AppPallete.gradient1,
       foregroundColor: AppPallete.whiteColor,
       elevation: 6,
       shape: RoundedRectangleBorder(

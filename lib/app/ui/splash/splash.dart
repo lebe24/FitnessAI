@@ -34,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppPallete.gradient1, // Purple
+              // AppPallete.gradient1, // Purple
               AppPallete.gradient2, // Pink
               AppPallete.gradient3, // Orange
             ],

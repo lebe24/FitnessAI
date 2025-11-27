@@ -24,14 +24,18 @@ Future<dynamic> chatModal({
       child: DraggableScrollableSheet(
         initialChildSize: 0.7,
         minChildSize: 0.5,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: AppPallete.backgroundColorBk,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          child: Column(
-            children: [
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppPallete.backgroundColorBk,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
               // Handle bar
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 12),
@@ -210,69 +214,88 @@ Future<dynamic> chatModal({
                 ),
               ),
               // Chat input area
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: BlocBuilder<ChatBloc, ChatState>(
-                  bloc: chatBloc,
-                  builder: (context, state) {
-                    final isLoading = state is ChatMessageSending;
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: messageController,
-                            style: GoogleFonts.inter(color: AppPallete.whiteColor),
-                            decoration: InputDecoration(
-                              hintText: 'Type your message...',
-                              hintStyle: GoogleFonts.inter(
-                                color: AppPallete.whiteColor.withOpacity(0.5),
+              SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppPallete.backgroundColorBk,
+                  ),
+                  child: BlocBuilder<ChatBloc, ChatState>(
+                    bloc: chatBloc,
+                    builder: (context, state) {
+                      final isLoading = state is ChatMessageSending;
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: messageController,
+                              style: GoogleFonts.inter(color: AppPallete.whiteColor),
+                              decoration: InputDecoration(
+                                hintText: 'Type your message...',
+                                hintStyle: GoogleFonts.inter(
+                                  color: AppPallete.whiteColor.withOpacity(0.5),
+                                ),
+                                filled: true,
+                                fillColor: AppPallete.whiteColor.withOpacity(0.1),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
                               ),
-                              filled: true,
-                              fillColor: AppPallete.whiteColor.withOpacity(0.1),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(25),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
+                              maxLines: 5,
+                              minLines: 1,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => onSendMessage(userId),
+                              enabled: !isLoading,
+                              onTap: () {
+                                // Scroll to bottom when text field is tapped
+                                Future.delayed(
+                                  const Duration(milliseconds: 300),
+                                  () => scrollToBottom(),
+                                );
+                              },
                             ),
-                            maxLines: null,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) => onSendMessage(userId),
-                            enabled: !isLoading,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isLoading
-                                ? AppPallete.borderColor.withOpacity(0.5)
-                                : AppPallete.borderColor,
-                            shape: BoxShape.circle,
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: isLoading
+                                  ? AppPallete.borderColor.withOpacity(0.5)
+                                  : AppPallete.borderColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              onPressed: isLoading ? null : () => onSendMessage(userId),
+                              icon: isLoading
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : const Icon(Icons.send, color: AppPallete.whiteColor),
+                            ),
                           ),
-                          child: IconButton(
-                            onPressed: isLoading ? null : () => onSendMessage(userId),
-                            icon: isLoading
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  )
-                                : const Icon(Icons.send, color: AppPallete.whiteColor),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
           ),
+        ),
         ),
       ),
     ),

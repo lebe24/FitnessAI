@@ -19,6 +19,15 @@ import 'package:fitness/app/chat/domain/usecases/connect_chat_usecase.dart';
 import 'package:fitness/app/chat/domain/usecases/disconnect_chat_usecase.dart';
 import 'package:fitness/app/chat/domain/usecases/send_message_usecase.dart';
 import 'package:fitness/app/chat/presentation/bloc/chat_bloc.dart';
+import 'package:fitness/app/api/data/datasources/exercise_remote_datasource.dart';
+import 'package:fitness/app/api/data/datasources/youtube_remote_datasource.dart';
+import 'package:fitness/app/api/data/repositories/exercise_repository_impl.dart';
+import 'package:fitness/app/api/data/repositories/youtube_repository_impl.dart';
+import 'package:fitness/app/api/domain/repositories/exercise_repository.dart';
+import 'package:fitness/app/api/domain/repositories/youtube_repository.dart';
+import 'package:fitness/app/api/domain/usecases/search_exercises_usecase.dart';
+import 'package:fitness/app/api/domain/usecases/get_exercise_by_id_usecase.dart';
+import 'package:fitness/app/api/domain/usecases/search_youtube_videos_usecase.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -132,4 +141,31 @@ Future<void> initDI() async {
       chatRepository: sl(),
     ),
   );
+
+  // --- Exercise API Data sources ---
+  sl.registerLazySingleton<ExerciseRemoteDataSource>(
+    () => ExerciseRemoteDataSourceImpl(),
+  );
+
+  // --- Exercise API Repository ---
+  sl.registerLazySingleton<ExerciseRepository>(
+    () => ExerciseRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // --- Exercise API Use cases ---
+  sl.registerLazySingleton(() => SearchExercisesUsecase(sl()));
+  sl.registerLazySingleton(() => GetExerciseByIdUsecase(sl()));
+
+  // --- YouTube API Data sources ---
+  sl.registerLazySingleton<YouTubeRemoteDataSource>(
+    () => YouTubeRemoteDataSourceImpl(),
+  );
+
+  // --- YouTube API Repository ---
+  sl.registerLazySingleton<YouTubeRepository>(
+    () => YouTubeRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // --- YouTube API Use cases ---
+  sl.registerLazySingleton(() => SearchYouTubeVideosUsecase(sl()));
 }

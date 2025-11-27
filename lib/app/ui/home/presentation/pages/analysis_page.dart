@@ -308,7 +308,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppPallete.gradient1,
+                                  // color: AppPallete.gradient1,
                                   blurRadius: 5,
                                   offset: const Offset(2, 5),
                                 ),
