@@ -15,6 +15,7 @@ class CustomBottombar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Container(
+        
         height: 80,
         decoration: BoxDecoration(
             boxShadow: [

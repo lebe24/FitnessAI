@@ -48,11 +48,11 @@ class GoalStep extends StatelessWidget {
         ).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
         OptionButton(
           disable: false,
-          label: "Maintain",
+          label: "Maintain Gains",
           subtitle: "",
-          isSelected: selectedGoal == "Maintain",
+          isSelected: selectedGoal == "Maintain Gains",
           onTap: () {
-            context.read<OnboardingBloc>().add(SelectGoal("Maintain"));
+            context.read<OnboardingBloc>().add(SelectGoal("Maintain Gains"));
           },
         ).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
         OptionButton(
@@ -65,11 +65,21 @@ class GoalStep extends StatelessWidget {
           },
         ).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
 
+        OptionButton(
+          disable: false,
+          label: "Build Aesthetics",
+          subtitle: "",
+          isSelected: selectedGoal == "Build Aesthetics",
+          onTap: () {
+            context.read<OnboardingBloc>().add(SelectGoal("Build Aesthetics"));
+          },
+        ).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
         // Custom goal input
         TextFormField(
           initialValue: selectedGoal != "Lose Weight" &&
-                  selectedGoal != "Maintain" &&
-                  selectedGoal != "Gain Weight"
+                  selectedGoal != "Maintain Gains" &&
+                  selectedGoal != "Gain Weight" &&
+                  selectedGoal != "Build Aesthetics"
               ? selectedGoal
               : '',
           decoration: InputDecoration(

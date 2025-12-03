@@ -4,6 +4,7 @@ import 'package:fitness/app/ui/auth/presentation/bloc/auth_bloc.dart';
 import 'package:fitness/app/ui/auth/presentation/page/auth_page.dart';
 import 'package:fitness/app/ui/onboarding/bloc/onboarding_bloc.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/dob.dart';
+import 'package:fitness/app/ui/onboarding/presentation/screens/experience.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/gender.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/goal.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/heightAndweight.dart';
@@ -50,6 +51,8 @@ class OnboardingScreen extends StatelessWidget {
                       return GenderStep();
                     case OnboardingStep.goal:
                       return GoalStep();
+                    case OnboardingStep.experience:
+                      return ExperienceStep();
                     case OnboardingStep.heightAndWeight:
                       return HeightAndWeightStep();
                     case OnboardingStep.dob:

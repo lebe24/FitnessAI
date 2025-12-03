@@ -4,6 +4,7 @@ import 'package:fitness/app/core/theme/app_pallet.dart';
 import 'package:fitness/app/core/common/widget/RoundbuttonText.dart';
 import 'package:fitness/app/core/common/common_lib.dart';
 import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -80,7 +81,7 @@ class Welcome extends StatelessWidget {
                       TextSpan(
                         text: "form",
                         style: TextStyle(
-                          backgroundColor: AppPallete.accent1,
+                          backgroundColor: const Color(0xFFCCFF00),
                           color: Colors.black,
                         ),
                       ),
@@ -107,54 +108,34 @@ class Welcome extends StatelessWidget {
                     text: "Get Started",
                   ).animate().fadeIn(delay: 1000.ms).slideY(begin: 0.3, end: 0),
                 ),
-                
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Already have an account?",
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
+                const SizedBox(height: 16),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.grey[700],
                     ),
-                    TextButton(
-                      onPressed: () {
-                        // Check if user is authenticated
-                        final getCurrentUser = sl<GetCurrentUser>();
-                        final user = getCurrentUser();
-                        
-                        if (user != null) {
-                          // User is authenticated, navigate to home
-                          context.go('/home');
-                        } else {
-                          // User is not authenticated, show message
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                "You are not a registered user. Please sign up first.",
-                              ),
-                              action: SnackBarAction(
-                                label: 'Sign Up',
-                                textColor: Colors.white,
-                                onPressed: () {
-                                  context.go('/onboarding');
-                                },
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      child: Text(
-                        "Login",
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
+                    children: [
+                      TextSpan(text: "Already have an account?"),
+                      
+                      TextSpan(
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            final getCurrentUser = sl<GetCurrentUser>();
+                            final user = getCurrentUser();
+
+                            context.go('/login');
+                          },
+                        style: TextStyle(
+                          color: const Color(0xFF418A43),
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ),
-                  ],
-                ).animate().fadeIn(delay: 1000.ms).slideY(begin: 0.3, end: 0)
+                        text: "\t Login"),
+                    ],
+                  ),
+                ).animate().fadeIn(delay: 1000.ms).slideY(begin: 0.3, end: 0),
+                
               ],
             ),
           )

@@ -73,16 +73,18 @@ class BaseStepLayout extends StatelessWidget {
   double progressForContext(BuildContext context) {
     final step = context.read<OnboardingBloc>().state.step;
     switch (step) {
-      case OnboardingStep.workoutDays:
-        return 0.15;
       case OnboardingStep.gender:
         return 0.05;
-      case OnboardingStep.heightAndWeight:
-        return 0.55;
-      case OnboardingStep.dob:
-        return 0.75;
+      case OnboardingStep.workoutDays:
+        return 0.15;
       case OnboardingStep.goal:
         return 0.35;
+      case OnboardingStep.experience:
+        return 0.50;
+      case OnboardingStep.heightAndWeight:
+        return 0.65;
+      case OnboardingStep.dob:
+        return 0.80;
       case OnboardingStep.signup:
         return 0.95;
       case OnboardingStep.summary:

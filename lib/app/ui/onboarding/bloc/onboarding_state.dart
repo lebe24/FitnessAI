@@ -5,6 +5,7 @@ enum OnboardingStep {
   gender,
   workoutDays,
   goal,
+  experience,
   heightAndWeight,
   dob,
   signup,

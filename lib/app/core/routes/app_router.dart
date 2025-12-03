@@ -1,12 +1,19 @@
 import 'package:fitness/app/ui/fitness/presentation/page/workout_page.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
-import 'package:fitness/app/ui/home/presentation/pages/analysis_page.dart';
+import 'package:fitness/app/core/routes/analysis_route_wrapper.dart';
 import 'package:fitness/app/core/common/common_lib.dart';
+import 'package:fitness/app/core/di.dart';
 import 'package:fitness/app/ui/home/presentation/pages/home_screen.dart';
 import 'package:fitness/app/ui/home/presentation/pages/settings_page.dart';
 import 'package:fitness/app/ui/onboarding/presentation/onboarding_screen.dart';
 import 'package:fitness/app/ui/splash/splash.dart';
 import 'package:fitness/app/ui/welcome/welcome.dart';
+import 'package:fitness/app/ui/nutrition/presentation/pages/nutrition_page.dart';
+import 'package:fitness/app/ui/nutrition/presentation/pages/analysis_ouput_page.dart';
+import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_bloc.dart';
+import 'package:fitness/app/ui/nutrition/domain/entities/nutrition_analysis_entity.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class ScreenPaths {
   static String splash = '/';
@@ -16,9 +23,11 @@ class ScreenPaths {
   static String home = '/home';
   static String settings = '/settings';
   static String workout = '/workout';
+  static String nutrition = '/nutrition';
+  static String nutritionAnalysis = '/nutrition-analysis';
 
   static final appRouter = GoRouter(
-    initialLocation: analysis,
+    initialLocation: home,
     routes: [
       GoRoute(
         path: welcome,
@@ -38,7 +47,7 @@ class ScreenPaths {
       ),
       GoRoute(
         path: analysis,
-        builder: (context, state) =>  AnalysisPage(),
+        builder: (context, state) => const AnalysisPageWithData(),
       ),
       GoRoute(
         path: settings,
@@ -57,6 +66,36 @@ class ScreenPaths {
           return const WorkoutPage(
             workoutDay: null,
             date: null,
+          );
+        },
+      ),
+      GoRoute(
+        path: nutrition,
+        builder: (context, state) {
+          final extra = state.extra;
+          return BlocProvider(
+            create: (context) => sl<NutritionBloc>(),
+            child: extra is Map<String, dynamic> && extra['imagePath'] != null
+                ? NutritionPage(
+                    imagePath: extra['imagePath'] as String,
+                  )
+                : const NutritionPage(),
+          );
+        },
+      ),
+      GoRoute(
+        path: nutritionAnalysis,
+        builder: (context, state) {
+          final extra = state.extra;
+          return BlocProvider(
+            create: (context) => sl<NutritionBloc>(),
+            child: extra is Map<String, dynamic>
+                ? AnalysisOutputPage(
+                    analysis: extra['analysis'] as NutritionAnalysisEntity?,
+                    imagePath: extra['imagePath'] as String?,
+                    heroTag: extra['heroTag'] as String?,
+                  )
+                : const AnalysisOutputPage(),
           );
         },
       ),

@@ -98,11 +98,11 @@ class GenderStep extends StatelessWidget {
                   ],
                 ),
               ),
-              Text("Others",
+              Text("Prefer Not To Say",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: selectedGender == "Others" ?  AppPallete.accent1 : Colors.black,
+                    color: selectedGender == "Prefer Not To Say" ?  AppPallete.accent1 : Colors.black,
                   ),
               )
             ],

@@ -23,5 +23,5 @@ class Constant {
   // Add RapidAPI YouTube constants
   static const youtubeRapidApiBaseUrl = "https://youtube138.p.rapidapi.com";
   static const youtubeRapidApiHost = "youtube138.p.rapidapi.com";
-  static final youtubeRapidApiKey = "23724cec06msh87881299a984296p1d1ef2jsn577eca766cea" ?? '';
+  static final youtubeRapidApiKey = "23724cec06msh87881299a984296p1d1ef2jsn577eca766cea";
 }

@@ -1,4 +1,5 @@
 import 'package:fitness/app/core/di.dart' as di;
+import 'package:fitness/app/core/theme/app_pallet.dart';
 import 'package:fitness/app/ui/activity/activity_page.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/fitness_page.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
@@ -32,15 +33,33 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
-      backgroundColor: const Color(0xFF121921),
-      body: pages[currentIndex],
-      bottomNavigationBar: CustomBottombar(
-        onItemTapped: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        }, currentIndex: currentIndex,
+      backgroundColor: AppPallete.backgroundColorBk,
+      
+      body: Stack(
+        children: [
+          pages[currentIndex],
+          Positioned(
+            bottom: 0,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width,
+              child: CustomBottombar(
+                      onItemTapped: (index) {
+              setState(() {
+                currentIndex = index;
+              });
+                      }, currentIndex: currentIndex,
+                    ),
+            ),
+          ),
+        ],
       ),
+      // bottomNavigationBar: CustomBottombar(
+      //   onItemTapped: (index) {
+      //     setState(() {
+      //       currentIndex = index;
+      //     });
+      //   }, currentIndex: currentIndex,
+      // ),
     );
   }
 }

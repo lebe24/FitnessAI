@@ -1,16 +1,25 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:fitness/app/core/common/widget/greeting.dart';
+import 'package:fitness/app/core/constant/assets.dart';
 import 'package:fitness/app/core/di.dart';
+import 'package:fitness/app/core/routes/app_router.dart';
 import 'package:fitness/app/core/theme/app_pallet.dart';
 import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_event.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_state.dart';
+import 'package:fitness/app/ui/fitness/presentation/page/motivate_page.dart';
+import 'package:fitness/app/ui/fitness/presentation/page/save_page.dart';
+import 'package:fitness/app/ui/fitness/presentation/widget/fitness_page_method.dart';
 import 'package:fitness/app/ui/fitness/presentation/widget/workout_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 class FitnessPage extends StatefulWidget {
   const FitnessPage({super.key});
@@ -95,6 +104,33 @@ class _FitnessPageState extends State<FitnessPage> {
     return '${name.substring(0, maxLength)}...';
   }
 
+  Future<void> _scanFoodItem() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
+
+      if (image != null && mounted) {
+        // Navigate to nutrition page with the image path
+        context.push(
+          ScreenPaths.nutrition,
+          extra: {'imagePath': image.path},
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error accessing camera: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _greetingTimer?.cancel();
@@ -110,230 +146,116 @@ class _FitnessPageState extends State<FitnessPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _fitnessHeader(),
-                GestureDetector(
-                  onTap: () {
-                    // Handle tap event
-                    debugPrint('Calories Burned tapped');
-                  },
-                  child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppPallete.whiteColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.local_fire_department,
-                                color: Colors.orange,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$_caloriesBurned',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppPallete.whiteColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                ),
-              ],
-            ),
+            // Fixed header section
+            _homeHeader(context),
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Text(
-                  "$_greeting ",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  _emoji,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14),
-                ),
-                const SizedBox(width: 8),
-                Builder(
-                  builder: (context) {
-                    final getCurrentUser = sl<GetCurrentUser>();
-                    final user = getCurrentUser();
-                    final displayName = user?.name ?? 
-                                        user?.email ?? 
-                                        'User';
-                    return Text(
-                      _shortenDisplayName(displayName),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14, fontWeight: FontWeight.bold),
-                    );
-                  },
-              ),
-              ],
-            ),
-            
-            // Date Selector
-            BlocBuilder<FitnessBloc, FitnessState>(
-              builder: (context, state) {
-                final workoutMappings = state is FitnessLoaded
-                    ? state.workoutMappings
-                    : <DateTime, dynamic>{};
+            _greetings(),
+            // Fixed Date Selector
+            _workoutDates(),
+            // Scrollable content section
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
 
-                return SizedBox(
-                  height: 80,
-                  child: ListView.builder(
-                    controller: _dateScrollController,
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _getWeekDates().length,
-                    itemBuilder: (context, index) {
-                      final date = _getWeekDates()[index];
-                      final normalizedDate =
-                          DateTime(date.year, date.month, date.day);
-                      final isSelected = date.day == _selectedDate.day &&
-                          date.month == _selectedDate.month &&
-                          date.year == _selectedDate.year;
-                      final hasWorkout = workoutMappings.containsKey(normalizedDate);
-                      final workoutMapping = workoutMappings[normalizedDate];
+                    // Access the Camera to scan Item for Analysis
+                    GestureDetector(
+                      onTap: _scanFoodItem,
+                      child: _customWidget(context,"Tap to Scan Food Item",
+                      null,
+                      ImagePath.foodScan,'Scan food items to get nutritional information and stay on top of your diet.')),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Access Your Motivation',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppPallete.whiteColor,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: (){
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MotivatePage(),
+                          ),
+                        );
+                      },
+                      child: _banner()
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Your Workout History',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppPallete.whiteColor,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    BlocBuilder<FitnessBloc, FitnessState>(
+                      builder: (context, state) {
+                        String? savedImagePath;
+                        if (state is FitnessLoaded && state.plans.isNotEmpty) {
+                          // Get the most recent plan's image
+                          final mostRecentPlan = state.plans.first;
+                          savedImagePath = mostRecentPlan.imagePath;
+                        }
+                        return GestureDetector(
+                          onTap: () {
+                            // Navigate to history or settings page
+                            dialogBuilder(
+                              context, 
+                              SizedBox(
+                                width: 400,
+                                height: 400,
+                                child:  Card(
+                                  child: Column(
+                                    children: [
+                                      Center(
+                                        child: Text('History Page Coming Soon!'),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.push(context, 
+                                            MaterialPageRoute(
+                                              builder: (context) => const SavedPage(),
+                                            ),
+                                          );
+                                        },
+                                        child: Text('Next',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppPallete.borderColor,
+                                          ),
 
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedDate = date;
-                          });
-                          context.read<FitnessBloc>().add(DateSelected(date));
-
-                          // Show workout modal if there's a workout for this date
-                          if (hasWorkout && workoutMapping?.workoutDay != null) {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => DraggableScrollableSheet(
-                                initialChildSize: 0.7,
-                                minChildSize: 0.5,
-                                maxChildSize: 0.9,
-                                builder: (context, scrollController) =>
-                                    WorkoutModal(
-                                  workoutDay: workoutMapping!.workoutDay!,
-                                  date: date,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );
-                          }
-                        },
-                        child: Container(
-                          width: 60,
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: 56,
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      boxShadow: isSelected
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.white.withAlpha(100),
-                                                blurRadius: 10,
-                                                offset: const Offset(0, 4),
-                                              ),
-                                            ]
-                                          : [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(0.1),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                      color: isSelected
-                                          ? AppPallete.borderColor.withOpacity(0.6)
-                                          : Colors.transparent,
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? AppPallete.whiteColor.withOpacity(0.4)
-                                            : hasWorkout
-                                                ? const Color(0xFFB7F034).withOpacity(0.6)
-                                                : AppPallete.whiteColor.withOpacity(0.1),
-                                        width: isSelected ? 2 : hasWorkout ? 2 : 1,
-                                        style: BorderStyle.solid,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            _getDayName(date),
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w500,
-                                              color: AppPallete.whiteColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${date.day}',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppPallete.whiteColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  // Workout indicator dot
-                                  if (hasWorkout && !isSelected)
-                                    Positioned(
-                                      top: 4,
-                                      right: 4,
-                                      child: Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Color(0xFFB7F034),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
+                          },
+                          child: _customWidget(
+                            context,
+                            "Check out your history",
+                            savedImagePath,
+                            null,
+                            'Review your past food scans and Workout Plans time.',
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 40),
-            Center(
-              child: Text(
-                'Fitness Page',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 26, fontWeight: FontWeight.bold),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 100),
+                  ],
+                ),
               ),
             ),
           ],
@@ -342,24 +264,424 @@ class _FitnessPageState extends State<FitnessPage> {
     );
   }
 
-  Row _fitnessHeader() {
-    return Row(
-                children: [
-                  const Icon(
-                    Icons.apple,
-                    color: AppPallete.whiteColor,
-                    size: 24,
+  Stack _banner(){
+    return Stack(
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.2,
+            width: double.infinity,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Image.asset(
+                  ImagePath.motivateBanner,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 60,
+            left:120,
+            child: Text(
+              textAlign: TextAlign.center,
+              "Stay Motivated!\n",
+              style: GoogleFonts.quicksand(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: AppPallete.whiteColor,
+              ),
+            ),
+          ),
+        ],
+    );
+  }
+
+  // ignore: unused_element
+  SizedBox _mealWidget(BuildContext context) {
+    return SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.25,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: 3, // You can change this to a dynamic list later
+                    itemBuilder: (context, index) {
+                      List<String> mealTypes = ['Breakfast', 'Lunch', 'Dinner'];
+                      List<String> mealImages = [ImagePath.breakfastImage, ImagePath.lunchImage, ImagePath.dinnerImage];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: index < 2 ? 12 : 0, // Add spacing between items
+                        ),
+                        child: meal_suggestion(
+                          context, mealTypes[index], mealImages[index]),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'BeFit',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppPallete.whiteColor,
-                    ),
+                );
+}
+
+  BlocBuilder<FitnessBloc, FitnessState> _workoutDates() {
+    return BlocBuilder<FitnessBloc, FitnessState>(
+      builder: (context, state) {
+        final workoutMappings = state is FitnessLoaded
+            ? state.workoutMappings
+            : <DateTime, dynamic>{};
+              
+        return SizedBox(
+          height: 80,
+          child: ListView.builder(
+            controller: _dateScrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _getWeekDates().length,
+            itemBuilder: (context, index) {
+              final date = _getWeekDates()[index];
+              final normalizedDate =
+                  DateTime(date.year, date.month, date.day);
+              final isSelected = date.day == _selectedDate.day &&
+                  date.month == _selectedDate.month &&
+                  date.year == _selectedDate.year;
+              final hasWorkout = workoutMappings.containsKey(normalizedDate);
+              final workoutMapping = workoutMappings[normalizedDate];
+              
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedDate = date;
+                  });
+                  context.read<FitnessBloc>().add(DateSelected(date));
+              
+                  // Show workout modal if there's a workout for this date
+                  if (hasWorkout && workoutMapping?.workoutDay != null) {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => DraggableScrollableSheet(
+                        initialChildSize: 0.7,
+                        minChildSize: 0.5,
+                        maxChildSize: 0.9,
+                        builder: (context, scrollController) =>
+                            WorkoutModal(
+                          workoutDay: workoutMapping!.workoutDay!,
+                          date: date,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  width: 60,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.rectangle,
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.white.withAlpha(100),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                              color: isSelected
+                                  ? AppPallete.borderColor.withOpacity(0.6)
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppPallete.whiteColor.withOpacity(0.4)
+                                    : hasWorkout
+                                        ? const Color(0xFFB7F034).withOpacity(0.6)
+                                        : AppPallete.whiteColor.withOpacity(0.1),
+                                width: isSelected ? 2 : hasWorkout ? 2 : 1,
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _getDayName(date),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppPallete.whiteColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${date.day}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppPallete.whiteColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Workout indicator dot
+                          if (hasWorkout && !isSelected)
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFFB7F034),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+}
+
+Row _greetings() {
+  return Row(
+      children: [
+        Text(
+          "$_greeting ",
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        Text(
+          _emoji,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14),
+        ),
+        const SizedBox(width: 8),
+        Builder(
+          builder: (context) {
+            final getCurrentUser = sl<GetCurrentUser>();
+            final user = getCurrentUser();
+            final displayName = user?.name ?? 
+                                user?.email ?? 
+                                'User';
+            return Text(
+              _shortenDisplayName(displayName),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14, fontWeight: FontWeight.bold),
+            );
+          },
+      ),
+      ],
+    );
+  }
+
+  Row _homeHeader(BuildContext context) {
+    return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _fitnessHeader(),
+                  GestureDetector(
+                    onTap: () {
+                      // Handle tap event
+                      dialogBuilder(
+                        context,
+                        const CustomDialog(),
+                      );
+                    },
+                    child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppPallete.whiteColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.local_fire_department,
+                                  color: Colors.orange,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$_caloriesBurned',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppPallete.whiteColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                   ),
                 ],
               );
+  }
+
+  SizedBox meal_suggestion(BuildContext context,String mealType, String imagePath) {
+    return SizedBox(
+                width: MediaQuery.of(context).size.width * 0.32,
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Image.asset(
+                          imagePath,
+                          height: MediaQuery.of(context).size.height * 0.25,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 40,
+                      left: 20,
+                      child: Text(
+                        textAlign: TextAlign.center,
+                        "Tap \n For \n$mealType ",
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppPallete.whiteColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+  }
+
+  Container _customWidget(
+    BuildContext context,
+    String text,
+    String? imagePath,
+    String? imageString,
+    String description,
+  ) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.19,
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppPallete.whiteColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.3,
+              height: double.infinity,
+              child:imageString != null ? Image.asset(
+                imageString,
+                fit: BoxFit.cover,
+                )  :imagePath != null
+                  ? FutureBuilder<bool>(
+                      future: File(imagePath).exists(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return _buildImagePlaceholder();
+                        }
+                        if (snapshot.hasData && snapshot.data == true) {
+                          return Image.file(
+                            File(imagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildImagePlaceholder();
+                            },
+                          );
+                        }
+                        return _buildImagePlaceholder();
+                      },
+                    )
+                  : _buildImagePlaceholder(),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  text,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppPallete.whiteColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppPallete.whiteColor.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Container(
+      color: AppPallete.borderColor.withOpacity(0.3),
+      child: const Center(
+        child: Icon(
+          Icons.image_outlined,
+          color: AppPallete.whiteColor,
+          size: 40,
+        ),
+      ),
+    );
+  }
+
+  Row _fitnessHeader() {
+    return Row(
+      children: [
+        Text(
+          'BeFit',
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: AppPallete.whiteColor,
+          ),
+        ),
+      ],
+    );
   }
 }

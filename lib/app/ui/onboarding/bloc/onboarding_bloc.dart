@@ -8,9 +8,9 @@ export 'onboarding_event.dart';
 export 'onboarding_state.dart';
 
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
-  OnboardingBloc()
-      : super(const OnboardingState(
-          data: OnboardingData(),
+  OnboardingBloc({OnboardingData? initialData})
+      : super(OnboardingState(
+          data: initialData ?? const OnboardingData(),
           step: OnboardingStep.gender,
         )) {
     on<SelectWorkoutDays>((event, emit) {
@@ -66,6 +66,10 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       emit(state.copyWith(data: state.data.copyWith(dob: event.dob)));
     });
 
+    on<SelectExperience>((event, emit) {
+      emit(state.copyWith(data: state.data.copyWith(experience: event.experience)));
+    });
+
     on<NextStep>((event, emit) {
       final nextStep = _next(state.step);
       emit(state.copyWith(step: nextStep));
@@ -81,10 +85,12 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     switch (step) {
       case OnboardingStep.gender:
         return OnboardingStep.workoutDays;
-      case OnboardingStep.goal:
-        return OnboardingStep.heightAndWeight;
       case OnboardingStep.workoutDays:
         return OnboardingStep.goal;
+      case OnboardingStep.goal:
+        return OnboardingStep.experience;
+      case OnboardingStep.experience:
+        return OnboardingStep.heightAndWeight;
       case OnboardingStep.heightAndWeight:
         return OnboardingStep.dob;
       case OnboardingStep.dob:
@@ -105,6 +111,8 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       case OnboardingStep.dob:
         return OnboardingStep.heightAndWeight;
       case OnboardingStep.heightAndWeight:
+        return OnboardingStep.experience;
+      case OnboardingStep.experience:
         return OnboardingStep.goal;
       case OnboardingStep.goal:
         return OnboardingStep.workoutDays;

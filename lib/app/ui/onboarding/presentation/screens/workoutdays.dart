@@ -41,7 +41,7 @@ class WorkoutDaysStep extends StatelessWidget {
       children: [
         OptionButton(
           disable: false,
-          label: "0 - 2", subtitle: "Hobbyist", isSelected: selectedWorkout == 2, onTap: () {
+          label: "1 - 2", subtitle: "Hobbyist", isSelected: selectedWorkout == 2, onTap: () {
           context.read<OnboardingBloc>().add(SelectWorkoutDays(2));
         }).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
         OptionButton(

@@ -8,6 +8,7 @@ import 'package:fitness/app/ui/home/presentation/bloc/upload/upload_bloc.dart';
 import 'package:fitness/app/ui/home/presentation/widget/camera_box.dart';
 import 'package:fitness/app/core/common/widget/greeting.dart';
 import 'package:fitness/app/ui/home/presentation/widget/result_modal.dart';
+import 'package:fitness/app/ui/onboarding/bloc/onboarding_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -278,6 +279,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
                         return const SizedBox.shrink();
                       }
 
+                      // Get onboarding data here using read instead of watch
+                      final onboardingData = context.read<OnboardingBloc>().state.data;
+
                       return Center(
                         child: GestureDetector(
                           onTap: isUploading
@@ -293,6 +297,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                           BlocProvider.value(
                                         value: context.read<UploadBloc>(),
                                         child: ResultModalPage(
+                                          userData: onboardingData,
                                           image: imageToUpload!,
                                         ),
                                       ),
@@ -308,7 +313,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  // color: AppPallete.gradient1,
+                                  color: AppPallete.sparkGradient,
                                   blurRadius: 5,
                                   offset: const Offset(2, 5),
                                 ),

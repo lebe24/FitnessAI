@@ -301,3 +301,46 @@ Future<dynamic> chatModal({
     ),
   );
 }
+
+
+// ================================
+// Dialog Methods
+// ================================
+
+Future<void> dialogBuilder(BuildContext context,Widget child) {
+  return showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 4.0,
+        child: child,
+      );
+    },
+  );
+}
+
+class CustomDialog extends StatelessWidget {
+  const CustomDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 300,
+      height: 400,
+      child:  Card(
+        color: AppPallete.backgroundColorBk,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'This is a custom dialog',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+}

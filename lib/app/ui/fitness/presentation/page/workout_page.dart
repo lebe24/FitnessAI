@@ -3,7 +3,7 @@ import 'package:fitness/app/core/theme/app_pallet.dart';
 import 'package:fitness/app/chat/data/helpers/workout_plan_serializer.dart';
 import 'package:fitness/app/chat/presentation/bloc/chat_bloc.dart';
 import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
-import 'package:fitness/app/ui/fitness/presentation/widget/chat_method.dart';
+import 'package:fitness/app/ui/fitness/presentation/widget/fitness_page_method.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/exercise_hero_page.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:flutter/material.dart';

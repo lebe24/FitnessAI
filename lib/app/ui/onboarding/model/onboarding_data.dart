@@ -5,8 +5,17 @@ class OnboardingData {
   final String? height;
   final String? weight;
   final String? dob;
+  final String? experience;
 
-  const OnboardingData({this.height, this.weight, this.workoutDays, this.gender, this.goal, this.dob});
+  const OnboardingData({
+    this.height,
+    this.weight,
+    this.workoutDays,
+    this.gender,
+    this.goal,
+    this.dob,
+    this.experience,
+  });
 
   OnboardingData copyWith({
     int? workoutDays,
@@ -15,6 +24,7 @@ class OnboardingData {
     String? dob,
     String? height,
     String? weight,
+    String? experience,
   }) {
     return OnboardingData(
       workoutDays: workoutDays ?? this.workoutDays,
@@ -23,6 +33,7 @@ class OnboardingData {
       dob: dob ?? this.dob,
       height: height ?? this.height,
       weight: weight ?? this.weight,
+      experience: experience ?? this.experience,
     );
   }
 }

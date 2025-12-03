@@ -6,7 +6,7 @@ class AppPallete {
   static final Color accent1 = const Color.fromARGB(225, 26, 202, 49);
   static final Color accent2 = Color(0xFFBEABA1);
   static final Color offWhite = Color(0xFFF8ECE5);
-  // static const Color gradient1 = Color.fromRGBO(187, 63, 221, 1);
+  static const Color sparkGradient = Color.fromRGBO(187, 63, 221, 1);
   static const Color gradient2 = Color.fromRGBO(251, 109, 169, 1);
   static const Color gradient3 = Color.fromRGBO(255, 159, 124, 1);
   static const Color borderColor = Color.fromRGBO(52, 51, 67, 1);

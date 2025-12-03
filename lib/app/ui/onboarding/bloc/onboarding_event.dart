@@ -52,6 +52,11 @@ class SelectDob extends OnboardingEvent {
   SelectDob(this.dob);
 }
 
+class SelectExperience extends OnboardingEvent {
+  final String experience;
+  SelectExperience(this.experience);
+}
+
 class NextStep extends OnboardingEvent {}
 
 class PreviousStep extends OnboardingEvent {}

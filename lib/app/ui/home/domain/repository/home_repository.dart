@@ -8,6 +8,10 @@ abstract class HomeRepository {
     required String goal,
     required String duration,
     required String trainingSplit,
+    required String gender,
+    required String height,
+    required String weight,
+    required String experience,
   });
   Future<String> getWorkoutPlan();
   Future<String> getBaseInfo();

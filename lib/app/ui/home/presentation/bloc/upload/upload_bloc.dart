@@ -67,6 +67,10 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
         goal: event.goal,
         duration: event.duration,
         trainingSplit: event.trainingSplit,
+        gender: event.gender,
+        height: event.height,
+        weight: event.weight,
+        experience: event.experience,
       );
     
       // Format the workout plan result as a readable message

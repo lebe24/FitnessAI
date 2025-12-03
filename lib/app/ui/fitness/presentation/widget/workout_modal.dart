@@ -197,7 +197,7 @@ class WorkoutModal extends StatelessWidget {
               ),
             ),
           ],
-      
+          const SizedBox(height: 24),
           GestureDetector(
             onTap: () {
               Navigator.of(context).pop();

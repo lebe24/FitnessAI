@@ -23,6 +23,10 @@ class HomeRemoteDataSource {
     required String goal,
     required String duration,
     required String trainingSplit,
+    required String gender,
+    required String height,
+    required String weight,
+    required String experience,
   }) async {
     final formData = FormData.fromMap({
       "extrainfo": extraInfo ?? "",
@@ -33,6 +37,10 @@ class HomeRemoteDataSource {
       "goal": goal,
       "duration": duration,
       "training_split": trainingSplit,
+      "gender": gender,
+      "height": height,
+      "weight": weight,
+      "experience": experience,
     });
 
     try {

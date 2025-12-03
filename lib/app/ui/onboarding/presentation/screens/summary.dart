@@ -1,6 +1,7 @@
 import 'package:fitness/app/core/common/common_lib.dart';
 import 'package:fitness/app/ui/onboarding/bloc/onboarding_bloc.dart';
 import 'package:fitness/app/ui/onboarding/presentation/share_screen.dart';
+import 'package:fitness/app/ui/onboarding/utils/onboarding_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -11,7 +12,7 @@ class SummaryStep extends StatelessWidget {
     final data = context.watch<OnboardingBloc>().state.data;
     return BaseStepLayout(
       title: Text(
-        "Summary",
+        "Your Summary",
         style: TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
@@ -37,8 +38,16 @@ class SummaryStep extends StatelessWidget {
         const SizedBox(height: 8),
         Text("Date of Birth: ${data.dob ?? '-'}", style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 8),
+        Text("Experience: ${data.experience ?? '-'}", style: const TextStyle(fontSize: 18)),
+        const SizedBox(height: 8),
       ],
-      onContinue: () => context.go('/analysis'),
+      onContinue: () async {
+        // Save onboarding data before navigating
+        await OnboardingStorage.saveOnboardingData(data);
+        if (context.mounted) {
+          context.go('/analysis');
+        }
+      },
     );
   }
 }

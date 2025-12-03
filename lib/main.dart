@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
+import 'package:carousel_slider/carousel_slider.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -30,4 +32,7 @@ class MainApp extends StatelessWidget {
     );
   }
 }
+
+
+
 

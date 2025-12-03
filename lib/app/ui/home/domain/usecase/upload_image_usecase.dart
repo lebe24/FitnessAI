@@ -13,6 +13,10 @@ class UploadImageUseCase {
     required String goal,
     required String duration,
     required String trainingSplit,
+    required String gender,
+    required String height,
+    required String weight,
+    required String experience,
   }) async {
     return await repository.uploadImage(
       extraInfo,
@@ -20,6 +24,10 @@ class UploadImageUseCase {
       goal: goal,
       duration: duration,
       trainingSplit: trainingSplit,
+      gender: gender,
+      height: height,
+      weight: weight,
+      experience: experience,
     );
   }
 }

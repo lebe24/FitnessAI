@@ -6,6 +6,7 @@ import 'package:fitness/app/core/di.dart' as di;
 import 'package:fitness/app/core/routes/app_router.dart';
 import 'package:fitness/app/storage/domain/usecases/save_fitness_plan_usecase.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
+import 'package:fitness/app/ui/onboarding/model/onboarding_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -21,9 +22,11 @@ class ResultModalPage extends StatefulWidget {
   const ResultModalPage({
     super.key,
     required this.image,
+    required this.userData
   });
 
   final File image;
+  final OnboardingData userData;
 
   @override
   State<ResultModalPage> createState() => _ResultModalPageState();
@@ -42,14 +45,29 @@ class _ResultModalPageState extends State<ResultModalPage> {
       _currentState = ModalState.generating;
     });
 
+    // Extract required parameters from userData
+    final goal = widget.userData.goal ?? 'Build Muscle';
+    final workoutDays = widget.userData.workoutDays ?? 2;
+    final trainingSplit = '$workoutDays days/week';
+    final duration = '12 weeks'; 
+    final gender = widget.userData.gender ?? 'Male';
+    final height = widget.userData.height ?? '5.10';
+    final weight = widget.userData.weight ?? '120kg';
+    final experience = widget.userData.experience ?? 'Experienced';
+    final extraInfo = _textController.text.isNotEmpty ? _textController.text : null;
+
     // Trigger the upload
     context.read<UploadBloc>().add(
           UploadImageToServer(
             image: widget.image,
+            goal: goal,
+            duration: duration,
+            trainingSplit: trainingSplit,
+            gender: gender,
+            height: height,
+            weight: weight,
+            experience: experience,
             extraInfo: extraInfo,
-            goal: 'Gain Muscle', 
-            duration: '4 weeks', 
-            trainingSplit: '5 days per week',
           ));
     
   }
@@ -90,6 +108,17 @@ class _ResultModalPageState extends State<ResultModalPage> {
     
     void addNormal(String text) {
       spans.add(TextSpan(text: text));
+    }
+
+    void addTip(String text) {
+      spans.add(TextSpan(
+        text: text,
+        style: const TextStyle(
+          color: Color(0xFF09670C),
+          fontStyle: FontStyle.italic,
+          fontSize: 10,
+        ),
+      ));
     }
     
     void addNewLine() {
@@ -139,7 +168,7 @@ class _ResultModalPageState extends State<ResultModalPage> {
       for (var exercise in day.exercises) {
         addNormal('  • ${exercise.name}: ${exercise.sets} sets x ${exercise.reps}\n');
         if (exercise.notes != null) {
-          addNormal('    Note: ${exercise.notes}\n');
+          addTip('    - Note: ${exercise.notes}\n');
         }
       }
       if (day.tip != null) {

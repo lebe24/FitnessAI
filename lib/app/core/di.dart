@@ -28,6 +28,17 @@ import 'package:fitness/app/api/domain/repositories/youtube_repository.dart';
 import 'package:fitness/app/api/domain/usecases/search_exercises_usecase.dart';
 import 'package:fitness/app/api/domain/usecases/get_exercise_by_id_usecase.dart';
 import 'package:fitness/app/api/domain/usecases/search_youtube_videos_usecase.dart';
+import 'package:fitness/app/ui/nutrition/data/datasources/nutrition_local_datasource.dart';
+import 'package:fitness/app/ui/nutrition/data/datasources/nutrition_remote_datasource.dart';
+import 'package:fitness/app/ui/nutrition/data/repositories/nutrition_repository_impl.dart';
+import 'package:fitness/app/ui/nutrition/domain/repositories/nutrition_repository.dart';
+import 'package:fitness/app/ui/nutrition/domain/usecases/analyze_food_usecase.dart';
+import 'package:fitness/app/ui/nutrition/domain/usecases/delete_nutrition_analysis_usecase.dart';
+import 'package:fitness/app/ui/nutrition/domain/usecases/get_all_nutrition_analyses_usecase.dart';
+import 'package:fitness/app/ui/nutrition/domain/usecases/get_nutrition_analysis_by_id_usecase.dart';
+import 'package:fitness/app/ui/nutrition/domain/usecases/save_nutrition_analysis_usecase.dart';
+import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_bloc.dart';
+
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -168,4 +179,38 @@ Future<void> initDI() async {
 
   // --- YouTube API Use cases ---
   sl.registerLazySingleton(() => SearchYouTubeVideosUsecase(sl()));
+
+  // --- Nutrition Data sources ---
+  sl.registerLazySingleton<NutritionRemoteDataSource>(
+    () => NutritionRemoteDataSourceImpl(),
+  );
+  sl.registerLazySingleton<NutritionLocalDataSource>(
+    () => NutritionLocalDataSourceImpl(),
+  );
+
+  // --- Nutrition Repository ---
+  sl.registerLazySingleton<NutritionRepository>(
+    () => NutritionRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+    ),
+  );
+
+  // --- Nutrition Use cases ---
+  sl.registerLazySingleton(() => AnalyzeFoodUseCase(sl()));
+  sl.registerLazySingleton(() => SaveNutritionAnalysisUseCase(sl()));
+  sl.registerLazySingleton(() => GetAllNutritionAnalysesUseCase(sl()));
+  sl.registerLazySingleton(() => GetNutritionAnalysisByIdUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteNutritionAnalysisUseCase(sl()));
+
+  // --- Nutrition Bloc ---
+  sl.registerFactory(
+    () => NutritionBloc(
+      analyzeFoodUseCase: sl(),
+      saveNutritionAnalysisUseCase: sl(),
+      getAllNutritionAnalysesUseCase: sl(),
+      getNutritionAnalysisByIdUseCase: sl(),
+      deleteNutritionAnalysisUseCase: sl(),
+    ),
+  );
 }
