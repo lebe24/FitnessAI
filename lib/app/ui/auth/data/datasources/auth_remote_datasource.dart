@@ -14,6 +14,7 @@ abstract class AuthRemoteDataSource {
 
   Future<void> signOut();
   UserEntity? getCurrentUser();
+  Future<void> deleteAccount();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -82,5 +83,29 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       avatarUrl: user.userMetadata?['avatar_url'] as String? ??
                  user.userMetadata?['picture'] as String?,
     );
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      final user = client.auth.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in');
+      }
+      
+      // Delete the user account from Supabase Auth
+      // This will remove the user from auth.users table
+      // Note: This requires the user to be authenticated
+      await client.auth.deleteUser();
+      
+      // Sign out from Google Sign In after successful deletion
+      final googleSignIn = GoogleSignIn.instance;
+      await googleSignIn.signOut();
+      
+      // Sign out from Supabase to clear local session
+      await client.auth.signOut();
+    } catch (e) {
+      throw Exception('Failed to delete account: ${e.toString()}');
+    }
   }
 }

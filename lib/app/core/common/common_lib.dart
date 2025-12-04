@@ -2,6 +2,7 @@ export 'package:go_router/go_router.dart';
 export 'package:fitness/app/ui/auth/data/datasources/auth_remote_datasource.dart';
 export 'package:fitness/app/ui/auth/data/repositories/auth_repository_impl.dart';
 export 'package:fitness/app/ui/auth/domain/repositories/auth_repository.dart';
+export 'package:fitness/app/ui/auth/domain/usecase/delete_account.dart';
 export 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
 export 'package:fitness/app/ui/auth/domain/usecase/sign_in_google.dart';
 export 'package:fitness/app/ui/auth/domain/usecase/sign_out.dart';

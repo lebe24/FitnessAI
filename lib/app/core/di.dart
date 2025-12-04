@@ -38,6 +38,11 @@ import 'package:fitness/app/ui/nutrition/domain/usecases/get_all_nutrition_analy
 import 'package:fitness/app/ui/nutrition/domain/usecases/get_nutrition_analysis_by_id_usecase.dart';
 import 'package:fitness/app/ui/nutrition/domain/usecases/save_nutrition_analysis_usecase.dart';
 import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_bloc.dart';
+import 'package:fitness/app/ui/profile/data/datasources/profile_local_datasource.dart';
+import 'package:fitness/app/ui/profile/data/repositories/profile_repository_impl.dart';
+import 'package:fitness/app/ui/profile/domain/repositories/profile_repository.dart';
+import 'package:fitness/app/ui/profile/domain/usecases/get_profile_usecase.dart';
+import 'package:fitness/app/ui/profile/presentation/bloc/profile_bloc.dart';
 
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -67,12 +72,14 @@ Future<void> initDI() async {
   sl.registerLazySingleton(() => SignInWithGoogle(sl()));
   sl.registerLazySingleton(() => SignOut(sl()));
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
+  sl.registerLazySingleton(() => DeleteAccount(sl()));
 
   // --- Auth Bloc ---
   sl.registerFactory(() => AuthBloc(
         signInWithGoogle: sl(),
         signOut: sl(),
         getCurrentUser: sl(),
+        deleteAccount: sl(),
       ));
 
   // --- Home Data source ---
@@ -211,6 +218,29 @@ Future<void> initDI() async {
       getAllNutritionAnalysesUseCase: sl(),
       getNutritionAnalysisByIdUseCase: sl(),
       deleteNutritionAnalysisUseCase: sl(),
+    ),
+  );
+
+  // --- Profile Data source ---
+  sl.registerLazySingleton<ProfileLocalDataSource>(
+    () => ProfileLocalDataSourceImpl(),
+  );
+
+  // --- Profile Repository ---
+  sl.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(
+      localDataSource: sl(),
+      getCurrentUser: sl(),
+    ),
+  );
+
+  // --- Profile Use cases ---
+  sl.registerLazySingleton(() => GetProfileUseCase(sl()));
+
+  // --- Profile Bloc ---
+  sl.registerFactory(
+    () => ProfileBloc(
+      getProfileUseCase: sl(),
     ),
   );
 }

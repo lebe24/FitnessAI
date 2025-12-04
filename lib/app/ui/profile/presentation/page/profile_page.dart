@@ -1,5 +1,12 @@
+import 'package:fitness/app/core/di.dart' as di;
 import 'package:fitness/app/core/theme/app_pallet.dart';
+import 'package:fitness/app/ui/profile/presentation/bloc/profile_bloc.dart';
+import 'package:fitness/app/ui/profile/presentation/bloc/profile_event.dart';
+import 'package:fitness/app/ui/profile/presentation/page/personal_details.dart';
+import 'package:fitness/app/ui/profile/utils/profile_dialogs.dart';
+import 'package:fitness/app/ui/profile/widget/user_profile.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -7,10 +14,12 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppPallete.backgroundColorBk,
-      body: SafeArea(
-        child: CustomScrollView(
+    return BlocProvider(
+      create: (context) => di.sl<ProfileBloc>()..add(LoadProfileEvent()),
+      child: Scaffold(
+        backgroundColor: AppPallete.backgroundColorBk,
+        body: SafeArea(
+          child: CustomScrollView(
           slivers: [
             // Header
             SliverToBoxAdapter(
@@ -31,7 +40,7 @@ class ProfilePage extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: _UserProfileSection(),
+                child: const UserProfileSection(),
               ),
             ),
 
@@ -100,76 +109,12 @@ class ProfilePage extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
 
-// User Profile Section Widget
-class _UserProfileSection extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppPallete.borderColor.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppPallete.borderColor.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Avatar
-          Container(
-            width: 60,
-            height: 60,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1A9A8F), // Teal color
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Text(
-                'e',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Name and Age
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'emmanuel philip amadikwa',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppPallete.whiteColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '24 years old',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.normal,
-                    color: AppPallete.whiteColor.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+
 
 // Invite Friends Section Widget
 class _InviteFriendsSection extends StatelessWidget {
@@ -279,7 +224,7 @@ class _InviteFriendsSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text(
+      child: Text(
                 'Refer a friend to earn \$10',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
@@ -346,7 +291,7 @@ class _SettingsSection extends StatelessWidget {
 class _SettingsListItem extends StatelessWidget {
   final IconData icon;
   final String title;
-  final VoidCallback? onTap;
+  final Function(BuildContext)? onTap;
   final bool isLast;
 
   const _SettingsListItem({
@@ -361,7 +306,7 @@ class _SettingsListItem extends StatelessWidget {
     return Column(
       children: [
         InkWell(
-          onTap: onTap,
+          onTap: onTap != null ? () => onTap!(context) : null,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
@@ -407,7 +352,7 @@ class _SettingsListItem extends StatelessWidget {
 class _SettingsItem {
   final IconData icon;
   final String title;
-  final VoidCallback? onTap;
+  final Function(BuildContext)? onTap;
 
   _SettingsItem({
     required this.icon,
@@ -421,35 +366,32 @@ final List<_SettingsItem> _generalSettingsItems = [
   _SettingsItem(
     icon: Icons.person_outline,
     title: 'Personal details',
-    onTap: () {
-      // TODO: Navigate to personal details page
+    onTap: (context) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const PersonalDetailsPage(),
+        ),
+      );
     },
   ),
   _SettingsItem(
     icon: Icons.refresh,
-    title: 'Adjust macronutrients',
-    onTap: () {
+    title: 'Adjust workout level',
+    onTap: (context) {
       // TODO: Navigate to macronutrients page
     },
   ),
   _SettingsItem(
     icon: Icons.flag_outlined,
-    title: 'Goal & current weight',
-    onTap: () {
+    title: 'Goal & progress',
+    onTap: (context) {
       // TODO: Navigate to goal & weight page
-    },
-  ),
-  _SettingsItem(
-    icon: Icons.history,
-    title: 'Weight history',
-    onTap: () {
-      // TODO: Navigate to weight history page
     },
   ),
   _SettingsItem(
     icon: Icons.language,
     title: 'Language',
-    onTap: () {
+    onTap: (context) {
       // TODO: Navigate to language settings page
     },
   ),
@@ -460,28 +402,28 @@ final List<_SettingsItem> _legalSupportItems = [
   _SettingsItem(
     icon: Icons.description_outlined,
     title: 'Terms and Conditions',
-    onTap: () {
+    onTap: (context) {
       // TODO: Navigate to terms page
     },
   ),
   _SettingsItem(
     icon: Icons.privacy_tip_outlined,
     title: 'Privacy Policy',
-    onTap: () {
+    onTap: (context) {
       // TODO: Navigate to privacy policy page
     },
   ),
   _SettingsItem(
     icon: Icons.email_outlined,
     title: 'Support Email',
-    onTap: () {
+    onTap: (context) {
       // TODO: Open email client
     },
   ),
   _SettingsItem(
     icon: Icons.campaign_outlined,
     title: 'Feature Request',
-    onTap: () {
+    onTap: (context) {
       // TODO: Navigate to feature request page
     },
   ),
@@ -492,15 +434,15 @@ final List<_SettingsItem> _accountItems = [
   _SettingsItem(
     icon: Icons.person_remove_outlined,
     title: 'Delete Account?',
-    onTap: () {
-      // TODO: Show delete account confirmation dialog
+    onTap: (context) {
+      showDeleteAccountDialog(context);
     },
   ),
   _SettingsItem(
     icon: Icons.logout,
     title: 'Logout',
-    onTap: () {
-      // TODO: Implement logout functionality
+    onTap: (context) {
+      handleLogout(context);
     },
   ),
 ];

@@ -26,4 +26,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   UserEntity? getCurrentUser() => remote.getCurrentUser();
+
+  @override
+  Future<void> deleteAccount() => remote.deleteAccount();
 }

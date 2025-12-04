@@ -10,3 +10,5 @@ class AppStarted extends AuthEvent {}
 class SignInWithGoogleRequested extends AuthEvent {}
 
 class SignOutRequested extends AuthEvent {}
+
+class DeleteAccountRequested extends AuthEvent {}
