@@ -135,7 +135,7 @@ class _NutritionPageState extends State<NutritionPage> {
                 'No image selected.',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
-                  color: AppPallete.whiteColor.withOpacity(0.7),
+                  color: AppPalete.whiteColor.withOpacity(0.7),
                 ),
               ),
             ),

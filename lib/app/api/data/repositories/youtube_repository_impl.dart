@@ -1,6 +1,4 @@
 import 'package:fitness/app/api/data/datasources/youtube_remote_datasource.dart';
-import 'package:fitness/app/api/data/models/youtube_video_model.dart';
-import 'package:fitness/app/api/domain/entities/youtube_video_entity.dart';
 import 'package:fitness/app/api/domain/repositories/youtube_repository.dart';
 
 /// Implementation of YouTubeRepository

@@ -35,9 +35,9 @@ class _SplashScreenState extends State<SplashScreen> {
             end: Alignment.bottomRight,
             colors: [
 
-              AppPallete.gradient3, // Purple
-              AppPallete.gradient2, // Pink
-              AppPallete.gradient3, // Orange
+              AppPalete.gradient3, // Purple
+              AppPalete.gradient2, // Pink
+              AppPalete.gradient3, // Orange
             ],
             stops: [0.0, 0.5, 1.0],
           ),
@@ -51,17 +51,17 @@ class _SplashScreenState extends State<SplashScreen> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: AppPallete.whiteColor.withOpacity(0.2),
+                  color: AppPalete.whiteColor.withOpacity(0.2),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppPallete.whiteColor.withOpacity(0.3),
+                    color: AppPalete.whiteColor.withOpacity(0.3),
                     width: 3,
                   ),
                 ),
                 child: Icon(
                   Icons.fitness_center,
                   size: 60,
-                  color: AppPallete.whiteColor,
+                  color: AppPalete.whiteColor,
                 ),
               )
                   .animate()
@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: 36,
                     fontWeight: FontWeight.bold,
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                     letterSpacing: 1.2,
                   ),
                   children: [
@@ -88,7 +88,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     TextSpan(
                       text: "form",
                       style: TextStyle(
-                        backgroundColor: AppPallete.accent1,
+                        backgroundColor: AppPalete.accent1,
                         color: Colors.black,
                       ),
                     ),
@@ -117,7 +117,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 height: 40,
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    AppPallete.whiteColor.withOpacity(0.8),
+                    AppPalete.whiteColor.withOpacity(0.8),
                   ),
                   strokeWidth: 3,
                 ),

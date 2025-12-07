@@ -31,7 +31,7 @@ Future<dynamic> chatModal({
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: AppPallete.backgroundColorBk,
+              color: AppPalete.backgroundColorBk,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Column(
@@ -42,7 +42,7 @@ Future<dynamic> chatModal({
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppPallete.whiteColor.withOpacity(0.3),
+                  color: AppPalete.whiteColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -59,7 +59,7 @@ Future<dynamic> chatModal({
                           style: GoogleFonts.poppins(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: AppPallete.whiteColor,
+                            color: AppPalete.whiteColor,
                           ),
                         ),
                         IconButton(
@@ -70,7 +70,7 @@ Future<dynamic> chatModal({
                           },
                           icon: const Icon(
                             Icons.close,
-                            color: AppPallete.whiteColor,
+                            color: AppPalete.whiteColor,
                           ),
                         ),
                       ],
@@ -175,7 +175,7 @@ Future<dynamic> chatModal({
                               Icon(
                                 Icons.chat_bubble_outline,
                                 size: 48,
-                                color: AppPallete.whiteColor.withOpacity(0.5),
+                                color: AppPalete.whiteColor.withOpacity(0.5),
                               ),
                               const SizedBox(height: 12),
                               Text(
@@ -183,7 +183,7 @@ Future<dynamic> chatModal({
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
-                                  color: AppPallete.whiteColor.withOpacity(0.7),
+                                  color: AppPalete.whiteColor.withOpacity(0.7),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -192,7 +192,7 @@ Future<dynamic> chatModal({
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
-                                  color: AppPallete.whiteColor.withOpacity(0.5),
+                                  color: AppPalete.whiteColor.withOpacity(0.5),
                                 ),
                               ),
                             ],
@@ -222,7 +222,7 @@ Future<dynamic> chatModal({
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: AppPallete.backgroundColorBk,
+                    color: AppPalete.backgroundColorBk,
                   ),
                   child: BlocBuilder<ChatBloc, ChatState>(
                     bloc: chatBloc,
@@ -234,14 +234,14 @@ Future<dynamic> chatModal({
                           Expanded(
                             child: TextField(
                               controller: messageController,
-                              style: GoogleFonts.inter(color: AppPallete.whiteColor),
+                              style: GoogleFonts.inter(color: AppPalete.whiteColor),
                               decoration: InputDecoration(
                                 hintText: 'Type your message...',
                                 hintStyle: GoogleFonts.inter(
-                                  color: AppPallete.whiteColor.withOpacity(0.5),
+                                  color: AppPalete.whiteColor.withOpacity(0.5),
                                 ),
                                 filled: true,
-                                fillColor: AppPallete.whiteColor.withOpacity(0.1),
+                                fillColor: AppPalete.whiteColor.withOpacity(0.1),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(25),
                                   borderSide: BorderSide.none,
@@ -269,8 +269,8 @@ Future<dynamic> chatModal({
                           Container(
                             decoration: BoxDecoration(
                               color: isLoading
-                                  ? AppPallete.borderColor.withOpacity(0.5)
-                                  : AppPallete.borderColor,
+                                  ? AppPalete.borderColor.withOpacity(0.5)
+                                  : AppPalete.borderColor,
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
@@ -284,7 +284,7 @@ Future<dynamic> chatModal({
                                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                       ),
                                     )
-                                  : const Icon(Icons.send, color: AppPallete.whiteColor),
+                                  : const Icon(Icons.send, color: AppPalete.whiteColor),
                             ),
                           ),
                         ],
@@ -329,7 +329,7 @@ class CustomDialog extends StatelessWidget {
       width: 300,
       height: 400,
       child:  Card(
-        color: AppPallete.backgroundColorBk,
+        color: AppPalete.backgroundColorBk,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),

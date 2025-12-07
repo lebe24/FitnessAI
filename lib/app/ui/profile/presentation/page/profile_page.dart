@@ -17,7 +17,7 @@ class ProfilePage extends StatelessWidget {
     return BlocProvider(
       create: (context) => di.sl<ProfileBloc>()..add(LoadProfileEvent()),
       child: Scaffold(
-        backgroundColor: AppPallete.backgroundColorBk,
+        backgroundColor: AppPalete.backgroundColorBk,
         body: SafeArea(
           child: CustomScrollView(
           slivers: [
@@ -30,7 +30,7 @@ class ProfilePage extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                   ),
                 ),
               ),
@@ -95,7 +95,7 @@ class ProfilePage extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: AppPallete.whiteColor.withOpacity(0.5),
+                      color: AppPalete.whiteColor.withOpacity(0.5),
                     ),
                   ),
                 ),
@@ -123,10 +123,10 @@ class _InviteFriendsSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppPallete.borderColor.withOpacity(0.3),
+        color: AppPalete.borderColor.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppPallete.borderColor.withOpacity(0.2),
+          color: AppPalete.borderColor.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -138,7 +138,7 @@ class _InviteFriendsSection extends StatelessWidget {
             children: [
               Icon(
                 Icons.people_outline,
-                color: AppPallete.whiteColor,
+                color: AppPalete.whiteColor,
                 size: 24,
               ),
               const SizedBox(width: 8),
@@ -147,7 +147,7 @@ class _InviteFriendsSection extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppPallete.whiteColor,
+                  color: AppPalete.whiteColor,
                 ),
               ),
             ],
@@ -163,8 +163,8 @@ class _InviteFriendsSection extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppPallete.borderColor.withOpacity(0.5),
-                  AppPallete.borderColor.withOpacity(0.3),
+                  AppPalete.borderColor.withOpacity(0.5),
+                  AppPalete.borderColor.withOpacity(0.3),
                 ],
               ),
             ),
@@ -174,7 +174,7 @@ class _InviteFriendsSection extends StatelessWidget {
                 Center(
                   child: Icon(
                     Icons.image_outlined,
-                    color: AppPallete.whiteColor.withOpacity(0.3),
+                    color: AppPalete.whiteColor.withOpacity(0.3),
                     size: 48,
                   ),
                 ),
@@ -191,7 +191,7 @@ class _InviteFriendsSection extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                         ),
                       ),
                       Text(
@@ -199,7 +199,7 @@ class _InviteFriendsSection extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                         ),
                       ),
                     ],
@@ -217,8 +217,8 @@ class _InviteFriendsSection extends StatelessWidget {
                 // TODO: Implement referral functionality
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppPallete.whiteColor,
-                foregroundColor: AppPallete.backgroundColorBk,
+                backgroundColor: AppPalete.whiteColor,
+                foregroundColor: AppPalete.backgroundColorBk,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -254,10 +254,10 @@ class _SettingsSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppPallete.borderColor.withOpacity(0.3),
+        color: AppPalete.borderColor.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppPallete.borderColor.withOpacity(0.2),
+          color: AppPalete.borderColor.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -270,7 +270,7 @@ class _SettingsSection extends StatelessWidget {
           //   style: GoogleFonts.poppins(
           //     fontSize: 14,
           //     fontWeight: FontWeight.w600,
-          //     color: AppPallete.whiteColor.withOpacity(0.7),
+          //     color: AppPalete.whiteColor.withOpacity(0.7),
           //   ),
           // ),
           // const SizedBox(height: 12),
@@ -314,7 +314,7 @@ class _SettingsListItem extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  color: AppPallete.whiteColor,
+                  color: AppPalete.whiteColor,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -324,13 +324,13 @@ class _SettingsListItem extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: AppPallete.whiteColor,
+                      color: AppPalete.whiteColor,
                     ),
                   ),
                 ),
                 Icon(
                   Icons.chevron_right,
-                  color: AppPallete.whiteColor.withOpacity(0.5),
+                  color: AppPalete.whiteColor.withOpacity(0.5),
                   size: 24,
                 ),
               ],
@@ -341,7 +341,7 @@ class _SettingsListItem extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: AppPallete.whiteColor.withOpacity(0.1),
+            color: AppPalete.whiteColor.withOpacity(0.1),
           ),
       ],
     );

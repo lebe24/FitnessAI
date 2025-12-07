@@ -15,14 +15,14 @@ class PersonalDetailsPage extends StatelessWidget {
     return BlocProvider(
       create: (context) => di.sl<ProfileBloc>()..add(LoadProfileEvent()),
       child: Scaffold(
-        backgroundColor: AppPallete.backgroundColorBk,
+        backgroundColor: AppPalete.backgroundColorBk,
         appBar: AppBar(
-          backgroundColor: AppPallete.backgroundColorBk,
+          backgroundColor: AppPalete.backgroundColorBk,
           elevation: 0,
           leading: IconButton(
             icon: const Icon(
               Icons.arrow_back,
-              color: AppPallete.whiteColor,
+              color: AppPalete.whiteColor,
             ),
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -31,7 +31,7 @@ class PersonalDetailsPage extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppPallete.whiteColor,
+              color: AppPalete.whiteColor,
             ),
           ),
         ),
@@ -41,7 +41,7 @@ class PersonalDetailsPage extends StatelessWidget {
               if (state is ProfileLoading) {
                 return const Center(
                   child: CircularProgressIndicator(
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                   ),
                 );
               } else if (state is ProfileError) {
@@ -52,14 +52,14 @@ class PersonalDetailsPage extends StatelessWidget {
                       Icon(
                         Icons.error_outline,
                         size: 64,
-                        color: AppPallete.errorColor,
+                        color: AppPalete.errorColor,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'Error loading profile',
                         style: GoogleFonts.poppins(
                           fontSize: 16,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -68,8 +68,8 @@ class PersonalDetailsPage extends StatelessWidget {
                           context.read<ProfileBloc>().add(RefreshProfileEvent());
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppPallete.whiteColor,
-                          foregroundColor: AppPallete.backgroundColorBk,
+                          backgroundColor: AppPalete.whiteColor,
+                          foregroundColor: AppPalete.backgroundColorBk,
                         ),
                         child: const Text('Retry'),
                       ),
@@ -115,7 +115,7 @@ class PersonalDetailsPage extends StatelessWidget {
               } else {
                 return const Center(
                   child: CircularProgressIndicator(
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                   ),
                 );
               }
@@ -202,10 +202,10 @@ class _DetailCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppPallete.borderColor.withOpacity(0.3),
+        color: AppPalete.borderColor.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppPallete.borderColor.withOpacity(0.2),
+          color: AppPalete.borderColor.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -215,12 +215,12 @@ class _DetailCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppPallete.borderColor.withOpacity(0.5),
+              color: AppPalete.borderColor.withOpacity(0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
-              color: AppPallete.whiteColor,
+              color: AppPalete.whiteColor,
               size: 24,
             ),
           ),
@@ -234,7 +234,7 @@ class _DetailCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: AppPallete.whiteColor.withOpacity(0.7),
+                    color: AppPalete.whiteColor.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -243,7 +243,7 @@ class _DetailCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                   ),
                 ),
               ],

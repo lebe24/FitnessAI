@@ -94,9 +94,25 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
       
       // Delete the user account from Supabase Auth
-      // This will remove the user from auth.users table
-      // Note: This requires the user to be authenticated
-      await client.auth.deleteUser();
+      // Note: client.auth.deleteUser() doesn't exist in GoTrueClient
+      // We need to use an Edge Function that handles the deletion server-side
+      // The Edge Function should use the service role key for security
+      
+      // Call Edge Function to delete user
+      final response = await client.functions.invoke(
+        'delete-user',
+        body: {'userId': user.id},
+      );
+      
+      if (response.status != 200) {
+        final errorData = response.data;
+        final errorMessage = errorData != null && errorData is Map
+            ? errorData['error']?.toString() ?? 
+              errorData['message']?.toString() ?? 
+              'Failed to delete user'
+            : 'Failed to delete user: HTTP ${response.status}';
+        throw Exception(errorMessage);
+      }
       
       // Sign out from Google Sign In after successful deletion
       final googleSignIn = GoogleSignIn.instance;
@@ -105,6 +121,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // Sign out from Supabase to clear local session
       await client.auth.signOut();
     } catch (e) {
+      // If Edge Function doesn't exist, provide helpful error message
+      if (e.toString().contains('Function not found') || 
+          e.toString().contains('404') ||
+          e.toString().contains('not found')) {
+        throw Exception(
+          'Delete account feature requires a Supabase Edge Function named "delete-user". '
+          'Please set up the Edge Function or contact support.',
+        );
+      }
       throw Exception('Failed to delete account: ${e.toString()}');
     }
   }

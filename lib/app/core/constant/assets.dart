@@ -9,5 +9,5 @@ class ImagePath{
   static const String focus = 'assets/image/focus_wm.jpg';
   static const String unstoppable = 'assets/image/unstoppable.jpg';
   static const String bloodandsweat = 'assets/image/bloodandsweat.jpg';
-  static const String motivateBanner = 'assets/image/motivational_banner.jpg';
+  static const String motivateBanner = 'assets/image/motivation_banner.png';
 }

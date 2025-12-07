@@ -49,14 +49,14 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPallete.backgroundColorBk,
+      backgroundColor: AppPalete.backgroundColorBk,
       appBar: AppBar(
-        backgroundColor: AppPallete.backgroundColorBk,
+        backgroundColor: AppPalete.backgroundColorBk,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back,
-            color: AppPallete.whiteColor,
+            color: AppPalete.whiteColor,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -65,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppPallete.whiteColor,
+            color: AppPalete.whiteColor,
           ),
         ),
       ),
@@ -73,7 +73,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                  color: AppPallete.whiteColor,
+                  color: AppPalete.whiteColor,
                 ),
               )
             : _errorMessage != null
@@ -84,14 +84,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         Icon(
                           Icons.error_outline,
                           size: 64,
-                          color: AppPallete.whiteColor.withOpacity(0.5),
+                          color: AppPalete.whiteColor.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           _errorMessage!,
                           style: GoogleFonts.inter(
                             fontSize: 16,
-                            color: AppPallete.whiteColor.withOpacity(0.7),
+                            color: AppPalete.whiteColor.withOpacity(0.7),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -99,8 +99,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         ElevatedButton(
                           onPressed: _loadStoredPlans,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppPallete.whiteColor,
-                            foregroundColor: AppPallete.backgroundColorBk,
+                            backgroundColor: AppPalete.whiteColor,
+                            foregroundColor: AppPalete.backgroundColorBk,
                           ),
                           child: const Text('Retry'),
                         ),
@@ -115,7 +115,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             Icon(
                               Icons.fitness_center,
                               size: 64,
-                              color: AppPallete.whiteColor.withOpacity(0.5),
+                              color: AppPalete.whiteColor.withOpacity(0.5),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -123,7 +123,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               style: GoogleFonts.poppins(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
-                                color: AppPallete.whiteColor,
+                                color: AppPalete.whiteColor,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -131,7 +131,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               'Generate your first plan to see it here',
                               style: GoogleFonts.inter(
                                 fontSize: 14,
-                                color: AppPallete.whiteColor.withOpacity(0.7),
+                                color: AppPalete.whiteColor.withOpacity(0.7),
                               ),
                             ),
                           ],
@@ -139,8 +139,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       )
                     : RefreshIndicator(
                         onRefresh: _loadStoredPlans,
-                        color: AppPallete.whiteColor,
-                        backgroundColor: AppPallete.backgroundColorBk,
+                        color: AppPalete.whiteColor,
+                        backgroundColor: AppPalete.backgroundColorBk,
                         child: GridView.builder(
                           padding: const EdgeInsets.all(16),
                           gridDelegate:
@@ -175,10 +175,10 @@ class _FitnessPlanCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: AppPallete.borderColor.withOpacity(0.3),
+          color: AppPalete.borderColor.withOpacity(0.3),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppPallete.borderColor.withOpacity(0.2),
+            color: AppPalete.borderColor.withOpacity(0.2),
             width: 1,
           ),
         ),
@@ -199,11 +199,11 @@ class _FitnessPlanCard extends StatelessWidget {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return Container(
-                              color: AppPallete.borderColor.withOpacity(0.5),
+                              color: AppPalete.borderColor.withOpacity(0.5),
                               child: const Center(
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: AppPallete.whiteColor,
+                                  color: AppPalete.whiteColor,
                                 ),
                               ),
                             );
@@ -216,10 +216,10 @@ class _FitnessPlanCard extends StatelessWidget {
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
                                   color:
-                                      AppPallete.borderColor.withOpacity(0.5),
+                                      AppPalete.borderColor.withOpacity(0.5),
                                   child: const Icon(
                                     Icons.broken_image,
-                                    color: AppPallete.whiteColor,
+                                    color: AppPalete.whiteColor,
                                     size: 40,
                                   ),
                                 );
@@ -227,20 +227,20 @@ class _FitnessPlanCard extends StatelessWidget {
                             );
                           }
                           return Container(
-                            color: AppPallete.borderColor.withOpacity(0.5),
+                            color: AppPalete.borderColor.withOpacity(0.5),
                             child: const Icon(
                               Icons.fitness_center,
-                              color: AppPallete.whiteColor,
+                              color: AppPalete.whiteColor,
                               size: 40,
                             ),
                           );
                         },
                       )
                     : Container(
-                        color: AppPallete.borderColor.withOpacity(0.5),
+                        color: AppPalete.borderColor.withOpacity(0.5),
                         child: const Icon(
                           Icons.fitness_center,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                           size: 40,
                         ),
                       ),
@@ -263,7 +263,7 @@ class _FitnessPlanCard extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: AppPallete.whiteColor,
+                            color: AppPalete.whiteColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -273,7 +273,7 @@ class _FitnessPlanCard extends StatelessWidget {
                           plan.workoutPlan.plan.focus,
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: AppPallete.whiteColor.withOpacity(0.7),
+                            color: AppPalete.whiteColor.withOpacity(0.7),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -287,7 +287,7 @@ class _FitnessPlanCard extends StatelessWidget {
                           _formatDate(plan.createdAt),
                           style: GoogleFonts.inter(
                             fontSize: 10,
-                            color: AppPallete.whiteColor.withOpacity(0.5),
+                            color: AppPalete.whiteColor.withOpacity(0.5),
                           ),
                         ),
                         if (plan.isSynced)

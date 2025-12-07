@@ -152,7 +152,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(
                         Icons.arrow_back,
-                        color: AppPallete.whiteColor,
+                        color: AppPalete.whiteColor,
                       ),
                     ),
                     const Spacer(),
@@ -161,7 +161,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: AppPallete.whiteColor,
+                        color: AppPalete.whiteColor,
                       ),
                     ),
                     const Spacer(),
@@ -183,7 +183,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                         style: GoogleFonts.inter(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -191,10 +191,10 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppPallete.whiteColor.withOpacity(0.1),
+                          color: AppPalete.whiteColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: AppPallete.whiteColor.withOpacity(0.2),
+                            color: AppPalete.whiteColor.withOpacity(0.2),
                             width: 1,
                           ),
                         ),
@@ -208,7 +208,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                                   style: GoogleFonts.inter(
                                     fontSize: 36,
                                     fontWeight: FontWeight.bold,
-                                    color: AppPallete.whiteColor,
+                                    color: AppPalete.whiteColor,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -216,7 +216,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                                   'Sets',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: AppPallete.whiteColor.withOpacity(0.7),
+                                    color: AppPalete.whiteColor.withOpacity(0.7),
                                   ),
                                 ),
                               ],
@@ -224,7 +224,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                             Container(
                               width: 1,
                               height: 50,
-                              color: AppPallete.whiteColor.withOpacity(0.3),
+                              color: AppPalete.whiteColor.withOpacity(0.3),
                             ),
                             Column(
                               children: [
@@ -233,7 +233,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                                   style: GoogleFonts.inter(
                                     fontSize: 36,
                                     fontWeight: FontWeight.bold,
-                                    color: AppPallete.whiteColor,
+                                    color: AppPalete.whiteColor,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -241,7 +241,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                                   'Reps',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: AppPallete.whiteColor.withOpacity(0.7),
+                                    color: AppPalete.whiteColor.withOpacity(0.7),
                                   ),
                                 ),
                               ],
@@ -256,17 +256,17 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                           style: GoogleFonts.inter(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppPallete.whiteColor,
+                            color: AppPalete.whiteColor,
                           ),
                         ),
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: AppPallete.whiteColor.withOpacity(0.1),
+                            color: AppPalete.whiteColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: AppPallete.whiteColor.withOpacity(0.2),
+                              color: AppPalete.whiteColor.withOpacity(0.2),
                               width: 1,
                             ),
                           ),
@@ -275,7 +275,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w400,
-                              color: AppPallete.whiteColor.withOpacity(0.9),
+                              color: AppPalete.whiteColor.withOpacity(0.9),
                               height: 1.6,
                             ),
                           ),
@@ -286,7 +286,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                       Text('Make sure to follow the instructions carefully to avoid injury and maximize effectiveness.',
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color: AppPallete.whiteColor.withOpacity(0.7),
+                            color: AppPalete.whiteColor.withOpacity(0.7),
                           ),
                         ),
                       const SizedBox(height: 20),
@@ -296,10 +296,10 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                           height: 200,
                           padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: AppPallete.whiteColor.withOpacity(0.1),
+                              color: AppPalete.whiteColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: AppPallete.whiteColor.withOpacity(0.2),
+                                color: AppPalete.whiteColor.withOpacity(0.2),
                                 width: 1,
                               ),
                           ),
@@ -309,7 +309,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w400,
-                                color: AppPallete.whiteColor.withOpacity(0.9),
+                                color: AppPalete.whiteColor.withOpacity(0.9),
                                 height: 1.6,
                               ),
                             ),
@@ -321,7 +321,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                         style: GoogleFonts.inter(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -350,7 +350,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      color: AppPallete.borderColor.withOpacity(0.6),
+                      color: AppPalete.borderColor.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -358,7 +358,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                       children: [
                         const Icon(
                           Icons.check_circle_outline,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                           size: 24,
                         ),
                         const SizedBox(width: 12),
@@ -367,7 +367,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                           style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: AppPallete.whiteColor,
+                            color: AppPalete.whiteColor,
                           ),
                         ),
                       ],
@@ -386,16 +386,16 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: AppPallete.whiteColor.withOpacity(0.1),
+        color: AppPalete.whiteColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppPallete.whiteColor.withOpacity(0.2),
+          color: AppPalete.whiteColor.withOpacity(0.2),
           width: 1,
         ),
       ),
       child: const Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppPallete.whiteColor),
+          valueColor: AlwaysStoppedAnimation<Color>(AppPalete.whiteColor),
         ),
       ),
     );
@@ -421,7 +421,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppPallete.whiteColor,
+              color: AppPalete.whiteColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -429,7 +429,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
             _errorMessage ?? 'Unknown error',
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: AppPallete.whiteColor.withOpacity(0.7),
+              color: AppPalete.whiteColor.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -441,7 +441,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
             child: Text(
               'Retry',
               style: GoogleFonts.inter(
-                color: AppPallete.whiteColor,
+                color: AppPalete.whiteColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -456,10 +456,10 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
       height: 200,
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: AppPallete.whiteColor.withOpacity(0.1),
+        color: AppPalete.whiteColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppPallete.whiteColor.withOpacity(0.2),
+          color: AppPalete.whiteColor.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -469,7 +469,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
           children: [
             Icon(
               Icons.video_library_outlined,
-              color: AppPallete.whiteColor.withOpacity(0.5),
+              color: AppPalete.whiteColor.withOpacity(0.5),
               size: 48,
             ),
             const SizedBox(height: 12),
@@ -477,7 +477,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
               'No videos found',
               style: GoogleFonts.inter(
                 fontSize: 16,
-                color: AppPallete.whiteColor.withOpacity(0.7),
+                color: AppPalete.whiteColor.withOpacity(0.7),
               ),
             ),
           ],
@@ -550,10 +550,10 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
       child: Container(
         width: 300,
         decoration: BoxDecoration(
-          color: AppPallete.whiteColor.withOpacity(0.1),
+          color: AppPalete.whiteColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppPallete.whiteColor.withOpacity(0.2),
+            color: AppPalete.whiteColor.withOpacity(0.2),
             width: 1,
           ),
         ),
@@ -570,11 +570,11 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
-                      color: AppPallete.whiteColor.withOpacity(0.1),
+                      color: AppPalete.whiteColor.withOpacity(0.1),
                       child: const Center(
                         child: Icon(
                           Icons.video_library_outlined,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                           size: 48,
                         ),
                       ),
@@ -583,11 +583,11 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                 )
               else
                 Container(
-                  color: AppPallete.whiteColor.withOpacity(0.1),
+                  color: AppPalete.whiteColor.withOpacity(0.1),
                   child: const Center(
                     child: Icon(
                       Icons.video_library_outlined,
-                      color: AppPallete.whiteColor,
+                      color: AppPalete.whiteColor,
                       size: 48,
                     ),
                   ),
@@ -631,7 +631,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppPallete.whiteColor,
+                        color: AppPalete.whiteColor,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -651,10 +651,10 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                       height: 200,
                       padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppPallete.whiteColor.withOpacity(0.1),
+                          color: AppPalete.whiteColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: AppPallete.whiteColor.withOpacity(0.2),
+                            color: AppPalete.whiteColor.withOpacity(0.2),
                             width: 1,
                           ),
                       ),
@@ -669,7 +669,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                         }, 
                         icon: const Icon(
                     Icons.play_circle_outline,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                           size: 48,)
                     ));
   }

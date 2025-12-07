@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:fitness/app/api/data/models/youtube_video_model.dart';
 import 'package:fitness/app/core/constant/constant.dart';
 
 /// Data source interface for YouTube via RapidAPI

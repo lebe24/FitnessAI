@@ -27,7 +27,7 @@ class ScreenPaths {
   static String nutritionAnalysis = '/nutrition-analysis';
 
   static final appRouter = GoRouter(
-    initialLocation: home,
+    initialLocation: splash,
     routes: [
       GoRoute(
         path: welcome,

@@ -19,7 +19,9 @@ import 'package:fitness/app/chat/domain/usecases/connect_chat_usecase.dart';
 import 'package:fitness/app/chat/domain/usecases/disconnect_chat_usecase.dart';
 import 'package:fitness/app/chat/domain/usecases/send_message_usecase.dart';
 import 'package:fitness/app/chat/presentation/bloc/chat_bloc.dart';
+import 'package:fitness/app/api/data/datasources/agent_remote_datasource.dart';
 import 'package:fitness/app/api/data/datasources/exercise_remote_datasource.dart';
+import 'package:fitness/app/api/data/datasources/supabase_remote_datasource.dart';
 import 'package:fitness/app/api/data/datasources/youtube_remote_datasource.dart';
 import 'package:fitness/app/api/data/repositories/exercise_repository_impl.dart';
 import 'package:fitness/app/api/data/repositories/youtube_repository_impl.dart';
@@ -158,6 +160,16 @@ Future<void> initDI() async {
       sendMessageUsecase: sl(),
       chatRepository: sl(),
     ),
+  );
+
+  // --- Supabase Data source ---
+  sl.registerLazySingleton<SupabaseRemoteDataSource>(
+    () => SupabaseRemoteDataSourceImpl(),
+  );
+
+  // --- Agent Data source ---
+  sl.registerLazySingleton<AgentRemoteDataSource>(
+    () => AgentRemoteDataSourceImpl(),
   );
 
   // --- Exercise API Data sources ---

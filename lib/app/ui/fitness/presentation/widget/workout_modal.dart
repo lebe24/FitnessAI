@@ -19,7 +19,7 @@ class WorkoutModal extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppPallete.backgroundColorBk,
+        color: AppPalete.backgroundColorBk,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(25),
         ),
@@ -42,7 +42,7 @@ class WorkoutModal extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: AppPallete.whiteColor,
+                        color: AppPalete.whiteColor,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -50,7 +50,7 @@ class WorkoutModal extends StatelessWidget {
                       _formatDate(date),
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: AppPallete.whiteColor.withOpacity(0.7),
+                        color: AppPalete.whiteColor.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -60,7 +60,7 @@ class WorkoutModal extends StatelessWidget {
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(
                   Icons.close,
-                  color: AppPallete.whiteColor,
+                  color: AppPalete.whiteColor,
                 ),
               ),
             ],
@@ -70,7 +70,7 @@ class WorkoutModal extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppPallete.borderColor.withOpacity(0.3),
+              color: AppPalete.borderColor.withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -89,7 +89,7 @@ class WorkoutModal extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppPallete.whiteColor,
+              color: AppPalete.whiteColor,
             ),
           ),
           const SizedBox(height: 16),
@@ -103,10 +103,10 @@ class WorkoutModal extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppPallete.borderColor.withOpacity(0.2),
+                    color: AppPalete.borderColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppPallete.borderColor.withOpacity(0.3),
+                      color: AppPalete.borderColor.withOpacity(0.3),
                       width: 1,
                     ),
                   ),
@@ -122,7 +122,7 @@ class WorkoutModal extends StatelessWidget {
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: AppPallete.whiteColor,
+                                color: AppPalete.whiteColor,
                               ),
                             ),
                           ),
@@ -152,7 +152,7 @@ class WorkoutModal extends StatelessWidget {
                           exercise.notes!,
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: AppPallete.whiteColor.withOpacity(0.7),
+                            color: AppPalete.whiteColor.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -189,7 +189,7 @@ class WorkoutModal extends StatelessWidget {
                       workoutDay.tip!,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: AppPallete.whiteColor.withOpacity(0.9),
+                        color: AppPalete.whiteColor.withOpacity(0.9),
                       ),
                     ),
                   ),

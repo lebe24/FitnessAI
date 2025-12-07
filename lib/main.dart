@@ -7,8 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
-import 'package:carousel_slider/carousel_slider.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -22,15 +20,15 @@ Future<void> main() async {
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: Constant.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.whiteThemeMode,
-      routerConfig: ScreenPaths.appRouter,
-    );
-  }
+    @override
+    Widget build(BuildContext context) {
+      return MaterialApp.router(
+        title: Constant.appName,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.whiteThemeMode,
+        routerConfig: ScreenPaths.appRouter,
+      );
+    }
 }
 
 

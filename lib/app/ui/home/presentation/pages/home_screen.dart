@@ -4,7 +4,7 @@ import 'package:fitness/app/ui/activity/activity_page.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/fitness_page.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
 import 'package:fitness/app/ui/home/presentation/widget/custom_bottomBar.dart';
-import 'package:fitness/app/ui/profile/profile_page.dart';
+import 'package:fitness/app/ui/profile/presentation/page/profile_page.dart';
 import 'package:fitness/app/ui/stats/statistics_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -33,7 +33,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
-      backgroundColor: AppPallete.backgroundColorBk,
+      backgroundColor: AppPalete.backgroundColorBk,
       
       body: Stack(
         children: [

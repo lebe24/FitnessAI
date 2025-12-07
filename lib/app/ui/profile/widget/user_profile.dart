@@ -19,10 +19,10 @@ class UserProfileSection extends StatelessWidget {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppPallete.borderColor.withOpacity(0.3),
+              color: AppPalete.borderColor.withOpacity(0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppPallete.borderColor.withOpacity(0.2),
+                color: AppPalete.borderColor.withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -58,7 +58,7 @@ class UserProfileSection extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                         ),
                       ),
                       if (profile.ageString.isNotEmpty) ...[
@@ -68,7 +68,7 @@ class UserProfileSection extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.normal,
-                            color: AppPallete.whiteColor.withOpacity(0.7),
+                            color: AppPalete.whiteColor.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -82,10 +82,10 @@ class UserProfileSection extends StatelessWidget {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppPallete.borderColor.withOpacity(0.3),
+              color: AppPalete.borderColor.withOpacity(0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppPallete.borderColor.withOpacity(0.2),
+                color: AppPalete.borderColor.withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -96,7 +96,7 @@ class UserProfileSection extends StatelessWidget {
                   height: 60,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                   ),
                 ),
                 SizedBox(width: 16),
@@ -104,7 +104,7 @@ class UserProfileSection extends StatelessWidget {
                   child: Text(
                     'Loading profile...',
                     style: TextStyle(
-                      color: AppPallete.whiteColor,
+                      color: AppPalete.whiteColor,
                       fontSize: 16,
                     ),
                   ),
@@ -116,10 +116,10 @@ class UserProfileSection extends StatelessWidget {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppPallete.borderColor.withOpacity(0.3),
+              color: AppPalete.borderColor.withOpacity(0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppPallete.borderColor.withOpacity(0.2),
+                color: AppPalete.borderColor.withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -127,7 +127,7 @@ class UserProfileSection extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.error_outline,
-                  color: AppPallete.errorColor,
+                  color: AppPalete.errorColor,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
@@ -136,14 +136,14 @@ class UserProfileSection extends StatelessWidget {
                     'Error loading profile',
                     style: GoogleFonts.poppins(
                       fontSize: 14,
-                      color: AppPallete.whiteColor,
+                      color: AppPalete.whiteColor,
                     ),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(
                     Icons.refresh,
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                   ),
                   onPressed: () {
                     context.read<ProfileBloc>().add(RefreshProfileEvent());
@@ -157,10 +157,10 @@ class UserProfileSection extends StatelessWidget {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppPallete.borderColor.withOpacity(0.3),
+              color: AppPalete.borderColor.withOpacity(0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppPallete.borderColor.withOpacity(0.2),
+                color: AppPalete.borderColor.withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -171,7 +171,7 @@ class UserProfileSection extends StatelessWidget {
                   height: 60,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                   ),
                 ),
                 SizedBox(width: 16),
@@ -179,7 +179,7 @@ class UserProfileSection extends StatelessWidget {
                   child: Text(
                     'Loading...',
                     style: TextStyle(
-                      color: AppPallete.whiteColor,
+                      color: AppPalete.whiteColor,
                       fontSize: 16,
                     ),
                   ),

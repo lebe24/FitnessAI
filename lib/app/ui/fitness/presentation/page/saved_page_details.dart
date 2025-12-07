@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class SavePageDetail extends StatefulWidget {
-  final Product product;
-  const SavePageDetail({ Key? key, required this.product }) : super(key: key);
+  
+  const SavePageDetail({ Key? key}) : super(key: key);
 
   @override
   _SavePageDetailState createState() => _SavePageDetailState();
@@ -45,7 +45,7 @@ class _SavePageDetailState extends State<SavePageDetail> {
               stretchModes: [
                 StretchMode.zoomBackground,
               ],
-              background: Image.network(widget.product.imageURL, fit: BoxFit.cover,)
+              background: Image.network("https://images.unsplash.com/photo-1539533018447-63fcce2678e3?ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8Y29hdHxlbnwwfHwwfHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60", fit: BoxFit.cover,)
             ),
             bottom: PreferredSize(
               preferredSize: Size.fromHeight(45),
@@ -90,14 +90,14 @@ class _SavePageDetailState extends State<SavePageDetail> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(widget.product.name,
+                            Text("Winter Coat",
                               style: TextStyle(color: Colors.black, fontSize: 22, fontWeight: FontWeight.bold,),
                             ),
                             SizedBox(height: 5,),
-                            Text(widget.product.brand, style: TextStyle(color: Colors.orange.shade400, fontSize: 14,),),
+                            Text("OSIRUS", style: TextStyle(color: Colors.orange.shade400, fontSize: 14,),),
                           ],
                         ),
-                        Text("\$ " +widget.product.price.toString() + '.00',
+                        Text("\$ 120.00",
                           style: TextStyle(color: Colors.black, fontSize: 16),
                         ),
                       ],

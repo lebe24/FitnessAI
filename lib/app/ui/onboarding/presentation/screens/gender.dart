@@ -47,12 +47,12 @@ class GenderStep extends StatelessWidget {
           },
             child: Column(
               children: [
-                Icon(Icons.male, size: 80,color: selectedGender == "Male" ?  AppPallete.accent1 : Colors.black,).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
+                Icon(Icons.male, size: 80,color: selectedGender == "Male" ?  AppPalete.accent1 : Colors.black,).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
                 Text("Male",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: selectedGender == "Male" ?  AppPallete.accent1 : Colors.black,
+                    color: selectedGender == "Male" ?  AppPalete.accent1 : Colors.black,
                   ),
                 ).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0)
               ],
@@ -66,12 +66,12 @@ class GenderStep extends StatelessWidget {
             context.read<OnboardingBloc>().add(SelectGender("Female"));
           },child: Column(
             children: [
-              Icon(Icons.female, size: 80,color: selectedGender == "Female" ?  AppPallete.accent1 : Colors.black).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
+              Icon(Icons.female, size: 80,color: selectedGender == "Female" ?  AppPalete.accent1 : Colors.black).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
               Text("Female",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: selectedGender == "Female" ?  AppPallete.accent1 : Colors.black,
+                    color: selectedGender == "Female" ?  AppPalete.accent1 : Colors.black,
                   ),
               )
             ],
@@ -92,8 +92,8 @@ class GenderStep extends StatelessWidget {
                     Positioned(
                       top: 20,
                       left: 5,
-                      child: Icon(Icons.female, size: 80,color: selectedGender == "Others" ?  AppPallete.accent1 : Colors.black).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0)),
-                    Icon(Icons.male, size: 80,color: selectedGender == "Others" ?  AppPallete.accent1 : Colors.black).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
+                      child: Icon(Icons.female, size: 80,color: selectedGender == "Others" ?  AppPalete.accent1 : Colors.black).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0)),
+                    Icon(Icons.male, size: 80,color: selectedGender == "Others" ?  AppPalete.accent1 : Colors.black).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3, end: 0),
                 
                   ],
                 ),
@@ -102,7 +102,7 @@ class GenderStep extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: selectedGender == "Prefer Not To Say" ?  AppPallete.accent1 : Colors.black,
+                    color: selectedGender == "Prefer Not To Say" ?  AppPalete.accent1 : Colors.black,
                   ),
               )
             ],

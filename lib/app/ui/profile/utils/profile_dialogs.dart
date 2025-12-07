@@ -16,20 +16,20 @@ void showDeleteAccountDialog(BuildContext context) {
     context: context,
     builder: (BuildContext dialogContext) {
       return AlertDialog(
-        backgroundColor: AppPallete.borderColor.withOpacity(0.9),
+        backgroundColor: AppPalete.borderColor.withOpacity(0.9),
         title: Text(
           'Delete Account',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppPallete.whiteColor,
+            color: AppPalete.whiteColor,
           ),
         ),
         content: Text(
           'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.',
           style: GoogleFonts.poppins(
             fontSize: 14,
-            color: AppPallete.whiteColor.withOpacity(0.9),
+            color: AppPalete.whiteColor.withOpacity(0.9),
           ),
         ),
         actions: [
@@ -38,7 +38,7 @@ void showDeleteAccountDialog(BuildContext context) {
             child: Text(
               'Cancel',
               style: GoogleFonts.poppins(
-                color: AppPallete.whiteColor.withOpacity(0.7),
+                color: AppPalete.whiteColor.withOpacity(0.7),
               ),
             ),
           ),
@@ -56,7 +56,7 @@ void showDeleteAccountDialog(BuildContext context) {
                   Navigator.of(dialogContext).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      backgroundColor: AppPallete.errorColor,
+                      backgroundColor: AppPalete.errorColor,
                       content: Text(
                         'Failed to delete account: ${state.message}',
                         style: GoogleFonts.poppins(),
@@ -79,13 +79,13 @@ void showDeleteAccountDialog(BuildContext context) {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AppPallete.errorColor,
+                            color: AppPalete.errorColor,
                           ),
                         )
                       : Text(
                           'Delete',
                           style: GoogleFonts.poppins(
-                            color: AppPallete.errorColor,
+                            color: AppPalete.errorColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -105,20 +105,20 @@ void handleLogout(BuildContext context) {
     context: context,
     builder: (BuildContext dialogContext) {
       return AlertDialog(
-        backgroundColor: AppPallete.borderColor.withOpacity(0.9),
+        backgroundColor: AppPalete.borderColor.withOpacity(0.9),
         title: Text(
           'Logout',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppPallete.whiteColor,
+            color: AppPalete.whiteColor,
           ),
         ),
         content: Text(
           'Are you sure you want to logout?',
           style: GoogleFonts.poppins(
             fontSize: 14,
-            color: AppPallete.whiteColor.withOpacity(0.9),
+            color: AppPalete.whiteColor.withOpacity(0.9),
           ),
         ),
         actions: [
@@ -127,7 +127,7 @@ void handleLogout(BuildContext context) {
             child: Text(
               'Cancel',
               style: GoogleFonts.poppins(
-                color: AppPallete.whiteColor.withOpacity(0.7),
+                color: AppPalete.whiteColor.withOpacity(0.7),
               ),
             ),
           ),
@@ -143,7 +143,7 @@ void handleLogout(BuildContext context) {
                   Navigator.of(dialogContext).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      backgroundColor: AppPallete.errorColor,
+                      backgroundColor: AppPalete.errorColor,
                       content: Text(
                         'Failed to logout: ${state.message}',
                         style: GoogleFonts.poppins(),
@@ -166,13 +166,13 @@ void handleLogout(BuildContext context) {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AppPallete.whiteColor,
+                            color: AppPalete.whiteColor,
                           ),
                         )
                       : Text(
                           'Logout',
                           style: GoogleFonts.poppins(
-                            color: AppPallete.whiteColor,
+                            color: AppPalete.whiteColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

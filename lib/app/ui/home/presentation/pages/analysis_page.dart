@@ -313,7 +313,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppPallete.sparkGradient,
+                                  color: AppPalete.sparkGradient,
                                   blurRadius: 5,
                                   offset: const Offset(2, 5),
                                 ),

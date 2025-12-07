@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class AppPallete {
+class AppPalete {
   static const Color backgroundColorBk = Color.fromRGBO(24, 24, 32, 1);
   static const Color backgroundColorWH = Color.fromRGBO(235, 235, 242, 1);
   static final Color accent1 = const Color.fromARGB(225, 26, 202, 49);

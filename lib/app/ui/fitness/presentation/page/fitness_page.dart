@@ -172,7 +172,7 @@ class _FitnessPageState extends State<FitnessPage> {
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: AppPallete.whiteColor,
+                        color: AppPalete.whiteColor,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -193,7 +193,7 @@ class _FitnessPageState extends State<FitnessPage> {
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: AppPallete.whiteColor,
+                        color: AppPalete.whiteColor,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -232,7 +232,7 @@ class _FitnessPageState extends State<FitnessPage> {
                                           style: GoogleFonts.poppins(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
-                                            color: AppPallete.borderColor,
+                                            color: AppPalete.borderColor,
                                           ),
 
                                         ),
@@ -278,19 +278,6 @@ class _FitnessPageState extends State<FitnessPage> {
                   ImagePath.motivateBanner,
                   fit: BoxFit.cover,
                 ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 60,
-            left:120,
-            child: Text(
-              textAlign: TextAlign.center,
-              "Stay Motivated!\n",
-              style: GoogleFonts.quicksand(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: AppPallete.whiteColor,
               ),
             ),
           ),
@@ -400,14 +387,14 @@ class _FitnessPageState extends State<FitnessPage> {
                                       ),
                                     ],
                               color: isSelected
-                                  ? AppPallete.borderColor.withOpacity(0.6)
+                                  ? AppPalete.borderColor.withOpacity(0.6)
                                   : Colors.transparent,
                               border: Border.all(
                                 color: isSelected
-                                    ? AppPallete.whiteColor.withOpacity(0.4)
+                                    ? AppPalete.whiteColor.withOpacity(0.4)
                                     : hasWorkout
                                         ? const Color(0xFFB7F034).withOpacity(0.6)
-                                        : AppPallete.whiteColor.withOpacity(0.1),
+                                        : AppPalete.whiteColor.withOpacity(0.1),
                                 width: isSelected ? 2 : hasWorkout ? 2 : 1,
                                 style: BorderStyle.solid,
                               ),
@@ -421,7 +408,7 @@ class _FitnessPageState extends State<FitnessPage> {
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: AppPallete.whiteColor,
+                                      color: AppPalete.whiteColor,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -430,7 +417,7 @@ class _FitnessPageState extends State<FitnessPage> {
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: AppPallete.whiteColor,
+                                      color: AppPalete.whiteColor,
                                     ),
                                   ),
                                 ],
@@ -518,7 +505,7 @@ Row _greetings() {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: AppPallete.whiteColor.withOpacity(0.2),
+                              color: AppPalete.whiteColor.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -534,7 +521,7 @@ Row _greetings() {
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: AppPallete.whiteColor,
+                                    color: AppPalete.whiteColor,
                                   ),
                                 ),
                               ],
@@ -570,7 +557,7 @@ Row _greetings() {
                         style: GoogleFonts.poppins(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                         ),
                       ),
                     ),
@@ -591,7 +578,7 @@ Row _greetings() {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppPallete.whiteColor.withOpacity(0.1),
+        color: AppPalete.whiteColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -638,15 +625,17 @@ Row _greetings() {
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppPallete.whiteColor,
+                    color: AppPalete.whiteColor,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: AppPallete.whiteColor.withOpacity(0.8),
+                Expanded(
+                  child: Text(
+                    description,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: AppPalete.whiteColor.withOpacity(0.8),
+                    ),
                   ),
                 ),
               ],
@@ -659,11 +648,11 @@ Row _greetings() {
 
   Widget _buildImagePlaceholder() {
     return Container(
-      color: AppPallete.borderColor.withOpacity(0.3),
+      color: AppPalete.borderColor.withOpacity(0.3),
       child: const Center(
         child: Icon(
           Icons.image_outlined,
-          color: AppPallete.whiteColor,
+          color: AppPalete.whiteColor,
           size: 40,
         ),
       ),
@@ -678,7 +667,7 @@ Row _greetings() {
           style: GoogleFonts.poppins(
             fontSize: 15,
             fontWeight: FontWeight.bold,
-            color: AppPallete.whiteColor,
+            color: AppPalete.whiteColor,
           ),
         ),
       ],

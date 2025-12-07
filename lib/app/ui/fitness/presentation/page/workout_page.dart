@@ -138,7 +138,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
         return FloatingActionButton(
           key: const ValueKey('fab_none'),
           onPressed: () => _toggleAiChat(exercise),
-          backgroundColor: AppPallete.backgroundColorBk,
+          backgroundColor: AppPalete.backgroundColorBk,
           child: const Icon(Icons.chat_bubble, color: Colors.white),
         );
       case AiChat.active:
@@ -260,7 +260,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
           },
           child: _buildFloatingActionButton(exercises),
         ),
-        backgroundColor: AppPallete.backgroundColorBk,
+        backgroundColor: AppPalete.backgroundColorBk,
       body: SafeArea(
         child: Column(
           children: [
@@ -312,7 +312,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                                 'No exercises available',
                                 style: GoogleFonts.inter(
                                   fontSize: 16,
-                                  color: AppPallete.whiteColor.withOpacity(0.7),
+                                  color: AppPalete.whiteColor.withOpacity(0.7),
                                 ),
                               ),
                             ),
@@ -339,7 +339,7 @@ Widget _buildSectionHeader(String title) {
       style: GoogleFonts.inter(
         fontSize: 20,
         fontWeight: FontWeight.bold,
-        color: AppPallete.whiteColor,
+        color: AppPalete.whiteColor,
       ),
     );
   }
@@ -403,7 +403,7 @@ Widget _buildSectionHeader(String title) {
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: AppPallete.whiteColor.withOpacity(0.9),
+                  color: AppPalete.whiteColor.withOpacity(0.9),
                 ),
               ),
               const SizedBox(height: 8),
@@ -412,7 +412,7 @@ Widget _buildSectionHeader(String title) {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
-                  color: AppPallete.whiteColor.withOpacity(0.7),
+                  color: AppPalete.whiteColor.withOpacity(0.7),
                 ),
               ),
               if (exercise.notes != null) ...[
@@ -422,7 +422,7 @@ Widget _buildSectionHeader(String title) {
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
-                    color: AppPallete.whiteColor.withOpacity(0.8),
+                    color: AppPalete.whiteColor.withOpacity(0.8),
                     height: 1.5,
                   ),
                 ),
@@ -434,7 +434,7 @@ Widget _buildSectionHeader(String title) {
                   const Spacer(),
                   Icon(
                     Icons.more_vert,
-                    color: AppPallete.whiteColor.withOpacity(0.7),
+                    color: AppPalete.whiteColor.withOpacity(0.7),
                     size: 20,
                   ),
                 ],
@@ -448,7 +448,7 @@ Widget _buildSectionHeader(String title) {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: AppPallete.borderColor.withOpacity(0.6),
+                      color: AppPalete.borderColor.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -456,7 +456,7 @@ Widget _buildSectionHeader(String title) {
                       children: [
                         const Icon(
                           Icons.check_circle_outline,
-                          color: AppPallete.whiteColor,
+                          color: AppPalete.whiteColor,
                           size: 18,
                         ),
                         const SizedBox(width: 8),
@@ -465,7 +465,7 @@ Widget _buildSectionHeader(String title) {
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: AppPallete.whiteColor,
+                            color: AppPalete.whiteColor,
                           ),
                         ),
                       ],
@@ -502,7 +502,7 @@ Widget _buildSectionHeader(String title) {
           Container(
             width: 2,
             height: 40,
-            color: AppPallete.borderColor.withOpacity(0.5),
+            color: AppPalete.borderColor.withOpacity(0.5),
           ),
           // Exercise indicators
           ...exercises.asMap().entries.map((entry) {
@@ -525,10 +525,10 @@ Widget _buildSectionHeader(String title) {
                           ? const Color(0xFF4DD0E1) // Done - cyan
                           : isActive
                               ? const Color(0xFFB7F034) // Active - green
-                              : AppPallete.borderColor.withOpacity(0.3), // Pending - gray
+                              : AppPalete.borderColor.withOpacity(0.3), // Pending - gray
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppPallete.backgroundColorBk,
+                        color: AppPalete.backgroundColorBk,
                         width: 2,
                       ),
                     ),
@@ -541,7 +541,7 @@ Widget _buildSectionHeader(String title) {
                         width: 2,
                         color: isDone
                             ? const Color(0xFF4DD0E1).withOpacity(0.5)
-                            : AppPallete.borderColor.withOpacity(0.5),
+                            : AppPalete.borderColor.withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -568,7 +568,7 @@ Widget _buildSectionHeader(String title) {
               padding: const EdgeInsets.all(8),
               child: const Icon(
                 Icons.bolt,
-                color: AppPallete.whiteColor,
+                color: AppPalete.whiteColor,
                 size: 24,
               ),
             ),
@@ -588,7 +588,7 @@ Widget _buildSectionHeader(String title) {
                     style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: AppPallete.whiteColor,
+                      color: AppPalete.whiteColor,
                     ),
                   ),
                 ),
@@ -599,7 +599,7 @@ Widget _buildSectionHeader(String title) {
         const SizedBox(width: 12),
         const Icon(
           Icons.notifications_outlined,
-          color: AppPallete.whiteColor,
+          color: AppPalete.whiteColor,
           size: 24,
         ),
       ],
@@ -623,7 +623,7 @@ Widget _buildSectionHeader(String title) {
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: AppPallete.whiteColor,
+                color: AppPalete.whiteColor,
               ),
             ),
             Text(
@@ -631,7 +631,7 @@ Widget _buildSectionHeader(String title) {
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w400,
-            color: AppPallete.whiteColor.withOpacity(0.7),
+            color: AppPalete.whiteColor.withOpacity(0.7),
           ),
         ),
           ],
