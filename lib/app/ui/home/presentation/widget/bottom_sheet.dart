@@ -1,6 +1,5 @@
 import 'dart:ui';
-
-import 'package:fitness/app/core/common/widget/RoundbuttonText.dart';
+import 'package:fitness/app/core/common/widget/appWidget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -191,7 +190,7 @@ import 'package:google_fonts/google_fonts.dart';
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child:RoundBtnText(
+                child:AppWidgets.roundbtnText(
                   onPressed: () {
                     Navigator.of(context).pop();
                   },

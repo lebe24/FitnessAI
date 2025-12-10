@@ -8,6 +8,7 @@ import 'package:fitness/app/ui/onboarding/presentation/screens/experience.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/gender.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/goal.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/heightAndweight.dart';
+import 'package:fitness/app/ui/onboarding/presentation/screens/motivation_quote.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/summary.dart';
 import 'package:fitness/app/ui/onboarding/presentation/screens/workoutdays.dart';
 import 'package:flutter/material.dart';
@@ -62,14 +63,10 @@ class OnboardingScreen extends StatelessWidget {
                         create: (_) => di.sl<AuthBloc>(),
                         child: const SignUp(),
                       );
-                    // case OnboardingStep.limitation:
-                    //   return ExerciseLimitationStep();
-                    // case OnboardingStep.diet:
-                    //   return DietStepStep();
-                    // case OnboardingStep.notification:
-                    //   return NotificationStep();
                     case OnboardingStep.summary:
                       return SummaryStep();
+                    case OnboardingStep.motivationQuote:
+                      return MotivationQuote();
                   }
                 },
               ),

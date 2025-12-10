@@ -20,3 +20,12 @@ class DateSelected extends FitnessEvent {
   List<Object?> get props => [date];
 }
 
+class WorkoutCompleted extends FitnessEvent {
+  final DateTime date;
+
+  const WorkoutCompleted(this.date);
+
+  @override
+  List<Object?> get props => [date];
+}
+

@@ -11,9 +11,9 @@ import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_event.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_state.dart';
+import 'package:fitness/app/ui/fitness/presentation/method/fitness.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/motivate_page.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/save_page.dart';
-import 'package:fitness/app/ui/fitness/presentation/widget/fitness_page_method.dart';
 import 'package:fitness/app/ui/fitness/presentation/widget/workout_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,21 +28,24 @@ class FitnessPage extends StatefulWidget {
   State<FitnessPage> createState() => _FitnessPageState();
 }
 
-class _FitnessPageState extends State<FitnessPage> {
+class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
   Timer? _greetingTimer;
   String _greeting = GreetingHelper.getGreeting();
   String _emoji = GreetingHelper.getGreetingEmoji();
 
   DateTime _selectedDate = DateTime.now();
   final ScrollController _dateScrollController = ScrollController();
-
-  int _caloriesBurned = 0;
+  bool _hasLoadedInitialData = false;
+  DateTime? _lastReloadTime;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Load fitness plans
     context.read<FitnessBloc>().add(const LoadFitnessPlans());
+    _hasLoadedInitialData = true;
+    _lastReloadTime = DateTime.now();
 
     // Update greeting every minute to handle time changes
     _greetingTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
@@ -132,7 +135,36 @@ class _FitnessPageState extends State<FitnessPage> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _hasLoadedInitialData) {
+      // Reload plans when app comes back to foreground
+      context.read<FitnessBloc>().add(const LoadFitnessPlans());
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload plans when page becomes visible again (e.g., returning from WorkoutPage)
+    // Only reload if it's been more than 500ms since last reload to avoid excessive reloads
+    if (_hasLoadedInitialData && mounted) {
+      final now = DateTime.now();
+      if (_lastReloadTime == null || 
+          now.difference(_lastReloadTime!).inMilliseconds > 500) {
+        _lastReloadTime = now;
+        // Use a small delay to ensure we're back on this page
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            context.read<FitnessBloc>().add(const LoadFitnessPlans());
+          }
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _greetingTimer?.cancel();
     super.dispose();
   }
@@ -148,7 +180,7 @@ class _FitnessPageState extends State<FitnessPage> {
           children: [
             // Fixed header section
             _homeHeader(context),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             _greetings(),
             // Fixed Date Selector
             _workoutDates(),
@@ -178,18 +210,16 @@ class _FitnessPageState extends State<FitnessPage> {
                     const SizedBox(height: 10),
                     GestureDetector(
                       onTap: (){
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MotivatePage(),
-                          ),
+                        FitnessMethod.dialogBuilder(
+                          context, 
+                          _motivateDialog(),
                         );
                       },
-                      child: _banner()
+                      child: FitnessMethod.banner(context)
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Your Workout History',
+                      'Your Saved Data',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -208,44 +238,16 @@ class _FitnessPageState extends State<FitnessPage> {
                         return GestureDetector(
                           onTap: () {
                             // Navigate to history or settings page
-                            dialogBuilder(
-                              context, 
-                              SizedBox(
-                                width: 400,
-                                height: 400,
-                                child:  Card(
-                                  child: Column(
-                                    children: [
-                                      Center(
-                                        child: Text('History Page Coming Soon!'),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          Navigator.push(context, 
-                                            MaterialPageRoute(
-                                              builder: (context) => const SavedPage(),
-                                            ),
-                                          );
-                                        },
-                                        child: Text('Next',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppPalete.borderColor,
-                                          ),
-
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                            Navigator.push(context, 
+                              MaterialPageRoute(
+                                builder: (context) => const SavedPage(),
                               ),
                             );
+                            
                           },
                           child: _customWidget(
                             context,
-                            "Check out your history",
+                            "Check out your Saved Data",
                             savedImagePath,
                             null,
                             'Review your past food scans and Workout Plans time.',
@@ -264,26 +266,7 @@ class _FitnessPageState extends State<FitnessPage> {
     );
   }
 
-  Stack _banner(){
-    return Stack(
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.2,
-            width: double.infinity,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Image.asset(
-                  ImagePath.motivateBanner,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-        ],
-    );
-  }
+  
 
   // ignore: unused_element
   SizedBox _mealWidget(BuildContext context) {
@@ -313,6 +296,17 @@ class _FitnessPageState extends State<FitnessPage> {
         final workoutMappings = state is FitnessLoaded
             ? state.workoutMappings
             : <DateTime, dynamic>{};
+        Set<DateTime> completedDates = <DateTime>{};
+        // if (state is FitnessLoaded) {
+        //   try {
+        //     final loadedState = state as FitnessLoaded;
+        //     completedDates = loadedState.completedDates.isNotEmpty 
+        //         ? loadedState.completedDates 
+        //         : <DateTime>{};
+        //   } catch (e) {
+        //     completedDates = <DateTime>{};
+        //   }
+        // }
               
         return SizedBox(
           height: 80,
@@ -330,6 +324,7 @@ class _FitnessPageState extends State<FitnessPage> {
                   date.year == _selectedDate.year;
               final hasWorkout = workoutMappings.containsKey(normalizedDate);
               final workoutMapping = workoutMappings[normalizedDate];
+              final isCompleted = completedDates.contains(normalizedDate);
               
               return GestureDetector(
                 onTap: () {
@@ -388,14 +383,18 @@ class _FitnessPageState extends State<FitnessPage> {
                                     ],
                               color: isSelected
                                   ? AppPalete.borderColor.withOpacity(0.6)
-                                  : Colors.transparent,
+                                  : isCompleted
+                                      ? Colors.red.withOpacity(0.6)
+                                      : Colors.transparent,
                               border: Border.all(
                                 color: isSelected
                                     ? AppPalete.whiteColor.withOpacity(0.4)
-                                    : hasWorkout
-                                        ? const Color(0xFFB7F034).withOpacity(0.6)
-                                        : AppPalete.whiteColor.withOpacity(0.1),
-                                width: isSelected ? 2 : hasWorkout ? 2 : 1,
+                                    : isCompleted
+                                        ? Colors.red.withOpacity(0.8)
+                                        : hasWorkout
+                                            ? const Color(0xFFB7F034).withOpacity(0.6)
+                                            : AppPalete.whiteColor.withOpacity(0.1),
+                                width: isSelected ? 2 : (isCompleted || hasWorkout) ? 2 : 1,
                                 style: BorderStyle.solid,
                               ),
                             ),
@@ -425,7 +424,7 @@ class _FitnessPageState extends State<FitnessPage> {
                             ),
                           ),
                           // Workout indicator dot
-                          if (hasWorkout && !isSelected)
+                          if (hasWorkout && !isSelected && !isCompleted)
                             Positioned(
                               top: 4,
                               right: 4,
@@ -435,6 +434,20 @@ class _FitnessPageState extends State<FitnessPage> {
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: Color(0xFFB7F034),
+                                ),
+                              ),
+                            ),
+                          // Completed indicator dot
+                          if (isCompleted && !isSelected)
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.red,
                                 ),
                               ),
                             ),
@@ -486,50 +499,77 @@ Row _greetings() {
     );
   }
 
-  Row _homeHeader(BuildContext context) {
-    return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _fitnessHeader(),
-                  GestureDetector(
-                    onTap: () {
-                      // Handle tap event
-                      dialogBuilder(
-                        context,
-                        const CustomDialog(),
-                      );
-                    },
-                    child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppPalete.whiteColor.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.local_fire_department,
-                                  color: Colors.orange,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$_caloriesBurned',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppPalete.whiteColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                  ),
-                ],
-              );
+
+// Note AI:  Monitor day workout Streak and increment when the daily workout is completed
+  Widget _homeHeader(BuildContext context) {
+    return BlocBuilder<FitnessBloc, FitnessState>(
+      builder: (context, state) {
+        final _streak = state is FitnessLoaded ? state.streak : 0;
+        // if (state is FitnessLoaded) {
+        //   try {
+        //     final loadedState = state as FitnessLoaded;
+        //     streak = loadedState.streak > 0 ? loadedState.streak : 0;
+        //   } catch (e) {
+        //     streak = 0;
+        //   }
+        // }
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _fitnessHeader(),
+            GestureDetector(
+              onTap: () {
+                // Handle tap event
+                FitnessMethod.dialogBuilder(
+                  context,
+                  _streakDialog(_streak)
+                  // const CustomDialog(),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppPalete.whiteColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.local_fire_department,
+                      color: Colors.orange,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    //Note for AI:  Increment streak as Day workout is completed
+                    Text(
+                      '$_streak',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppPalete.whiteColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _streakDialog(int streak){
+    return SizedBox(
+      width: 400,
+      height: 300,
+      child: Card(
+        child: Center(child: Text("$streak",style: TextStyle(fontSize: 150,fontWeight: FontWeight.bold),)),
+      ),
+    );
   }
 
   SizedBox meal_suggestion(BuildContext context,String mealType, String imagePath) {
@@ -662,15 +702,53 @@ Row _greetings() {
   Row _fitnessHeader() {
     return Row(
       children: [
-        Text(
-          'BeFit',
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: AppPalete.whiteColor,
-          ),
-        ),
+        SizedBox(
+          width: 70,
+          height: 70,
+          child: Image.asset(ImagePath.appLogo))
       ],
+    );
+  }
+}
+
+class _motivateDialog extends StatelessWidget {
+  const _motivateDialog({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 400,
+      height: 400,
+      child:  Card(
+        child: Column(
+          children: [
+            Center(
+              child: Text('History Page Coming Soon!'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MotivatePage(tone: 'aggressive',),
+                  ),
+                );
+              },
+              child: Text('Next',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppPalete.borderColor,
+                ),
+    
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

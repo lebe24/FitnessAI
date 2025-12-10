@@ -1,4 +1,4 @@
-import 'package:fitness/app/core/common/widget/RoundbuttonText.dart';
+import 'package:fitness/app/core/common/widget/appWidget.dart';
 import 'package:fitness/app/ui/auth/presentation/bloc/auth_bloc.dart';
 import 'package:fitness/app/ui/auth/presentation/bloc/auth_event.dart';
 import 'package:fitness/app/ui/auth/presentation/bloc/auth_state.dart';
@@ -109,18 +109,21 @@ class SignUp extends StatelessWidget {
                             ),
                           ],
                         )
-                      : RoundBtnText(
-                          onPressed: () {
-                            if (isLoading) return;
-                            context
-                                .read<AuthBloc>()
-                                .add(SignInWithGoogleRequested());
-                          },
-                          text: "Sign up with Google",
-                        )
-                          .animate()
-                          .fadeIn(duration: 1200.ms)
-                          .slideY(begin: 0.3, end: 0),
+                      : SizedBox(
+                        width: 250,
+                        child: AppWidgets.roundbtnText(
+                            onPressed: () {
+                              if (isLoading) return;
+                              context
+                                  .read<AuthBloc>()
+                                  .add(SignInWithGoogleRequested());
+                            },
+                            text: "Sign up with Google",
+                          )
+                            .animate()
+                            .fadeIn(duration: 1200.ms)
+                            .slideY(begin: 0.3, end: 0),
+                      ),
                 ),
               ),
           ],

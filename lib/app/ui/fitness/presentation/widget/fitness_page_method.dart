@@ -303,22 +303,7 @@ Future<dynamic> chatModal({
 }
 
 
-// ================================
-// Dialog Methods
-// ================================
 
-Future<void> dialogBuilder(BuildContext context,Widget child) {
-  return showDialog(
-    context: context,
-    builder: (context) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 4.0,
-        child: child,
-      );
-    },
-  );
-}
 
 class CustomDialog extends StatelessWidget {
   const CustomDialog({super.key});

@@ -1,4 +1,4 @@
-import 'package:fitness/app/core/common/widget/RoundbuttonText.dart';
+import 'package:fitness/app/core/common/widget/appWidget.dart';
 import 'package:fitness/app/ui/onboarding/bloc/onboarding_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -57,7 +57,7 @@ class BaseStepLayout extends StatelessWidget {
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: RoundBtnText(
+              child: AppWidgets.roundbtnText(
                 onPressed: onContinue,
                 text: "Continue",
               ),
@@ -88,6 +88,8 @@ class BaseStepLayout extends StatelessWidget {
       case OnboardingStep.signup:
         return 0.95;
       case OnboardingStep.summary:
+        return 1.0;
+      case OnboardingStep.motivationQuote:
         return 1.0;
       }
   }

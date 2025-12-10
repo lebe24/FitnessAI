@@ -98,12 +98,16 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       case OnboardingStep.signup:
         return OnboardingStep.summary;
       case OnboardingStep.summary:
-        return OnboardingStep.summary;
+        return OnboardingStep.motivationQuote;
+      case OnboardingStep.motivationQuote:
+        return OnboardingStep.motivationQuote;
     }
   }
 
   OnboardingStep _prev(OnboardingStep step) {
     switch (step) {
+      case OnboardingStep.motivationQuote:
+        return OnboardingStep.summary;
       case OnboardingStep.summary:
         return OnboardingStep.signup;
       case OnboardingStep.signup:

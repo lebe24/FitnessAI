@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:fitness/app/core/common/common_lib.dart';
-import 'package:fitness/app/core/common/widget/RoundbuttonText.dart';
+import 'package:fitness/app/core/common/widget/appWidget.dart';
 import 'package:fitness/app/core/di.dart' as di;
 import 'package:fitness/app/core/routes/app_router.dart';
 import 'package:fitness/app/storage/domain/usecases/save_fitness_plan_usecase.dart';
@@ -37,13 +38,19 @@ class _ResultModalPageState extends State<ResultModalPage> {
   String? _resultMessage;
   TextSpan? _formattedMessage;
   WorkoutPlanEntity? _workoutPlan;
+  double _progress = 0.0;
+  Timer? _progressTimer;
 
   final TextEditingController _textController = TextEditingController();
 
   void _generatePlan({String? extraInfo}) {
     setState(() {
       _currentState = ModalState.generating;
+      _progress = 0.0;
     });
+    
+    // Start progress simulation
+    _startProgressSimulation();
 
     // Extract required parameters from userData
     final goal = widget.userData.goal ?? 'Build Muscle';
@@ -72,8 +79,35 @@ class _ResultModalPageState extends State<ResultModalPage> {
     
   }
 
+  void _startProgressSimulation() {
+    _progressTimer?.cancel();
+    _progress = 0.0;
+    
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (mounted) {
+        setState(() {
+          // Simulate progress: slow at start, faster in middle, slow at end
+          if (_progress < 0.9) {
+            // Increase progress gradually, slowing down as it approaches 90%
+            _progress += (0.9 - _progress) * 0.05;
+          } else if (_progress < 0.95) {
+            // Very slow near completion
+            _progress += 0.01;
+          }
+          // Don't go to 100% until actual success
+        });
+      }
+    });
+  }
+
+  void _stopProgressSimulation() {
+    _progressTimer?.cancel();
+    _progressTimer = null;
+  }
+
   @override
   void dispose() {
+    _progressTimer?.cancel();
     _textController.dispose();
     super.dispose();
   }
@@ -116,7 +150,7 @@ class _ResultModalPageState extends State<ResultModalPage> {
         style: const TextStyle(
           color: Color(0xFF09670C),
           fontStyle: FontStyle.italic,
-          fontSize: 10,
+          fontSize: 13,
         ),
       ));
     }
@@ -502,6 +536,14 @@ class _ResultModalPageState extends State<ResultModalPage> {
         return BlocListener<UploadBloc, UploadState>(
           listener: (context, state) async {
             if (state is UploadSeverSuccess && state.workoutPlan != null) {
+              // Stop progress simulation
+              _stopProgressSimulation();
+              
+              // Set progress to 100% before showing success
+              setState(() {
+                _progress = 1.0;
+              });
+              
               // Save the plan and image to storage
               try {
                 final saveFitnessPlanUsecase = di.sl<SaveFitnessPlanUsecase>();
@@ -521,26 +563,53 @@ class _ResultModalPageState extends State<ResultModalPage> {
                 _formattedMessage = _formatWorkoutPlanMessage(state.workoutPlan!);
                 _resultMessage = _textSpanToPlainText(_formattedMessage!);
               });
+            } else if (state is UploadFailure) {
+              // Stop progress on failure
+              _stopProgressSimulation();
             }
           },
           child: BlocBuilder<UploadBloc, UploadState>(
             builder: (context, state) {
               if (state is UploadSeverSuccess) {
-                // Success - listener will change state, show loading briefly
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text(
-                        "Processing your plan...",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                // Success - listener will change state, show 100% progress
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "100%",
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 24),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: 1.0,
+                            minHeight: 8,
+                            backgroundColor: Colors.grey.shade300,
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.green,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          "Processing your plan...",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               } else if (state is UploadFailure) {
@@ -604,22 +673,60 @@ class _ResultModalPageState extends State<ResultModalPage> {
                   ),
                 );
               } else {
-                // Loading state
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text(
-                        "Generating your personalized workout plan...",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                // Loading state with percentage progress
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "${(_progress * 100).toInt()}%",
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 24),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: _progress,
+                            minHeight: 8,
+                            backgroundColor: Colors.grey.shade300,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.black87,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          "Generating your personalized workout plan...",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _progress < 0.3
+                              ? "Uploading image..."
+                              : _progress < 0.6
+                                  ? "Analyzing your physique..."
+                                  : _progress < 0.9
+                                      ? "Creating your workout plan..."
+                                      : "Finalizing details...",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
@@ -647,11 +754,14 @@ class _ResultModalPageState extends State<ResultModalPage> {
               ),
             ),
             const SizedBox(height: 16),
-            RoundBtnText(
-              onPressed: () {
-                 context.go(ScreenPaths.home);
-              },
-              text: "Save Plan",
+            SizedBox(
+              width:double.infinity,
+              child: AppWidgets.roundbtnText(
+                onPressed: () {
+                   context.go(ScreenPaths.home);
+                },
+                text: "Save Plan",
+              ),
             ),
           ],
         );
@@ -684,10 +794,12 @@ class _ResultModalPageState extends State<ResultModalPage> {
                 IconButton(
                   onPressed: () {
                     if (_currentState == ModalState.generating) {
+                      _stopProgressSimulation();
                       setState(() {
                         _currentState = ModalState.cancel;
                       });
                     } else {
+                      _stopProgressSimulation();
                       Navigator.pop(context);
                     }
                   },

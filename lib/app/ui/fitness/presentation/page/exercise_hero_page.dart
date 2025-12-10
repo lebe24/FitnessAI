@@ -2,6 +2,7 @@ import 'package:fitness/app/api/data/helpers/youtube_video_cache.dart';
 import 'package:fitness/app/api/domain/usecases/search_youtube_videos_usecase.dart';
 import 'package:fitness/app/core/di.dart';
 import 'package:fitness/app/core/theme/app_pallet.dart';
+import 'package:fitness/app/ui/fitness/presentation/widget/yt_player.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -119,13 +120,14 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
     }
   }
 
-  void _openYouTubeVideo(String videoId) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _YouTubePlayerModal(videoId: videoId),
-    );
+  Widget _openYouTubeVideo(String videoId) {
+    // showModalBottomSheet(
+    //   context: context,
+    //   isScrollControlled: true,
+    //   backgroundColor: Colors.transparent,
+    //   builder: (context) => _YouTubePlayerModal(videoId: videoId),
+    // );
+    return YouTubePlayer(videoId: videoId);
   }
 
   @override
@@ -261,10 +263,11 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                         ),
                         const SizedBox(height: 12),
                         Container(
+                          width: double.infinity,
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: AppPalete.whiteColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(5),
                             border: Border.all(
                               color: AppPalete.whiteColor.withOpacity(0.2),
                               width: 1,
@@ -272,6 +275,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                           ),
                           child: Text(
                             widget.exercise.notes!,
+                            textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w400,
@@ -290,31 +294,31 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                           ),
                         ),
                       const SizedBox(height: 20),
-                      GestureDetector(
-                        child: Container(
-                          width: double.infinity,
-                          height: 200,
-                          padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: AppPalete.whiteColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppPalete.whiteColor.withOpacity(0.2),
-                                width: 1,
-                              ),
-                          ),
-                          child:Center(
-                            child: Text("Access Similar Exercises Tutorials",
-                               textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                                color: AppPalete.whiteColor.withOpacity(0.9),
-                                height: 1.6,
-                              ),
-                            ),
-                          )),
-                      ),
+                      // GestureDetector(
+                      //   child: Container(
+                      //     width: double.infinity,
+                      //     height: 200,
+                      //     padding: const EdgeInsets.all(20),
+                      //       decoration: BoxDecoration(
+                      //         color: AppPalete.whiteColor.withOpacity(0.1),
+                      //         borderRadius: BorderRadius.circular(16),
+                      //         border: Border.all(
+                      //           color: AppPalete.whiteColor.withOpacity(0.2),
+                      //           width: 1,
+                      //         ),
+                      //     ),
+                      //     child:Center(
+                      //       child: Text("Access Similar Exercises Tutorials",
+                      //          textAlign: TextAlign.center,
+                      //         style: GoogleFonts.inter(
+                      //           fontSize: 16,
+                      //           fontWeight: FontWeight.w400,
+                      //           color: AppPalete.whiteColor.withOpacity(0.9),
+                      //           height: 1.6,
+                      //         ),
+                      //       ),
+                      //     )),
+                      // ),
                       const SizedBox(height: 40),
                       Text(
                         "View Video Tutorials",
@@ -546,7 +550,13 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
     }
 
     return GestureDetector(
-      onTap: videoId.isNotEmpty ? () => _openYouTubeVideo(videoId) : null,
+      // onTap: videoId.isNotEmpty ? () => _openYouTubeVideo(videoId) : null,
+      onTap: (){
+        Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) =>  YouTubePlayer(videoId: videoId,)),
+        );
+      },
       child: Container(
         width: 300,
         decoration: BoxDecoration(
@@ -676,131 +686,3 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
 }
 
 /// YouTube Player Modal Widget
-class _YouTubePlayerModal extends StatefulWidget {
-  final String videoId;
-
-  const _YouTubePlayerModal({required this.videoId});
-
-  @override
-  State<_YouTubePlayerModal> createState() => _YouTubePlayerModalState();
-}
-
-class _YouTubePlayerModalState extends State<_YouTubePlayerModal> {
-  late YoutubePlayerController _controller;
-  bool _isPlayerReady = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = YoutubePlayerController(
-      initialVideoId: widget.videoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
-        mute: false,
-        enableCaption: true,
-        loop: false,
-      ),
-    )..addListener(_listener);
-  }
-
-  void _listener() {
-    if (_isPlayerReady && mounted && !_controller.value.isFullScreen) {
-      // Handle player state changes if needed
-    }
-  }
-
-  @override
-  void deactivate() {
-    _controller.pause();
-    super.deactivate();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[600],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Close button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Video Tutorial',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.grey),
-              // YouTube Player
-              Expanded(
-                child: YoutubePlayerBuilder(
-                  onExitFullScreen: () {
-                    // Handle exit fullscreen
-                  },
-                  player: YoutubePlayer(
-                    controller: _controller,
-                    showVideoProgressIndicator: true,
-                    progressIndicatorColor: Colors.red,
-                    progressColors: const ProgressBarColors(
-                      playedColor: Colors.red,
-                      handleColor: Colors.redAccent,
-                    ),
-                    onReady: () {
-                      setState(() {
-                        _isPlayerReady = true;
-                      });
-                    },
-                  ),
-                  builder: (context, player) {
-                    return Container(
-                      color: Colors.black,
-                      child: Center(
-                        child: player,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}

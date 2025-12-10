@@ -68,3 +68,16 @@ class StoredNutritionAnalysisModel extends StoredNutritionAnalysisEntity {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+

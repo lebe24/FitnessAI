@@ -8,7 +8,9 @@ import 'package:fitness/app/ui/profile/domain/usecases/get_profile_usecase.dart'
 import 'package:flutter/material.dart';
 
 class MotivatePage extends StatefulWidget {
-  const MotivatePage({super.key});
+  const MotivatePage({super.key, required this.tone});
+
+  final String tone;
 
   @override
   State<MotivatePage> createState() => _MotivatePageState();
@@ -73,7 +75,7 @@ class _MotivatePageState extends State<MotivatePage> {
           
           // Generate AI quote based on the photo_tone
           if (quote != null && quote.isNotEmpty) {
-            await _generateAIMotivationQuote(quote);
+            await _generateAIMotivationQuote(quote,widget.tone);
           }
           
           if (audio != null && audio.isNotEmpty) {
@@ -102,7 +104,7 @@ class _MotivatePageState extends State<MotivatePage> {
     }
   }
 
-  Future<void> _generateAIMotivationQuote(String message) async {
+  Future<void> _generateAIMotivationQuote(String message, String tone) async {
     try {
       setState(() {
         _isGeneratingQuote = true;
@@ -113,7 +115,7 @@ class _MotivatePageState extends State<MotivatePage> {
       
       final generatedQuote = await agentDataSource.generateMotivationQuote(
         userName: userName,
-        tone: 'soft motivation',
+        tone: tone,
         message: message,
       );
 
@@ -175,14 +177,14 @@ class _MotivatePageState extends State<MotivatePage> {
                                 width: double.infinity,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Image.asset(
-                                    ImagePath.unstoppable,
+                                    ImagePath.beFitbanner,
                                     fit: BoxFit.cover,
                                     width: double.infinity,
                                   );
                                 },
                               )
                             : Image.asset(
-                                ImagePath.unstoppable,
+                                ImagePath.beFitbanner,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                               ),

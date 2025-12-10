@@ -12,6 +12,8 @@ import 'package:fitness/app/ui/nutrition/presentation/pages/nutrition_page.dart'
 import 'package:fitness/app/ui/nutrition/presentation/pages/analysis_ouput_page.dart';
 import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_bloc.dart';
 import 'package:fitness/app/ui/nutrition/domain/entities/nutrition_analysis_entity.dart';
+import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
+import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,7 +29,7 @@ class ScreenPaths {
   static String nutritionAnalysis = '/nutrition-analysis';
 
   static final appRouter = GoRouter(
-    initialLocation: splash,
+    initialLocation: home,
     routes: [
       GoRoute(
         path: welcome,
@@ -57,15 +59,21 @@ class ScreenPaths {
         path: workout,
         builder: (context, state) {
           final extra = state.extra;
-          if (extra is Map<String, dynamic>) {
-            return WorkoutPage(
-              workoutDay: extra['workoutDay'] as WorkoutDay?,
-              date: extra['date'] as DateTime?,
-            );
-          }
-          return const WorkoutPage(
-            workoutDay: null,
-            date: null,
+          return BlocProvider(
+            create: (context) {
+              final bloc = sl<FitnessBloc>();
+              bloc.add(const LoadFitnessPlans());
+              return bloc;
+            },
+            child: extra is Map<String, dynamic>
+                ? WorkoutPage(
+                    workoutDay: extra['workoutDay'] as WorkoutDay?,
+                    date: extra['date'] as DateTime?,
+                  )
+                : const WorkoutPage(
+                    workoutDay: null,
+                    date: null,
+                  ),
           );
         },
       ),

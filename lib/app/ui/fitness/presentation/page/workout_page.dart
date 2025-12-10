@@ -5,8 +5,11 @@ import 'package:fitness/app/chat/presentation/bloc/chat_bloc.dart';
 import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
 import 'package:fitness/app/ui/fitness/presentation/widget/fitness_page_method.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/exercise_hero_page.dart';
+import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
+import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_event.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 enum AiChat {
@@ -87,6 +90,38 @@ class _WorkoutPageState extends State<WorkoutPage> {
         _currentExerciseIndex = index + 1;
       }
     });
+
+    // Check if all exercises are completed
+    final exercises = widget.workoutDay?.exercises ?? [];
+    if (_completedExercises.length == exercises.length && exercises.isNotEmpty) {
+      _handleWorkoutCompletion();
+    }
+  }
+
+  void _handleWorkoutCompletion() {
+    final workoutDate = widget.date ?? DateTime.now();
+    
+    // Dispatch event to mark workout as completed
+    if (mounted) {
+      context.read<FitnessBloc>().add(WorkoutCompleted(workoutDate));
+      
+      // Show completion message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Daily Exercise Completed! 🔥',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppPalete.whiteColor,
+            ),
+          ),
+          backgroundColor: const Color(0xFF4CAF50),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   bool _isExerciseActive(int index) {
@@ -136,9 +171,10 @@ class _WorkoutPageState extends State<WorkoutPage> {
     switch (_aiChatState) {
       case AiChat.none:
         return FloatingActionButton(
+          elevation: 2,
           key: const ValueKey('fab_none'),
           onPressed: () => _toggleAiChat(exercise),
-          backgroundColor: AppPalete.backgroundColorBk,
+          backgroundColor: Colors.red,
           child: const Icon(Icons.chat_bubble, color: Colors.white),
         );
       case AiChat.active:
@@ -289,21 +325,26 @@ class _WorkoutPageState extends State<WorkoutPage> {
                         const SizedBox(height: 20),
                         // Note to Ai: Map the card excise here after each card a sizedbox of 16 height should follow.
                         if (exercises.isNotEmpty) ...[
-                          // First exercise - no section header
-                          _buildExerciseCard(0),
-                          const SizedBox(height: 16),
-                          // Rest of exercises with section header
-                          ...exercises.asMap().entries.skip(1).map((entry) {
-                            final index = entry.key;
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 16),
-                                _buildExerciseCard(index),
-                                const SizedBox(height: 16),
-                              ],
-                            );
-                          }),
+                          if (_completedExercises.length == exercises.length)
+                            // Show completion message when all exercises are done
+                            _buildCompletionMessage()
+                          else ...[
+                            // First exercise - no section header
+                            _buildExerciseCard(0),
+                            const SizedBox(height: 16),
+                            // Rest of exercises with section header
+                            ...exercises.asMap().entries.skip(1).map((entry) {
+                              final index = entry.key;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 16),
+                                  _buildExerciseCard(index),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            }),
+                          ],
                         ] else
                           Center(
                             child: Padding(
@@ -480,6 +521,44 @@ Widget _buildSectionHeader(String title) {
     );
   }
 
+
+  // ======= Completion Message ========
+  Widget _buildCompletionMessage() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle,
+              size: 80,
+              color: const Color(0xFF4CAF50),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Daily Exercise Completed!',
+              style: GoogleFonts.inter(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppPalete.whiteColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Great job! You\'ve completed all exercises for today. Keep up the momentum! 🔥',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: AppPalete.whiteColor.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   // ======= Progress Indicator ========
 

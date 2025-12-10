@@ -38,3 +38,16 @@ class AnalyzeFoodUseCase {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+

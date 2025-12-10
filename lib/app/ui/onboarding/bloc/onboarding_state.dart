@@ -9,7 +9,8 @@ enum OnboardingStep {
   heightAndWeight,
   dob,
   signup,
-  summary
+  summary,
+  motivationQuote
 }
 
 class OnboardingState {

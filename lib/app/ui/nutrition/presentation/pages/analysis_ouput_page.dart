@@ -1,5 +1,6 @@
-import 'dart:io';
+import  'dart:io';
 
+import 'package:fitness/app/core/common/widget/appWidget.dart';
 import 'package:fitness/app/ui/nutrition/domain/entities/nutrition_analysis_entity.dart';
 import 'package:fitness/app/ui/nutrition/domain/entities/stored_nutrition_analysis_entity.dart';
 import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_bloc.dart';
@@ -17,6 +18,7 @@ class AnalysisOutputPage extends StatefulWidget {
     this.analysis,
     this.imagePath,
     this.heroTag,
+  
   });
 
   final NutritionAnalysisEntity? analysis;
@@ -58,7 +60,7 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
               backgroundColor: Colors.green,
             ),
           );
-        } else if (state is NutritionError) {
+        }else if(state is NutritionError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
@@ -68,140 +70,132 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          title: Text(
-            analysis.dishName,
-            style: const TextStyle(color: Colors.black),
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(_isSaved ? Icons.bookmark : Icons.bookmark_border),
-              onPressed: _isSaved
-                  ? null
-                  : () {
-                      final storedAnalysis = StoredNutritionAnalysisEntity(
-                        id: const Uuid().v4(),
-                        analysis: analysis,
-                        imagePath: widget.imagePath,
-                        createdAt: DateTime.now(),
-                        updatedAt: DateTime.now(),
-                      );
-                      context.read<NutritionBloc>().add(
-                            SaveNutritionAnalysisRequested(storedAnalysis),
-                          );
-                    },
+        backgroundColor: Colors.white,
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: MediaQuery.of(context).size.height * 0.6,
+              elevation: 0,
+              snap: true,
+              floating: true,
+              stretch: true,
+              backgroundColor: Colors.grey.shade50,
+              flexibleSpace: FlexibleSpaceBar(
+              stretchModes: [
+                StretchMode.zoomBackground,
+              ],
+              background: Image.file(
+                File(widget.imagePath!),
+                fit: BoxFit.cover,
+              ),
             ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Hero Image
-              if (widget.imagePath != null)
-                Hero(
-                  tag: widget.heroTag ?? _heroImageTag,
-                  child: Container(
-                    height: MediaQuery.of(context).size.height * 0.4,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                    ),
-                    child: Image.file(
-                      File(widget.imagePath!),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-
-              // Product Info Card (similar to the reference image)
-              Padding(
-                padding: const EdgeInsets.all(18.0),
+            bottom: PreferredSize(
+              preferredSize: Size.fromHeight(45),
+              child: Transform.translate(
+                offset: Offset(0, 1),
                 child: Container(
+                  height: 45,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue.shade100,
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
-                        spreadRadius: 5,
-                      ),
-                    ],
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Dish Name and Healthiness Score
-                      Padding(
-                        padding: const EdgeInsets.all(18.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                analysis.dishName,
+                  child: Center(
+                    child: Container(
+                      width: 50,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    )
+                  ),
+                ),
+              ),
+            )),
+            SliverList(
+              delegate: SliverChildListDelegate([
+                Container(
+                  height: MediaQuery.of(context).size.height * 0.55,
+                  color: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                  child: SingleChildScrollView(
+
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color:Colors.black,
+                            borderRadius: BorderRadius.circular(5)
+                          ),
+                          child:Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              "Meal Name",
+                              style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white
+                            ),
+                          ),
+                          )
+                        ),
+                        SizedBox(height: 10,),
+                        Text(
+                          analysis.dishName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 10,),
+                    
+                        // Calories and Macros Summary
+                        _buildMacrosSummary(analysis),
+                        SizedBox(height: 20,),
+                        Container(
+                          decoration: BoxDecoration(
+                            
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            
+                            children: [
+                              Text(
+                                "${analysis.overallRating} : ",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.bold
                                 ),
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getHealthinessColor(analysis.healthinessScore),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
+                              Text(
                                 '${(analysis.healthinessScore * 100).toInt()}%',
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: _getHealthinessColor(analysis.healthinessScore),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Overall Rating
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18.0),
-                        child: Text(
-                          analysis.overallRating,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
+                                
+                            ],
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 20),
+                        // Nutrient Breakdown
+                        _buildNutrientBreakdown(analysis),
+                    
+                        const SizedBox(height: 20),
+                    
+                        // Macro Chart
+                        _buildMacroChart(analysis),
+                    
+                        const SizedBox(height: 20),
 
-                      const SizedBox(height: 20),
-
-                      // Calories and Macros Summary
-                      _buildMacrosSummary(analysis),
-
-                      const SizedBox(height: 20),
-
-                      // Macro Chart
-                      _buildMacroChart(analysis),
-
-                      const SizedBox(height: 20),
-
-                      // Nutrient Breakdown
-                      _buildNutrientBreakdown(analysis),
-
-                      const SizedBox(height: 20),
-
-                      // Ingredients
+                        // Ingredients
                       _buildIngredients(analysis),
 
                       const SizedBox(height: 20),
@@ -221,13 +215,21 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
                       _buildNotes(analysis),
 
                       const SizedBox(height: 20),
-                    ],
+
+                      SizedBox(
+                        width:double.infinity,
+                        child: AppWidgets.roundbtnText(
+                          onPressed: () {},
+                          text: "Save Meal",
+                        ),
+                      )
+                    ],),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
+                )
+              ])
+            )
+          ],
+        )
       ),
     );
   }
@@ -273,6 +275,7 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
     );
   }
 
+
   Widget _buildMacroItem(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
@@ -295,6 +298,64 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
       ],
     );
   }
+
+  Widget _buildNutrientBreakdown(NutritionAnalysisEntity analysis) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Nutrient Breakdown',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildNutrientRow('Protein', '${analysis.macroEstimates.protein.grams.toInt()}g', '${analysis.macroEstimates.protein.percentage.toStringAsFixed(1)}%'),
+          _buildNutrientRow('Carbohydrates', '${analysis.macroEstimates.carbohydrates.grams.toInt()}g', '${analysis.macroEstimates.carbohydrates.percentage.toStringAsFixed(1)}%'),
+          _buildNutrientRow('Fats', '${analysis.macroEstimates.fats.grams.toInt()}g', '${analysis.macroEstimates.fats.percentage.toStringAsFixed(1)}%'),
+          _buildNutrientRow('Fiber', '${analysis.macroEstimates.fiber.grams.toInt()}g', '${analysis.macroEstimates.fiber.percentage.toStringAsFixed(1)}%'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNutrientRow(String label, String value, String percentage) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
+          Row(
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                percentage,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildMacroChart(NutritionAnalysisEntity analysis) {
     final protein = analysis.macroEstimates.protein.percentage;
@@ -392,63 +453,6 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
     );
   }
 
-  Widget _buildNutrientBreakdown(NutritionAnalysisEntity analysis) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Nutrient Breakdown',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildNutrientRow('Protein', '${analysis.macroEstimates.protein.grams.toInt()}g', '${analysis.macroEstimates.protein.percentage.toStringAsFixed(1)}%'),
-          _buildNutrientRow('Carbohydrates', '${analysis.macroEstimates.carbohydrates.grams.toInt()}g', '${analysis.macroEstimates.carbohydrates.percentage.toStringAsFixed(1)}%'),
-          _buildNutrientRow('Fats', '${analysis.macroEstimates.fats.grams.toInt()}g', '${analysis.macroEstimates.fats.percentage.toStringAsFixed(1)}%'),
-          _buildNutrientRow('Fiber', '${analysis.macroEstimates.fiber.grams.toInt()}g', '${analysis.macroEstimates.fiber.percentage.toStringAsFixed(1)}%'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNutrientRow(String label, String value, String percentage) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(fontSize: 14),
-          ),
-          Row(
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                percentage,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildIngredients(NutritionAnalysisEntity analysis) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18.0),
@@ -470,9 +474,11 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
               return Chip(
                 label: Text(
                   ingredient,
-                  style: GoogleFonts.poppins(fontSize: 12),
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 12),
                 ),
-                backgroundColor: Colors.blue.shade50,
+                backgroundColor: const Color(0xFF057E43)
               );
             }).toList(),
           ),
@@ -480,6 +486,7 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
       ),
     );
   }
+
 
   Widget _buildDietaryInfo(NutritionAnalysisEntity analysis) {
     return Padding(
@@ -638,8 +645,6 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
     );
   }
 }
-
-
 
 
 

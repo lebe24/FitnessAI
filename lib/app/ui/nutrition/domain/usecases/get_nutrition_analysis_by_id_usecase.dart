@@ -21,3 +21,16 @@ class GetNutritionAnalysisByIdUseCase {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+

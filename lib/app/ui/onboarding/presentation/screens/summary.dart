@@ -1,4 +1,3 @@
-import 'package:fitness/app/core/common/common_lib.dart';
 import 'package:fitness/app/ui/onboarding/bloc/onboarding_bloc.dart';
 import 'package:fitness/app/ui/onboarding/presentation/share_screen.dart';
 import 'package:fitness/app/ui/onboarding/utils/onboarding_storage.dart';
@@ -6,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SummaryStep extends StatelessWidget {
+  const SummaryStep({super.key});
+
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +45,11 @@ class SummaryStep extends StatelessWidget {
       onContinue: () async {
         // Save onboarding data before navigating
         await OnboardingStorage.saveOnboardingData(data);
-        if (context.mounted) {
-          context.go('/analysis');
-        }
+
+        context.read<OnboardingBloc>().add(NextStep());
+        // if (context.mounted) {
+        //   context.go('/analysis');
+        // }
       },
     );
   }
