@@ -22,10 +22,11 @@ class DateSelected extends FitnessEvent {
 
 class WorkoutCompleted extends FitnessEvent {
   final DateTime date;
+  final int streak;
 
-  const WorkoutCompleted(this.date);
+  const WorkoutCompleted(this.date,this.streak);
 
   @override
-  List<Object?> get props => [date];
+  List<Object?> get props => [date,streak];
 }
 

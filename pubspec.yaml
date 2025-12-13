@@ -32,6 +32,9 @@ dependencies:
   carousel_slider: ^5.1.1
   just_audio: ^0.10.5
   flutter_native_splash: ^2.3.3
+  google_maps_flutter: ^2.14.0
+  custom_info_window: ^1.0.1
+  animate_do: ^4.2.0
   
 
 dev_dependencies:

@@ -24,4 +24,23 @@ class Constant {
   static const youtubeRapidApiBaseUrl = "https://youtube138.p.rapidapi.com";
   static const youtubeRapidApiHost = "youtube138.p.rapidapi.com";
   static final youtubeRapidApiKey = "23724cec06msh87881299a984296p1d1ef2jsn577eca766cea";
+
+  static final toneOptions = [
+    {
+      "male":[
+        "Alpha & Dominant",
+        "Calm & Disciplined",
+        "Warrior Mentality",
+        "Coach Tone",
+        "Hype"
+      ],
+      "female" :[
+        "Confident & Empowering",
+        "Soft but Encouraging",
+        "High-Energy Badass",
+        "Self-Care Focused",
+        "Goal-Oriented"
+      ]
+    }
+  ];
 }

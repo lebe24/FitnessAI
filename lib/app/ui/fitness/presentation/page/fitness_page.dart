@@ -2,12 +2,17 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:fitness/app/core/common/widget/appWidget.dart';
 import 'package:fitness/app/core/common/widget/greeting.dart';
 import 'package:fitness/app/core/constant/assets.dart';
+import 'package:fitness/app/core/constant/constant.dart';
 import 'package:fitness/app/core/di.dart';
 import 'package:fitness/app/core/routes/app_router.dart';
 import 'package:fitness/app/core/theme/app_pallet.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
+import 'package:fitness/app/ui/fitness/domain/usecases/get_user_streak_usecase.dart';
+import 'package:fitness/app/ui/fitness/domain/usecases/get_completed_dates_usecase.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_event.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_state.dart';
@@ -28,24 +33,30 @@ class FitnessPage extends StatefulWidget {
   State<FitnessPage> createState() => _FitnessPageState();
 }
 
-class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
+class _FitnessPageState extends State<FitnessPage> {
   Timer? _greetingTimer;
   String _greeting = GreetingHelper.getGreeting();
   String _emoji = GreetingHelper.getGreetingEmoji();
 
   DateTime _selectedDate = DateTime.now();
   final ScrollController _dateScrollController = ScrollController();
-  bool _hasLoadedInitialData = false;
-  DateTime? _lastReloadTime;
+
+  int _streak = 0;
+  Set<DateTime> _completedDates = <DateTime>{};
+  Color _selectedToneColor = Colors.black;
+  String? _selectedTone;
+  final GetUserStreakUsecase _getUserStreakUsecase = sl<GetUserStreakUsecase>();
+  final GetCompletedDatesUsecase _getCompletedDatesUsecase = sl<GetCompletedDatesUsecase>();
+  final GetCurrentUser _getCurrentUser = sl<GetCurrentUser>();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     // Load fitness plans
     context.read<FitnessBloc>().add(const LoadFitnessPlans());
-    _hasLoadedInitialData = true;
-    _lastReloadTime = DateTime.now();
+    // Load streak and completed dates from Supabase
+    _loadStreak();
+    _loadCompletedDates();
 
     // Update greeting every minute to handle time changes
     _greetingTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
@@ -134,37 +145,96 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
     }
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _hasLoadedInitialData) {
-      // Reload plans when app comes back to foreground
-      context.read<FitnessBloc>().add(const LoadFitnessPlans());
+  Future<void> _loadStreak() async {
+    try {
+      final user = _getCurrentUser();
+      if (user?.id != null) {
+        final streak = await _getUserStreakUsecase(user!.id);
+        if (mounted) {
+          setState(() {
+            _streak = streak;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading streak: $e');
+    }
+  }
+
+  Future<void> _loadCompletedDates() async {
+    try {
+      final user = _getCurrentUser();
+      if (user?.id != null) {
+        final completedDates = await _getCompletedDatesUsecase(user!.id);
+        if (mounted) {
+          setState(() {
+            _completedDates = completedDates;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading completed dates: $e');
     }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Reload plans when page becomes visible again (e.g., returning from WorkoutPage)
-    // Only reload if it's been more than 500ms since last reload to avoid excessive reloads
-    if (_hasLoadedInitialData && mounted) {
-      final now = DateTime.now();
-      if (_lastReloadTime == null || 
-          now.difference(_lastReloadTime!).inMilliseconds > 500) {
-        _lastReloadTime = now;
-        // Use a small delay to ensure we're back on this page
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) {
-            context.read<FitnessBloc>().add(const LoadFitnessPlans());
-          }
-        });
-      }
-    }
+    // Refresh streak and completed dates when page becomes visible again
+    _loadStreak();
+    _loadCompletedDates();
+  }
+
+  void _showWorkoutCompletedAlert(BuildContext context, DateTime date) {
+    final dateStr = '${date.day}/${date.month}/${date.year}';
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppPalete.backgroundColorBk,
+        title: Row(
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: const Color(0xFF4CAF50),
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Workout Completed',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppPalete.whiteColor,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'You have already completed the workout for $dateStr. Great job! 🔥',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: AppPalete.whiteColor.withOpacity(0.8),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppPalete.borderColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _greetingTimer?.cancel();
     super.dispose();
   }
@@ -180,7 +250,7 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
           children: [
             // Fixed header section
             _homeHeader(context),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             _greetings(),
             // Fixed Date Selector
             _workoutDates(),
@@ -210,16 +280,165 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
                     const SizedBox(height: 10),
                     GestureDetector(
                       onTap: (){
-                        FitnessMethod.dialogBuilder(
-                          context, 
-                          _motivateDialog(),
+                        final parentContext = context; // Capture parent context
+                        showDialog(
+                          context: context, 
+                          builder: (BuildContext dialogContext) {
+                            // Get user's gender from metadata or default to 'male'
+                            final user = _getCurrentUser();
+                            String? gender;
+                            
+                            // Try to get gender from user metadata
+                            try {
+                              final supabaseClient = sl<SupabaseClient>();
+                              final currentUser = supabaseClient.auth.currentUser;
+                              gender = currentUser?.userMetadata?['gender'] as String?;
+                            } catch (e) {
+                              debugPrint('Error getting user gender: $e');
+                            }
+                            
+                            // Default to 'male' if gender is not available
+                            final userGender = (gender?.toLowerCase() == 'female' || gender?.toLowerCase() == 'f') ? 'female' : 'male';
+                            
+                            // Get tone options based on gender
+                            final toneOptionsList = Constant.toneOptions.first[userGender] ?? [];
+                            
+                            return Dialog(
+                              backgroundColor: Colors.transparent,
+                              elevation: 4.0,
+                              child: StatefulBuilder(
+                                builder: (context, setDialogState) {
+                                  return SizedBox(
+                                    width: 400,
+                                    height: 500,
+                                    child: Card(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "Pick your tone",
+                                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: toneOptionsList.isEmpty
+                                                  ? Center(
+                                                      child: Text(
+                                                        'No tone options available',
+                                                        style: TextStyle(color: Colors.grey),
+                                                      ),
+                                                    )
+                                                  : ListView.builder(
+                                                      itemCount: toneOptionsList.length,
+                                                      itemBuilder: (context, index) {
+                                                        final tone = toneOptionsList[index];
+                                                        final isSelected = _selectedTone == tone;
+                                                        
+                                                        return Padding(
+                                                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                                          child: GestureDetector(
+                                                            onTap: () {
+                                                              setDialogState(() {
+                                                                setState(() {
+                                                                  _selectedTone = tone;
+                                                                });
+                                                              });
+                                                            },
+                                                            child: Container(
+                                                              padding: EdgeInsets.symmetric(
+                                                                horizontal: 16.0,
+                                                                vertical: 12.0,
+                                                              ),
+                                                              decoration: BoxDecoration(
+                                                                color: isSelected
+                                                                    ? AppPalete.borderColor.withOpacity(0.3)
+                                                                    : Colors.transparent,
+                                                                borderRadius: BorderRadius.circular(8),
+                                                                border: Border.all(
+                                                                  color: isSelected
+                                                                      ? AppPalete.borderColor
+                                                                      : Colors.grey.withOpacity(0.3),
+                                                                  width: isSelected ? 2 : 1,
+                                                                ),
+                                                              ),
+                                                              child: Row(
+                                                                children: [
+                                                                  Expanded(
+                                                                    child: Text(
+                                                                      tone,
+                                                                      style: TextStyle(
+                                                                        color: Colors.black,
+                                                                        fontSize: 16,
+                                                                        fontWeight: isSelected
+                                                                            ? FontWeight.bold
+                                                                            : FontWeight.normal,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  if (isSelected)
+                                                                    Icon(
+                                                                      Icons.check_circle,
+                                                                      color: AppPalete.borderColor,
+                                                                      size: 20,
+                                                                    ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.all(8.0),
+                                              child: SizedBox(
+                                                width: double.infinity,
+                                                child: AppWidgets.roundbtnText(
+                                                  onPressed: _selectedTone != null
+                                                      ? () {
+                                                          // Close dialog first
+                                                          Navigator.of(dialogContext).pop();
+                                                          // Navigate to motivate page with selected tone using root navigator
+                                                          Navigator.of(dialogContext, rootNavigator: true).push(
+                                                            MaterialPageRoute(
+                                                              builder: (context) => MotivatePage(
+                                                                tone: _selectedTone?.toLowerCase().replaceAll(' ', '-') ?? 'aggressive',
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }
+                                                      : () {
+                                                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                                            SnackBar(
+                                                              content: Text('Please select a tone'),
+                                                              backgroundColor: Colors.orange,
+                                                            ),
+                                                          );
+                                                        },
+                                                  text: "Motivate",
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
                         );
                       },
-                      child: FitnessMethod.banner(context)
+                      child: _banner()
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Your Saved Data',
+                      'Your Saved  Data',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -266,28 +485,47 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
     );
   }
 
-  
+  Stack _banner(){
+    return Stack(
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.2,
+            width: double.infinity,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Image.asset(
+                  ImagePath.motivateBanner,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+        ],
+    );
+  }
 
   // ignore: unused_element
   SizedBox _mealWidget(BuildContext context) {
     return SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.25,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 3, // You can change this to a dynamic list later
-                    itemBuilder: (context, index) {
-                      List<String> mealTypes = ['Breakfast', 'Lunch', 'Dinner'];
-                      List<String> mealImages = [ImagePath.breakfastImage, ImagePath.lunchImage, ImagePath.dinnerImage];
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          right: index < 2 ? 12 : 0, // Add spacing between items
-                        ),
-                        child: meal_suggestion(
-                          context, mealTypes[index], mealImages[index]),
-                      );
-                    },
-                  ),
-                );
+    height: MediaQuery.of(context).size.height * 0.25,
+    child: ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: 3, // You can change this to a dynamic list later
+      itemBuilder: (context, index) {
+        List<String> mealTypes = ['Breakfast', 'Lunch', 'Dinner'];
+        List<String> mealImages = [ImagePath.breakfastImage, ImagePath.lunchImage, ImagePath.dinnerImage];
+        return Padding(
+          padding: EdgeInsets.only(
+            right: index < 2 ? 12 : 0, // Add spacing between items
+          ),
+          child: meal_suggestion(
+            context, mealTypes[index], mealImages[index]),
+        );
+      },
+    ),
+  );
 }
 
   BlocBuilder<FitnessBloc, FitnessState> _workoutDates() {
@@ -296,18 +534,6 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
         final workoutMappings = state is FitnessLoaded
             ? state.workoutMappings
             : <DateTime, dynamic>{};
-        Set<DateTime> completedDates = <DateTime>{};
-        // if (state is FitnessLoaded) {
-        //   try {
-        //     final loadedState = state as FitnessLoaded;
-        //     completedDates = loadedState.completedDates.isNotEmpty 
-        //         ? loadedState.completedDates 
-        //         : <DateTime>{};
-        //   } catch (e) {
-        //     completedDates = <DateTime>{};
-        //   }
-        // }
-              
         return SizedBox(
           height: 80,
           child: ListView.builder(
@@ -324,7 +550,7 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
                   date.year == _selectedDate.year;
               final hasWorkout = workoutMappings.containsKey(normalizedDate);
               final workoutMapping = workoutMappings[normalizedDate];
-              final isCompleted = completedDates.contains(normalizedDate);
+              final isCompleted = _completedDates.contains(normalizedDate);
               
               return GestureDetector(
                 onTap: () {
@@ -332,6 +558,12 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
                     _selectedDate = date;
                   });
                   context.read<FitnessBloc>().add(DateSelected(date));
+              
+                  // Check if workout is already completed
+                  if (isCompleted) {
+                    _showWorkoutCompletedAlert(context, date);
+                    return;
+                  }
               
                   // Show workout modal if there's a workout for this date
                   if (hasWorkout && workoutMapping?.workoutDay != null) {
@@ -383,9 +615,7 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
                                     ],
                               color: isSelected
                                   ? AppPalete.borderColor.withOpacity(0.6)
-                                  : isCompleted
-                                      ? Colors.red.withOpacity(0.6)
-                                      : Colors.transparent,
+                                  : Colors.transparent,
                               border: Border.all(
                                 color: isSelected
                                     ? AppPalete.whiteColor.withOpacity(0.4)
@@ -423,7 +653,7 @@ class _FitnessPageState extends State<FitnessPage> with WidgetsBindingObserver {
                               ),
                             ),
                           ),
-                          // Workout indicator dot
+                          // Workout indicator dot (only if not completed)
                           if (hasWorkout && !isSelected && !isCompleted)
                             Positioned(
                               top: 4,
@@ -500,110 +730,88 @@ Row _greetings() {
   }
 
 
-// Note AI:  Monitor day workout Streak and increment when the daily workout is completed
-  Widget _homeHeader(BuildContext context) {
-    return BlocBuilder<FitnessBloc, FitnessState>(
-      builder: (context, state) {
-        final _streak = state is FitnessLoaded ? state.streak : 0;
-        // if (state is FitnessLoaded) {
-        //   try {
-        //     final loadedState = state as FitnessLoaded;
-        //     streak = loadedState.streak > 0 ? loadedState.streak : 0;
-        //   } catch (e) {
-        //     streak = 0;
-        //   }
-        // }
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _fitnessHeader(),
-            GestureDetector(
-              onTap: () {
-                // Handle tap event
-                FitnessMethod.dialogBuilder(
-                  context,
-                  _streakDialog(_streak)
-                  // const CustomDialog(),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppPalete.whiteColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.local_fire_department,
-                      color: Colors.orange,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 4),
-                    //Note for AI:  Increment streak as Day workout is completed
-                    Text(
-                      '$_streak',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppPalete.whiteColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _streakDialog(int streak){
-    return SizedBox(
-      width: 400,
-      height: 300,
-      child: Card(
-        child: Center(child: Text("$streak",style: TextStyle(fontSize: 150,fontWeight: FontWeight.bold),)),
-      ),
-    );
+// Note AI:  Monitor day workout Streak
+  Row _homeHeader(BuildContext context) {
+    return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _fitnessHeader(),
+                  GestureDetector(
+                    onTap: () {
+                        // Handle tap event
+                        FitnessMethod.dialogBuilder(
+                          context,
+                          _streakDialog(_streak)
+                          // const CustomDialog(),
+                        );
+                      
+                    },
+                    child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppPalete.whiteColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.local_fire_department,
+                                  color: Colors.orange,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 4),
+                                //Note for AI:  Increment streak as Day workout is completed
+                                Text(
+                                  '$_streak',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppPalete.whiteColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ),
+                ],
+              );
   }
 
   SizedBox meal_suggestion(BuildContext context,String mealType, String imagePath) {
     return SizedBox(
-                width: MediaQuery.of(context).size.width * 0.32,
-                child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                        child: Image.asset(
-                          imagePath,
-                          height: MediaQuery.of(context).size.height * 0.25,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 40,
-                      left: 20,
-                      child: Text(
-                        textAlign: TextAlign.center,
-                        "Tap \n For \n$mealType ",
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppPalete.whiteColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
+      width: MediaQuery.of(context).size.width * 0.32,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Image.asset(
+                imagePath,
+                height: MediaQuery.of(context).size.height * 0.25,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 40,
+            left: 20,
+            child: Text(
+              textAlign: TextAlign.center,
+              "Tap \n For \n$mealType ",
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppPalete.whiteColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Container _customWidget(
@@ -699,6 +907,18 @@ Row _greetings() {
     );
   }
 
+  Widget _streakDialog(int streak){
+    return SizedBox(
+      width: 400,
+      height: 300,
+      child: Card(
+        child: Center(child: Text("$streak",style: TextStyle(fontSize: 150,fontWeight: FontWeight.bold),)),
+      ),
+    );
+  }
+
+  
+
   Row _fitnessHeader() {
     return Row(
       children: [
@@ -707,48 +927,6 @@ Row _greetings() {
           height: 70,
           child: Image.asset(ImagePath.appLogo))
       ],
-    );
-  }
-}
-
-class _motivateDialog extends StatelessWidget {
-  const _motivateDialog({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 400,
-      height: 400,
-      child:  Card(
-        child: Column(
-          children: [
-            Center(
-              child: Text('History Page Coming Soon!'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MotivatePage(tone: 'aggressive',),
-                  ),
-                );
-              },
-              child: Text('Next',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppPalete.borderColor,
-                ),
-    
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

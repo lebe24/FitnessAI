@@ -1,15 +1,12 @@
 import 'package:fitness/app/core/di.dart';
 import 'package:fitness/app/core/theme/app_pallet.dart';
-import 'package:fitness/app/chat/data/helpers/workout_plan_serializer.dart';
 import 'package:fitness/app/chat/presentation/bloc/chat_bloc.dart';
 import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
+import 'package:fitness/app/ui/fitness/domain/usecases/update_workout_completion_usecase.dart';
 import 'package:fitness/app/ui/fitness/presentation/widget/fitness_page_method.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/exercise_hero_page.dart';
-import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
-import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_event.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 enum AiChat {
@@ -38,6 +35,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
   late final ChatBloc _chatBloc;
+  final UpdateWorkoutCompletionUsecase _updateWorkoutCompletionUsecase = sl<UpdateWorkoutCompletionUsecase>();
+  final GetCurrentUser _getCurrentUser = sl<GetCurrentUser>();
+  final TextEditingController _durationController = TextEditingController();
 
   @override
   void initState() {
@@ -53,6 +53,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     // Disconnect chat only when page is disposed (user exits)
     _chatBloc.add(const DisconnectChat());
     _messageController.dispose();
+    _durationController.dispose();
     _chatScrollController.dispose();
     _chatBloc.close();
     super.dispose();
@@ -98,29 +99,183 @@ class _WorkoutPageState extends State<WorkoutPage> {
     }
   }
 
-  void _handleWorkoutCompletion() {
-    final workoutDate = widget.date ?? DateTime.now();
-    
-    // Dispatch event to mark workout as completed
-    if (mounted) {
-      context.read<FitnessBloc>().add(WorkoutCompleted(workoutDate));
-      
-      // Show completion message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Daily Exercise Completed! 🔥',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppPalete.whiteColor,
+  Future<void> _handleWorkoutCompletion() async {
+    // Show dialog to enter duration
+    _showDurationInputDialog();
+  }
+
+  void _showDurationInputDialog() {
+    _durationController.clear();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppPalete.whiteColor,
+        title: Text(
+          'Workout Completed! 🎉',
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppPalete.backgroundColorBk,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'How long did your workout take? (in minutes)',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppPalete.backgroundColorBk,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _durationController,
+              keyboardType: TextInputType.number,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: AppPalete.backgroundColorBk,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Enter duration (e.g., 45)',
+                hintStyle: GoogleFonts.inter(
+                  color: AppPalete.backgroundColorBk,
+                ),
+                filled: true,
+                fillColor: AppPalete.whiteColor.withOpacity(0.1),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: AppPalete.borderColor.withOpacity(0.3),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: AppPalete.borderColor.withOpacity(0.3),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: AppPalete.borderColor,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.red,
+              ),
             ),
           ),
-          backgroundColor: const Color(0xFF4CAF50),
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-        ),
+          ElevatedButton(
+            onPressed: () async {
+              final durationText = _durationController.text.trim();
+              if (durationText.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Please enter workout duration'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              final duration = double.tryParse(durationText);
+              if (duration == null || duration <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Please enter a valid duration'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              
+              await _saveWorkoutData(duration);
+              Navigator.of(context).pop();
+              
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppPalete.borderColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Save',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveWorkoutData(double duration) async {
+    try {
+      final user = _getCurrentUser();
+      if (user?.id == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please sign in to save workout data'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Get workout date
+      final workoutDate = widget.date ?? DateTime.now();
+
+      // Update workout completion in Supabase (will increment streak and update date_n_duration)
+      await _updateWorkoutCompletionUsecase(
+        userId: user!.id,
+        duration: duration,
+        date: workoutDate,
       );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Workout saved successfully! 🔥',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppPalete.whiteColor,
+              ),
+            ),
+            backgroundColor: const Color(0xFF4CAF50),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving workout: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -325,26 +480,21 @@ class _WorkoutPageState extends State<WorkoutPage> {
                         const SizedBox(height: 20),
                         // Note to Ai: Map the card excise here after each card a sizedbox of 16 height should follow.
                         if (exercises.isNotEmpty) ...[
-                          if (_completedExercises.length == exercises.length)
-                            // Show completion message when all exercises are done
-                            _buildCompletionMessage()
-                          else ...[
-                            // First exercise - no section header
-                            _buildExerciseCard(0),
-                            const SizedBox(height: 16),
-                            // Rest of exercises with section header
-                            ...exercises.asMap().entries.skip(1).map((entry) {
-                              final index = entry.key;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 16),
-                                  _buildExerciseCard(index),
-                                  const SizedBox(height: 16),
-                                ],
-                              );
-                            }),
-                          ],
+                          // First exercise - no section header
+                          _buildExerciseCard(0),
+                          const SizedBox(height: 16),
+                          // Rest of exercises with section header
+                          ...exercises.asMap().entries.skip(1).map((entry) {
+                            final index = entry.key;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 16),
+                                _buildExerciseCard(index),
+                                const SizedBox(height: 16),
+                              ],
+                            );
+                          }),
                         ] else
                           Center(
                             child: Padding(
@@ -521,44 +671,6 @@ Widget _buildSectionHeader(String title) {
     );
   }
 
-
-  // ======= Completion Message ========
-  Widget _buildCompletionMessage() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle,
-              size: 80,
-              color: const Color(0xFF4CAF50),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Daily Exercise Completed!',
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppPalete.whiteColor,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Great job! You\'ve completed all exercises for today. Keep up the momentum! 🔥',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: AppPalete.whiteColor.withOpacity(0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ======= Progress Indicator ========
 

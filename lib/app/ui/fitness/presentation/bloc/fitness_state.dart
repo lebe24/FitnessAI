@@ -17,35 +17,27 @@ class FitnessLoaded extends FitnessState {
   final List<StoredFitnessPlanEntity> plans;
   final Map<DateTime, WorkoutDayMappingEntity> workoutMappings;
   final DateTime? selectedDate;
-  final Set<DateTime> completedDates;
-  final int streak;
 
   const FitnessLoaded({
     required this.plans,
     required this.workoutMappings,
     this.selectedDate,
-    this.completedDates = const {},
-    this.streak = 2
   });
 
   FitnessLoaded copyWith({
     List<StoredFitnessPlanEntity>? plans,
     Map<DateTime, WorkoutDayMappingEntity>? workoutMappings,
     DateTime? selectedDate,
-    Set<DateTime>? completedDates,
-    int? streak,
   }) {
     return FitnessLoaded(
       plans: plans ?? this.plans,
       workoutMappings: workoutMappings ?? this.workoutMappings,
       selectedDate: selectedDate ?? this.selectedDate,
-      completedDates: completedDates ?? this.completedDates,
-      streak: streak ?? this.streak,
     );
   }
 
   @override
-  List<Object?> get props => [plans, workoutMappings, selectedDate, completedDates, streak];
+  List<Object?> get props => [plans, workoutMappings, selectedDate];
 }
 
 class FitnessError extends FitnessState {

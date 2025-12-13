@@ -5,7 +5,7 @@ import 'package:fitness/app/ui/fitness/presentation/page/fitness_page.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
 import 'package:fitness/app/ui/home/presentation/widget/custom_bottomBar.dart';
 import 'package:fitness/app/ui/profile/presentation/page/profile_page.dart';
-import 'package:fitness/app/ui/stats/statistics_page.dart';
+import 'package:fitness/app/ui/analytic/statistics_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

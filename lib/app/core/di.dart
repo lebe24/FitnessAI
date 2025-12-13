@@ -12,6 +12,13 @@ import 'package:fitness/app/storage/domain/usecases/get_unsynced_plans_usecase.d
 import 'package:fitness/app/storage/domain/usecases/save_fitness_plan_usecase.dart';
 import 'package:fitness/app/storage/domain/usecases/update_sync_status_usecase.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
+import 'package:fitness/app/ui/fitness/data/datasources/user_data_remote_datasource.dart';
+import 'package:fitness/app/ui/fitness/data/repositories/user_data_repository_impl.dart';
+import 'package:fitness/app/ui/fitness/domain/repositories/user_data_repository.dart';
+import 'package:fitness/app/ui/fitness/domain/usecases/get_user_streak_usecase.dart';
+import 'package:fitness/app/ui/fitness/domain/usecases/update_workout_completion_usecase.dart';
+import 'package:fitness/app/ui/fitness/domain/usecases/get_completed_dates_usecase.dart';
+import 'package:fitness/app/ui/fitness/domain/usecases/get_user_data_usecase.dart';
 import 'package:fitness/app/chat/data/datasources/chat_remote_datasource.dart';
 import 'package:fitness/app/chat/data/repositories/chat_repository_impl.dart';
 import 'package:fitness/app/chat/domain/repositories/chat_repository.dart';
@@ -129,6 +136,22 @@ Future<void> initDI() async {
   sl.registerLazySingleton(() => DeleteFitnessPlanUsecase(sl()));
   sl.registerLazySingleton(() => UpdateSyncStatusUsecase(sl()));
   sl.registerLazySingleton(() => GetUnsyncedPlansUsecase(sl()));
+
+  // --- Fitness User Data Data source ---
+  sl.registerLazySingleton<UserDataRemoteDataSource>(
+    () => UserDataRemoteDataSourceImpl(),
+  );
+
+  // --- Fitness User Data Repository ---
+  sl.registerLazySingleton<UserDataRepository>(
+    () => UserDataRepositoryImpl(sl()),
+  );
+
+  // --- Fitness User Data Use cases ---
+  sl.registerLazySingleton(() => GetUserStreakUsecase(sl()));
+  sl.registerLazySingleton(() => UpdateWorkoutCompletionUsecase(sl()));
+  sl.registerLazySingleton(() => GetCompletedDatesUsecase(sl()));
+  sl.registerLazySingleton(() => GetUserDataUsecase(sl()));
 
   // --- Fitness Bloc ---
   sl.registerFactory(
