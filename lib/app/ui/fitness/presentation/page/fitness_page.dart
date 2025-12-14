@@ -19,6 +19,7 @@ import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_state.dart';
 import 'package:fitness/app/ui/fitness/presentation/method/fitness.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/motivate_page.dart';
 import 'package:fitness/app/ui/fitness/presentation/page/save_page.dart';
+import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_bloc.dart';
 import 'package:fitness/app/ui/fitness/presentation/widget/workout_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -456,13 +457,35 @@ class _FitnessPageState extends State<FitnessPage> {
                         }
                         return GestureDetector(
                           onTap: () {
-                            // Navigate to history or settings page
-                            Navigator.push(context, 
+                            // Navigate to saved page with both blocs
+                            Navigator.push(
+                              context,
                               MaterialPageRoute(
-                                builder: (context) => const SavedPage(),
+                                builder: (context) {
+                                  // Get or create FitnessBloc
+                                  FitnessBloc? fitnessBloc;
+                                  try {
+                                    fitnessBloc = context.read<FitnessBloc>();
+                                  } catch (e) {
+                                    // Create new FitnessBloc if not available
+                                    fitnessBloc = sl<FitnessBloc>();
+                                    fitnessBloc.add(const LoadFitnessPlans());
+                                  }
+                                  
+                                  return MultiBlocProvider(
+                                    providers: [
+                                      BlocProvider.value(
+                                        value: fitnessBloc,
+                                      ),
+                                      BlocProvider(
+                                        create: (context) => sl<NutritionBloc>(),
+                                      ),
+                                    ],
+                                    child: const SavedPage(),
+                                  );
+                                },
                               ),
                             );
-                            
                           },
                           child: _customWidget(
                             context,

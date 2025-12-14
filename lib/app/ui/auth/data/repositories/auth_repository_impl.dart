@@ -22,6 +22,20 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<UserEntity?> signInWithGmail(String email) async {
+    final user = await remote.signInWithGmail(email);
+    
+    return UserModel(
+      id: user.id,
+      email: user.email,
+      name: user.userMetadata?['full_name'] as String? ?? 
+            user.userMetadata?['name'] as String?,
+      avatarUrl: user.userMetadata?['avatar_url'] as String? ??
+                 user.userMetadata?['picture'] as String?,
+    );
+  }
+
+  @override
   Future<void> signOut() => remote.signOut();
 
   @override

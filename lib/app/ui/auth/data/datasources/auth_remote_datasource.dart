@@ -12,6 +12,9 @@ abstract class AuthRemoteDataSource {
   /// Returns the authenticated user model after successful sign-in.
   Future<User> signInWithGoogle();
 
+  /// Verify and sign in user by Gmail address
+  Future<User> signInWithGmail(String email);
+
   Future<void> signOut();
   UserEntity? getCurrentUser();
   Future<void> deleteAccount();
@@ -56,6 +59,64 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
   
+  @override
+  Future<User> signInWithGmail(String email) async {
+    try {
+      // Check if email is a Gmail address
+      final normalizedEmail = email.toLowerCase().trim();
+      if (!normalizedEmail.endsWith('@gmail.com')) {
+        throw Exception('Please enter a valid Gmail address');
+      }
+
+      // Use Google Sign-In and verify the email matches
+      GoogleSignIn googleSignIn = GoogleSignIn.instance;
+      await googleSignIn.initialize(
+        clientId: Platform.isAndroid ? Constant.oauthAndroidClient : Constant.iosClient,
+        serverClientId: Constant.oauthWebClient,
+      );
+      
+      // Sign in with Google
+      GoogleSignInAccount account = await googleSignIn.authenticate();
+      
+      // Verify the email matches
+      if (account.email.toLowerCase() != normalizedEmail) {
+        await googleSignIn.signOut();
+        throw Exception('The Gmail address does not match. Please use ${account.email} or sign in with the correct account.');
+      }
+      
+      String idToken = account.authentication.idToken ?? "";
+      final authorization = await account.authorizationClient.authorizationForScopes(
+        [
+          'email',
+          'profile',
+        ],
+      ) ?? await account.authorizationClient.authorizationForScopes([
+          'email',
+          'profile',
+        ]);
+        
+      final AuthResponse response = await client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: authorization?.accessToken,
+      );
+      
+      final user = response.user;
+      if (user == null) {
+        throw Exception('Sign in succeeded but no user was returned');
+      }
+      
+      // Double check email matches
+      if (user.email?.toLowerCase() != normalizedEmail) {
+        throw Exception('Email verification failed. Please try again.');
+      }
+      
+      return user;
+    } catch (e) {
+      throw Exception('Failed to verify Gmail: ${e.toString()}');
+    }
+  }
+
   @override
   Future<void> signOut() async {
     try {

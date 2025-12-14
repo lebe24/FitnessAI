@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:fitness/app/core/common/common_lib.dart';
 import 'package:fitness/app/core/routes/app_router.dart';
 import 'package:fitness/app/core/theme/app_pallet.dart';
+import 'package:fitness/app/core/di.dart';
+import 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fitness/app/core/common/widget/appWidget.dart';
@@ -15,15 +17,28 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final GetCurrentUser _getCurrentUser = sl<GetCurrentUser>();
+
   @override
   void initState() {
     super.initState();
-    // Navigate to welcome screen after 3 seconds
-    Timer(const Duration(seconds: 8), () {
+    // Check authentication and navigate after 3 seconds
+    Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        context.go(ScreenPaths.welcome);
+        _checkAuthenticationAndNavigate();
       }
     });
+  }
+
+  void _checkAuthenticationAndNavigate() {
+    final user = _getCurrentUser();
+    if (user != null) {
+      // User is authenticated, navigate to home
+      context.go(ScreenPaths.home);
+    } else {
+      // User is not authenticated, navigate to welcome
+      context.go(ScreenPaths.welcome);
+    }
   }
 
   @override

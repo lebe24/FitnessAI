@@ -79,6 +79,7 @@ Future<void> initDI() async {
 
   // --- Auth Use cases ---
   sl.registerLazySingleton(() => SignInWithGoogle(sl()));
+  sl.registerLazySingleton(() => SignInWithGmail(sl()));
   sl.registerLazySingleton(() => SignOut(sl()));
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
   sl.registerLazySingleton(() => DeleteAccount(sl()));
@@ -86,6 +87,7 @@ Future<void> initDI() async {
   // --- Auth Bloc ---
   sl.registerFactory(() => AuthBloc(
         signInWithGoogle: sl(),
+        signInWithGmail: sl(),
         signOut: sl(),
         getCurrentUser: sl(),
         deleteAccount: sl(),

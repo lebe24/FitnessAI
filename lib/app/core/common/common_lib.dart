@@ -5,6 +5,7 @@ export 'package:fitness/app/ui/auth/domain/repositories/auth_repository.dart';
 export 'package:fitness/app/ui/auth/domain/usecase/delete_account.dart';
 export 'package:fitness/app/ui/auth/domain/usecase/get_current_user.dart';
 export 'package:fitness/app/ui/auth/domain/usecase/sign_in_google.dart';
+export 'package:fitness/app/ui/auth/domain/usecase/sign_in_gmail.dart';
 export 'package:fitness/app/ui/auth/domain/usecase/sign_out.dart';
 export 'package:fitness/app/ui/auth/presentation/bloc/auth_bloc.dart';
 export 'package:fitness/app/ui/home/data/datasources/home_remote_datasource.dart';

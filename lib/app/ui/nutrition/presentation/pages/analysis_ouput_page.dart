@@ -3,6 +3,7 @@ import  'dart:io';
 import 'package:fitness/app/core/common/widget/appWidget.dart';
 import 'package:fitness/app/ui/nutrition/domain/entities/nutrition_analysis_entity.dart';
 import 'package:fitness/app/ui/nutrition/domain/entities/stored_nutrition_analysis_entity.dart';
+import 'package:fitness/app/ui/nutrition/data/models/stored_nutrition_analysis_model.dart';
 import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_bloc.dart';
 import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_event.dart';
 import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_state.dart';
@@ -217,11 +218,43 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
                       const SizedBox(height: 20),
 
                       SizedBox(
-                        width:double.infinity,
-                        child: AppWidgets.roundbtnText(
-                          onPressed: () {},
-                          text: "Save Meal",
-                        ),
+                        width: double.infinity,
+                        child: _isSaved
+                            ? ElevatedButton(
+                                onPressed: null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Meal Saved",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : AppWidgets.roundbtnText(
+                                onPressed: () {
+                                  _saveMeal(context);
+                                },
+                                text: "Save Meal",
+                              ),
                       )
                     ],),
                   ),
@@ -232,6 +265,23 @@ class _AnalysisOutputPageState extends State<AnalysisOutputPage> {
         )
       ),
     );
+  }
+
+  void _saveMeal(BuildContext context) {
+    if (widget.analysis == null) return;
+
+    final now = DateTime.now();
+    final storedAnalysis = StoredNutritionAnalysisModel(
+      id: const Uuid().v4(),
+      analysis: widget.analysis!,
+      imagePath: widget.imagePath,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    context.read<NutritionBloc>().add(
+          SaveNutritionAnalysisRequested(storedAnalysis),
+        );
   }
 
   Color _getHealthinessColor(double score) {

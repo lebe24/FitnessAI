@@ -14,6 +14,7 @@ import 'package:fitness/app/ui/nutrition/presentation/bloc/nutrition_bloc.dart';
 import 'package:fitness/app/ui/nutrition/domain/entities/nutrition_analysis_entity.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_event.dart';
+import 'package:fitness/app/ui/auth/presentation/page/auth_login_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,6 +28,7 @@ class ScreenPaths {
   static String workout = '/workout';
   static String nutrition = '/nutrition';
   static String nutritionAnalysis = '/nutrition-analysis';
+  static String login = '/login';
 
   static final appRouter = GoRouter(
     initialLocation: splash,
@@ -34,6 +36,10 @@ class ScreenPaths {
       GoRoute(
         path: welcome,
         builder: (context, state) => Welcome(),
+      ),
+      GoRoute(
+        path: login,
+        builder: (context, state) => const AuthLoginPage(),
       ),
       GoRoute(
         path: home,
