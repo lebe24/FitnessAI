@@ -17,7 +17,7 @@ class YouTubeRemoteDataSourceImpl implements YouTubeRemoteDataSource {
       receiveTimeout: const Duration(seconds: 30),
       headers: {
         'Content-Type': 'application/json',
-        if (Constant.youtubeRapidApiKey.isNotEmpty) 'x-rapidapi-key': Constant.youtubeRapidApiKey,
+        if (Constant.youtubeRapidApiKey!.isNotEmpty) 'x-rapidapi-key': Constant.youtubeRapidApiKey,
         'x-rapidapi-host': Constant.youtubeRapidApiHost,
       },
     ));
@@ -31,7 +31,7 @@ class YouTubeRemoteDataSourceImpl implements YouTubeRemoteDataSource {
     try {
       final apiKey = Constant.youtubeRapidApiKey;
 
-      if (apiKey.isEmpty) {
+      if (apiKey!.isEmpty) {
         throw Exception('RapidAPI YouTube key is missing');
       }
 
