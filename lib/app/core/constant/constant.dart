@@ -5,13 +5,25 @@ class Constant {
   static const String welcomeMessage = "Welcome to BEFIT - AI";
   static const String onboardingMessage = "Let's get started with your fitness journey!";
 
+  // BACKEND BASE URL
+  static final backendUrl = dotenv.env['BACKEND_BASE_URL'];
+
   // supabase client
-  static final supabaseUrl = dotenv.env['SUPABASE_URL'];
+  static final supabaseUrl = dotenv.env['SUPABASE_URL'] ;
   static final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
 
+
   // Oauth
+  // Web OAuth client ID (used as serverClientId for Google Sign-In)
   static final oauthWebClient = dotenv.env['Oauth_webClientId'];
+  
+  // iOS OAuth client ID
+  // Format: {CLIENT_ID_PART}.apps.googleusercontent.com
+  // Example: 846651404738-ap673f3cgaog3nh8n4a6vfa66oq1km44.apps.googleusercontent.com
+  // The reverse client ID (com.googleusercontent.apps.{CLIENT_ID_PART}) is configured in ios/Runner/Info.plist as CFBundleURLSchemes
   static final iosClient = dotenv.env['OAUTH_IOS_CLIENT'];
+  
+  // Android OAuth client ID
   static final oauthAndroidClient = dotenv.env['OAUTH_ANDROID_CLIENT'];
 
   // API Keys
