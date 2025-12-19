@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:fitness/app/core/constant/constant.dart';
 
 abstract class AgentRemoteDataSource {
   Future<String> generateMotivationQuote({
@@ -9,7 +10,7 @@ abstract class AgentRemoteDataSource {
 }
 
 class AgentRemoteDataSourceImpl implements AgentRemoteDataSource {
-  final String baseUrl = "https://fwq1p840-8080.uks1.devtunnels.ms/";
+  final String baseUrl = Constant.backendUrl;
   
   late final Dio dio;
 

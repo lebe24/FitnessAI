@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:fitness/app/core/constant/constant.dart';
 import 'package:fitness/app/ui/nutrition/data/models/nutrition_analysis_model.dart';
 
 abstract class NutritionRemoteDataSource {
@@ -15,7 +16,7 @@ abstract class NutritionRemoteDataSource {
 }
 
 class NutritionRemoteDataSourceImpl implements NutritionRemoteDataSource {
-  final String baseUrl = "https://fwq1p840-8080.uks1.devtunnels.ms/";
+  final String baseUrl = Constant.backendUrl;
   
   late final Dio dio;
 

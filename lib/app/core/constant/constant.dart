@@ -6,7 +6,7 @@ class Constant {
   static const String onboardingMessage = "Let's get started with your fitness journey!";
 
   // BACKEND BASE URL
-  static final backendUrl = dotenv.env['BACKEND_BASE_URL'];
+  static final backendUrl = dotenv.env['BACKEND_BASE_URL'] ?? "https://fwq1p840-8080.uks1.devtunnels.ms/";
 
   // supabase client
   static final supabaseUrl = dotenv.env['SUPABASE_URL'] ;

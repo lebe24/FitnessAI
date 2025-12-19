@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:fitness/app/chat/data/models/chat_message_model.dart';
 import 'package:fitness/app/chat/data/models/chat_response_model.dart';
+import 'package:fitness/app/core/constant/constant.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Data source interface for chat WebSocket communication
@@ -28,7 +29,7 @@ abstract class ChatRemoteDataSource {
 }
 
 class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
-  static const String _baseUrl = 'ws://fwq1p840-8080.uks1.devtunnels.ms/ws/chat';
+  static  final String _baseUrl = 'ws:${Constant.backendUrl}/ws/chat';
   
   WebSocketChannel? _channel;
   final _messageController = StreamController<ChatMessageModel>.broadcast();

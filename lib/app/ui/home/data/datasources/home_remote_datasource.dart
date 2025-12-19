@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:fitness/app/core/constant/constant.dart';
 import 'package:fitness/app/ui/home/data/model/workout_plan_model.dart';
 
 class HomeRemoteDataSource {
-  final String baseUrl = "https://fwq1p840-8080.uks1.devtunnels.ms/";
+  final String baseUrl = Constant.backendUrl;
   
   late final Dio dio;
 
