@@ -1,6 +1,6 @@
 name: fitness
 description: "Befit AI - Your Personal Fitness Assistant tailored for you."
-publish_to: 'none'
+publish_to: 'manuel'
 version: 0.1.0
 
 environment:
@@ -45,8 +45,24 @@ dev_dependencies:
   bloc_test: ^10.0.0
   build_runner: ^2.4.13
   flutter_launcher_icons: ^0.14.4
+  icons_launcher: ^3.0.0
 
-flutter_launcher_icons:
+
+icons_launcher:
+  image_path: "assets/icon/app_icon.png"
+  platforms:
+    web:
+      enable: true
+      image_path: "assets/icon/app_icon.png"
+      favicon_path: "assets/icon/app_icon.png"
+    android:
+      enable: true
+    ios:
+      enable: true
+    macos:
+      enable: true
+
+flutter_icons:
   ios: true
   android: true
   image_path: assets/icon/app_icon.png
