@@ -45,12 +45,12 @@ class ProfilePage extends StatelessWidget {
             ),
 
             // Invite Friends Section
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: _InviteFriendsSection(),
-              ),
-            ),
+            // SliverToBoxAdapter(
+            //   child: Padding(
+            //     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            //     child: _InviteFriendsSection(),
+            //   ),
+            // ),
 
             // General Settings
             SliverToBoxAdapter(
@@ -376,18 +376,18 @@ final List<_SettingsItem> _generalSettingsItems = [
   ),
   _SettingsItem(
     icon: Icons.refresh,
-    title: 'Adjust workout level',
+    title: 'Adjust workout plan',
     onTap: (context) {
-      // TODO: Navigate to macronutrients page
+      // TODO: Navigate to  workplan chat page
     },
   ),
-  _SettingsItem(
-    icon: Icons.flag_outlined,
-    title: 'Goal & progress',
-    onTap: (context) {
-      // TODO: Navigate to goal & weight page
-    },
-  ),
+  // _SettingsItem(
+  //   icon: Icons.flag_outlined,
+  //   title: 'Goal & progress',
+  //   onTap: (context) {
+  //     // TODO: Navigate to goal & weight page
+  //   },
+  // ),
   _SettingsItem(
     icon: Icons.language,
     title: 'Language',

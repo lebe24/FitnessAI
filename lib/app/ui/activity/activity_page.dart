@@ -68,18 +68,18 @@ class _ActivityPageState extends State<ActivityPage> {
   /// GRID SECTION
   Widget _buildGridSection() {
     final items = [
-      _CategoryItem("Running", Icons.play_circle_fill, Colors.blueAccent, true),
-      _CategoryItem("Stair climbing outdoors", Icons.campaign, Colors.teal, true),
-      _CategoryItem("Backpacking", Icons.favorite, Colors.redAccent, false),
-      _CategoryItem("Speed walking", Icons.videocam, Colors.purpleAccent, false),
-      _CategoryItem("Hiking", Icons.camera_alt, Colors.blueGrey.shade300, false),
-      _CategoryItem("Rock climbing", Icons.pie_chart, Colors.orange, false),
+      _CategoryItem("Running", Icons.directions_run, Colors.blueAccent, true),
+      _CategoryItem("Stair climbing outdoors", Icons.stairs, Colors.teal, true),
+      _CategoryItem("Backpacking", Icons.backpack, Colors.redAccent, false),
+      _CategoryItem("Speed walking", Icons.directions_walk, Colors.purpleAccent, false),
+      _CategoryItem("Hiking", Icons.terrain, Colors.blueGrey.shade300, false),
+      _CategoryItem("Rock climbing", Icons.scale, Colors.orange, false),
       _CategoryItem("Print products", Icons.print, Colors.blueAccent, false),
-      _CategoryItem("Jump rope", Icons.description, Colors.teal, false),
-      _CategoryItem("Canva Code", Icons.code, Colors.green, false),
-      _CategoryItem("Website", Icons.web, Colors.indigo, false),
+      _CategoryItem("Jump rope", Icons.fitness_center, Colors.teal, false),
+      _CategoryItem("Video Analysis", Icons.video_library, Colors.green, false),
+      _CategoryItem("Shopping", Icons.shopping_cart, Colors.indigo, false),
       _CategoryItem("Email", Icons.mail, Colors.deepPurple, true),
-      _CategoryItem("Whiteboard", Icons.border_all, Colors.green, false),
+      _CategoryItem("Daily Challenge", Icons.fitness_center, Colors.green, false),
     ];
 
     return GridView.count(

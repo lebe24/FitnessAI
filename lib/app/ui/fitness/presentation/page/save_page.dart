@@ -122,13 +122,11 @@ class _SavedPageState extends State<SavedPage> {
     } else {
       // item.type == SavedItemType.workoutPlan
       final storedPlan = item.data as StoredFitnessPlanEntity;
-      // Navigate to workout page or create a detail page for workout plans
-      // For now, we'll show a snackbar indicating workout plan detail page needs to be created
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Workout plan detail view coming soon'),
-          backgroundColor: Colors.blue,
-        ),
+      context.push(
+        ScreenPaths.workoutPlanDetail,
+        extra: {
+          'storedPlan': storedPlan,
+        },
       );
     }
   }

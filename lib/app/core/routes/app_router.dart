@@ -1,4 +1,5 @@
 import 'package:fitness/app/ui/fitness/presentation/page/workout_page.dart';
+import 'package:fitness/app/ui/fitness/presentation/page/workout_plan_detail_page.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:fitness/app/core/routes/analysis_route_wrapper.dart';
 import 'package:fitness/app/core/common/common_lib.dart';
@@ -15,6 +16,8 @@ import 'package:fitness/app/ui/nutrition/domain/entities/nutrition_analysis_enti
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_bloc.dart';
 import 'package:fitness/app/ui/fitness/presentation/bloc/fitness_event.dart';
 import 'package:fitness/app/ui/auth/presentation/page/auth_login_page.dart';
+import 'package:fitness/app/storage/domain/entities/stored_fitness_plan_entity.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -28,6 +31,7 @@ class ScreenPaths {
   static String workout = '/workout';
   static String nutrition = '/nutrition';
   static String nutritionAnalysis = '/nutrition-analysis';
+  static String workoutPlanDetail = '/workout-plan-detail';
   static String login = '/login';
 
   static final appRouter = GoRouter(
@@ -111,6 +115,22 @@ class ScreenPaths {
                   )
                 : const AnalysisOutputPage(),
           );
+        },
+      ),
+      GoRoute(
+        path: workoutPlanDetail,
+        builder: (context, state) {
+          final extra = state.extra;
+          return extra is Map<String, dynamic> &&
+                  extra['storedPlan'] is StoredFitnessPlanEntity
+              ? WorkoutPlanDetailPage(
+                  storedPlan: extra['storedPlan'] as StoredFitnessPlanEntity,
+                )
+              : const Scaffold(
+                  body: Center(
+                    child: Text('No workout plan data available'),
+                  ),
+                );
         },
       ),
     ],
