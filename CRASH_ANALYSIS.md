@@ -2,6 +2,7 @@
 
 ## Crash Details
 
+### Crash #1 (Initial)
 **Date**: 2025-12-25 20:19:02  
 **Device**: iPhone 18,2 (iPhone 17 Pro Max)  
 **OS Version**: iOS 26.2 (23C55)  
@@ -9,45 +10,71 @@
 **Exception Type**: `EXC_BAD_ACCESS (SIGSEGV)` - Segmentation fault  
 **Exception Subtype**: `KERN_INVALID_ADDRESS at 0x0000000000000000` (Null pointer access)
 
-## Root Cause
+**Location**: `path_provider_foundation` plugin
 
-The crash occurs in the `path_provider_foundation` plugin during app startup. Specifically:
-
-1. **Location**: `swift_getObjectType` in `libswiftCore.dylib` called from `path_provider_foundation`
-2. **When**: During plugin registration in `GeneratedPluginRegistrant.register`
-3. **Why**: The Swift runtime is trying to get the type of a null object pointer (0x0)
-
-The crash happens because:
-- `path_provider_foundation` is a Swift-based Flutter plugin
-- During initialization, it's trying to access a Swift object before it's properly initialized
-- This is a Swift runtime initialization order issue, possibly exacerbated by iOS 26.2 compatibility
-
-## Stack Trace (Key Frames)
-
+**Stack Trace**:
 ```
 0   libswiftCore.dylib            	swift_getObjectType + 40
 1   path_provider_foundation      	0x101e287d8 (offset 34776)
 2   path_provider_foundation      	0x101e28910 (offset 35088)
 3   Runner                        	0x100284284 (app initialization)
-...
-6   UIKitCore                     	-[UIApplication _handleDelegateCallbacksWithOptions:...]
 ```
+
+### Crash #2 (After Fix #1)
+**Date**: 2025-12-25 20:43:38  
+**Device**: iPhone 18,2 (iPhone 17 Pro Max)  
+**OS Version**: iOS 26.2 (23C55)  
+**App Version**: 0.1.0 (6)  
+**Exception Type**: `EXC_BAD_ACCESS (SIGSEGV)` - Segmentation fault  
+**Exception Subtype**: `KERN_INVALID_ADDRESS at 0x0000000000000000` (Null pointer access)
+
+**Location**: Runner binary (Swift plugin code compiled into main app)  
+**Progress**: The crash moved from `path_provider_foundation` to Runner binary, indicating the first fix helped but Swift runtime initialization is still incomplete.
+
+**Stack Trace**:
+```
+0   libswiftCore.dylib            	swift_getObjectType + 40
+1   Runner                        	0x102cf7068 (offset 8728680 - compiled Swift code)
+2   Runner                        	0x102cf71a0 (offset 8728992)
+3   Runner                        	0x1024a8284 (app initialization)
+```
+
+## Root Cause
+
+Both crashes share the same root cause: **Swift runtime initialization order issue on iOS 26.2**
+
+1. **Crash #1**: `path_provider_foundation` plugin couldn't access Swift objects during initialization
+2. **Crash #2**: With static frameworks, Swift plugin code is compiled into Runner, but Swift runtime isn't properly embedded/initialized
+
+The issue:
+- Swift-based Flutter plugins need the Swift runtime to be available during initialization
+- With static frameworks, all Swift code is compiled into the main app binary
+- The Swift runtime must be embedded and initialized before any Swift code executes
+- iOS 26.2 may have stricter initialization requirements
 
 ## Fixes Applied
 
-### 1. Podfile Changes
-- Changed from dynamic frameworks to **static frameworks** (`use_frameworks! :linkage => :static`)
-- Added Swift build settings:
-  - `SWIFT_VERSION = '5.0'`
-  - `ENABLE_BITCODE = 'NO'`
-  - `BUILD_LIBRARY_FOR_DISTRIBUTION = 'YES'`
-  - `ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = 'NO'`
+### Fix #1 (Initial)
+1. **Podfile Changes**:
+   - Changed to static frameworks (`use_frameworks! :linkage => :static`)
+   - Added Swift build settings (SWIFT_VERSION, ENABLE_BITCODE, etc.)
+   - Set `ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = 'NO'`
 
-Static frameworks help with Swift initialization order by ensuring all Swift runtime dependencies are properly linked and initialized before the plugin tries to use them.
+2. **AppDelegate**:
+   - Ensured explicit plugin registration
 
-### 2. AppDelegate
-- Ensured plugin registration follows standard Flutter pattern
-- Plugins registered before calling super to ensure they're available during initialization
+**Result**: Crash moved from `path_provider_foundation` to Runner binary (progress!)
+
+### Fix #2 (Current)
+1. **Podfile Update**:
+   - **Embed Swift standard libraries for Runner target**: `ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = 'YES'` for Runner
+   - This ensures Swift runtime is available when static frameworks try to use Swift code
+   - Plugins still use `'NO'` to avoid duplicate embedding
+
+2. **AppDelegate**:
+   - Explicit plugin registration before super call to ensure proper initialization order
+
+**Why this should work**: With static frameworks, Swift code is compiled into Runner. We need to embed Swift standard libraries in the Runner target so the Swift runtime is available during app initialization, before plugins try to use Swift features.
 
 ## Next Steps
 
