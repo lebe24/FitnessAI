@@ -6,7 +6,6 @@ import 'package:fitness/app/ui/fitness/presentation/widget/yt_player.dart';
 import 'package:fitness/app/ui/home/domain/entities/workout_plan_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 // ======= Exercise Hero Page ========
 
