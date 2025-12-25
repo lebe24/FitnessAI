@@ -58,3 +58,7 @@ class StoredNutritionAnalysisEntity extends Equatable {
 
 
 
+
+
+
+
