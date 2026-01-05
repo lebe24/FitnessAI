@@ -27,16 +27,26 @@ class StoredFitnessPlanModel extends StoredFitnessPlanEntity {
   }
 
   factory StoredFitnessPlanModel.fromJson(Map<String, dynamic> json) {
+    // Safely convert workoutPlan
+    final workoutPlanData = json['workoutPlan'];
+    Map<String, dynamic> workoutPlanJson;
+    if (workoutPlanData is Map) {
+      workoutPlanJson = workoutPlanData.map((k, v) => MapEntry(
+        k.toString(),
+        v,
+      ));
+    } else {
+      throw Exception('Invalid workoutPlan data type: ${workoutPlanData.runtimeType}');
+    }
+
     return StoredFitnessPlanModel(
-      id: json['id'] as String,
-      workoutPlan: WorkoutPlanModel.fromJson(
-        json['workoutPlan'] as Map<String, dynamic>,
-      ),
-      imagePath: json['imagePath'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      isSynced: json['isSynced'] as bool? ?? false,
-      cloudId: json['cloudId'] as String?,
+      id: json['id']?.toString() ?? '',
+      workoutPlan: WorkoutPlanModel.fromJson(workoutPlanJson),
+      imagePath: json['imagePath']?.toString(),
+      createdAt: DateTime.parse(json['createdAt']?.toString() ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updatedAt']?.toString() ?? DateTime.now().toIso8601String()),
+      isSynced: json['isSynced'] == true || json['isSynced'] == 1,
+      cloudId: json['cloudId']?.toString(),
     );
   }
 

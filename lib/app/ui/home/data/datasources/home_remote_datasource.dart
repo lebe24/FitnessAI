@@ -14,7 +14,7 @@ class HomeRemoteDataSource {
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(minutes: 5), // Increased for image processing
-      sendTimeout: const Duration(seconds: 60),
+      sendTimeout: const Duration(minutes: 2),
     ));
   }
 

@@ -105,3 +105,8 @@ class DeleteNutritionAnalysisRequested extends NutritionEvent {
 
 
 
+
+
+
+
+

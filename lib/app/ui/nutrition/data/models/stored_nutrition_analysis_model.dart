@@ -22,12 +22,24 @@ class StoredNutritionAnalysisModel extends StoredNutritionAnalysisEntity {
   }
 
   factory StoredNutritionAnalysisModel.fromJson(Map<String, dynamic> json) {
+    // Safely convert analysis
+    final analysisData = json['analysis'];
+    Map<String, dynamic> analysisJson;
+    if (analysisData is Map) {
+      analysisJson = analysisData.map((k, v) => MapEntry(
+        k.toString(),
+        v,
+      ));
+    } else {
+      throw Exception('Invalid analysis data type: ${analysisData.runtimeType}');
+    }
+
     return StoredNutritionAnalysisModel(
-      id: json['id'] as String,
-      analysis: NutritionAnalysisModel.fromJson(json['analysis'] as Map<String, dynamic>),
-      imagePath: json['imagePath'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      id: json['id']?.toString() ?? '',
+      analysis: NutritionAnalysisModel.fromJson(analysisJson),
+      imagePath: json['imagePath']?.toString(),
+      createdAt: DateTime.parse(json['createdAt']?.toString() ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updatedAt']?.toString() ?? DateTime.now().toIso8601String()),
     );
   }
 
@@ -57,6 +69,11 @@ class StoredNutritionAnalysisModel extends StoredNutritionAnalysisEntity {
     );
   }
 }
+
+
+
+
+
 
 
 
