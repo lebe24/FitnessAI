@@ -28,6 +28,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>BeFit AI needs camera access to capture gym equipment or your exercise form for AI analysis.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
