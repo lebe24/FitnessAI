@@ -1,0 +1,36 @@
+{
+  "@@locale": "es",
+
+  "profileTitle": "Perfil",
+
+  "editAction": "Editar",
+  "sectionYourWorkoutsData": "Tus Datos de Entrenamiento",
+  "sectionGeneral": "General",
+  "sectionLegalSupport": "Legal y Soporte",
+  "sectionAccount": "Cuenta",
+
+  "menuPersonalDetails": "Datos personales",
+  "menuAdjustWorkoutPlan": "Ajustar plan de entrenamiento",
+  "menuBilling": "Facturación",
+  "menuLanguage": "Idioma",
+  "menuTermsAndConditions": "Términos y Condiciones",
+  "menuPrivacyPolicy": "Política de Privacidad",
+  "menuSupportEmail": "Correo de Soporte",
+  "menuFeatureRequest": "Solicitar una Función",
+  "menuLogout": "Cerrar Sesión",
+  "menuDeleteAccount": "Eliminar Cuenta",
+
+  "savedWorkoutsTitle": "Entrenamientos Guardados",
+  "savedWorkoutsSubtitle": "Accede a tus entrenamientos guardados en cualquier momento.",
+  "viewAllAction": "Ver todo",
+
+  "languagePageTitle": "Idioma",
+  "languagePageSubtitle": "Elige tu idioma preferido para la aplicación",
+  "languageEnglish": "Inglés",
+  "languageSpanish": "Español",
+
+  "commonCancel": "Cancelar",
+  "commonSave": "Guardar",
+  "commonContinue": "Continuar",
+  "commonRetry": "Reintentar"
+}

@@ -1,0 +1,130 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:fitness/ui/core/constants/constant.dart';
+import 'package:fitness/data/models/nutrition/nutrition_analysis_model.dart';
+
+abstract class NutritionRemoteDataSource {
+  Future<NutritionAnalysisModel> analyzeFood({
+    required File image,
+    String? goal,
+    String? gender,
+    String? height,
+    String? weight,
+    String? experience,
+    String? extraInfo,
+  });
+}
+
+class NutritionRemoteDataSourceImpl implements NutritionRemoteDataSource {
+  final String baseUrl = Constant.backendUrl;
+  
+  late final Dio dio;
+
+  NutritionRemoteDataSourceImpl() {
+    dio = Dio(BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(minutes: 5),
+      sendTimeout: const Duration(seconds: 60),
+    ));
+  }
+
+  @override
+  Future<NutritionAnalysisModel> analyzeFood({
+    required File image,
+    String? goal,
+    String? gender,
+    String? height,
+    String? weight,
+    String? experience,
+    String? extraInfo,
+  }) async {
+    final formData = FormData.fromMap({
+      "image": await MultipartFile.fromFile(
+        image.path,
+        filename: image.path.split("/").last,
+      ),
+      "goal": goal ?? "",
+      "gender": gender ?? "",
+      "height": height ?? "",
+      "weight": weight ?? "",
+      "experience": experience ?? "",
+      "extra_info": extraInfo ?? "",
+    });
+
+    try {
+      final response = await dio.post(
+        "/api/v1/analysis/nutrition",
+        data: formData,
+        options: Options(
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        if (response.data is Map<String, dynamic>) {
+          return NutritionAnalysisModel.fromJson(response.data as Map<String, dynamic>);
+        } else {
+          throw Exception("Unexpected response format: ${response.data.runtimeType}");
+        }
+      } else {
+        throw Exception("Failed to analyze food: ${response.statusMessage}");
+      }
+    } on DioException catch (e) {
+      throw Exception("Failed to analyze food: ${e.message}");
+    } catch (e) {
+      throw Exception("Failed to analyze food: $e");
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

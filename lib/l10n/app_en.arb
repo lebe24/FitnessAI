@@ -1,0 +1,37 @@
+{
+  "@@locale": "en",
+
+  "profileTitle": "Profile",
+  "@profileTitle": { "description": "Title of the Profile tab" },
+
+  "editAction": "Edit",
+  "sectionYourWorkoutsData": "Your Workouts Data",
+  "sectionGeneral": "General",
+  "sectionLegalSupport": "Legal & Support",
+  "sectionAccount": "Account",
+
+  "menuPersonalDetails": "Personal details",
+  "menuAdjustWorkoutPlan": "Adjust workout plan",
+  "menuBilling": "Billing",
+  "menuLanguage": "Language",
+  "menuTermsAndConditions": "Terms and Conditions",
+  "menuPrivacyPolicy": "Privacy Policy",
+  "menuSupportEmail": "Support Email",
+  "menuFeatureRequest": "Feature Request",
+  "menuLogout": "Logout",
+  "menuDeleteAccount": "Delete Account",
+
+  "savedWorkoutsTitle": "Saved Workouts",
+  "savedWorkoutsSubtitle": "Access your saved workouts anytime.",
+  "viewAllAction": "View all",
+
+  "languagePageTitle": "Language",
+  "languagePageSubtitle": "Choose your preferred language for the app",
+  "languageEnglish": "English",
+  "languageSpanish": "Spanish",
+
+  "commonCancel": "Cancel",
+  "commonSave": "Save",
+  "commonContinue": "Continue",
+  "commonRetry": "Retry"
+}

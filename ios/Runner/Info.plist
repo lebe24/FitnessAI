@@ -28,6 +28,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>BeFit AI needs camera access to capture gym equipment or your exercise form for AI analysis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BeFit AI needs photo library access so you can attach images to your coach chat.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>BeFit AI needs permission to save photos to your library.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BeFit AI uses speech recognition to fill in your workout sets by voice.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BeFit AI needs microphone access for voice input during workouts.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Befit AI needs access to your location to show nearby gyms and fitness facilities on the map, and to provide location-based workout recommendations.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
