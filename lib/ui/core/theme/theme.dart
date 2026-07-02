@@ -2,52 +2,6 @@ import 'package:fitness/ui/core/theme/app_pallet.dart';
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Modern border decoration for inputs
-  // static _border([Color? color]) => OutlineInputBorder(
-  //       borderSide: BorderSide(
-  //         color: color ?? AppPalete.borderColor.withOpacity(0.3),
-  //         width: 1.5,
-  //       ),
-  //       borderRadius: BorderRadius.circular(16),
-  //     );
-
-  // Card decoration for modern mobile design
-  // static BoxDecoration cardDecoration({bool isDark = false}) => BoxDecoration(
-  //       color: isDark
-  //           ? AppPalete.backgroundColorBk.withOpacity(0.6)
-  //           : AppPalete.whiteColor,
-  //       borderRadius: BorderRadius.circular(20),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: isDark
-  //               ? Colors.black.withOpacity(0.3)
-  //               : Colors.black.withOpacity(0.08),
-  //           blurRadius: 20,
-  //           offset: const Offset(0, 4),
-  //           spreadRadius: 0,
-  //         ),
-  //       ],
-  //     );
-
-  // // Elevated button decoration
-  // static BoxDecoration elevatedButtonDecoration({bool isDark = false}) =>
-  //     BoxDecoration(
-  //       gradient: const LinearGradient(
-  //         colors: [AppPalete.gradient1, AppPalete.gradient2],
-  //         begin: Alignment.topLeft,
-  //         end: Alignment.bottomRight,
-  //       ),
-  //       borderRadius: BorderRadius.circular(16),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: AppPalete.gradient2.withOpacity(0.4),
-  //           blurRadius: 12,
-  //           offset: const Offset(0, 6),
-  //           spreadRadius: 0,
-  //         ),
-  //       ],
-  //     );
-
   // White/Light Theme Mode
   static final whiteThemeMode = ThemeData.light().copyWith(
     useMaterial3: true,

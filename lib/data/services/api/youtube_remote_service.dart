@@ -48,29 +48,6 @@ class YouTubeRemoteDataSourceImpl implements YouTubeRemoteDataSource {
       if (response.statusCode == 200) {
         final data = response.data ;
         
-        // RapidAPI YouTube response format may vary
-        // Try to find items in different possible locations
-        // List<dynamic> items = [];
-        
-        // if (data != null) {
-        //   if (data.containsKey('contents')) {
-        //     final contents = data['contents'];
-        //     if (contents is List) {
-        //       items = contents;
-        //     } else if (contents is Map && contents.containsKey('items')) {
-        //       items = contents['items'] as List<dynamic>? ?? [];
-        //     }
-        //   } else if (data.containsKey('items')) {
-        //     items = data['items'] as List<dynamic>? ?? [];
-        //   } else if (data.containsKey('data')) {
-        //     final dataList = data['data'];
-        //     if (dataList is List) {
-        //       items = dataList;
-        //     }
-        //   }
-        // }
-        
-        // Map items to YouTubeVideoModel
         return data;
             
       } else {

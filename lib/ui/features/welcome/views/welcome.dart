@@ -20,15 +20,6 @@ class Welcome extends StatelessWidget {
         children: [
           Stack(
             children: [
-              // SizedBox(
-              //   height: 50,
-              //   width: 50,
-              //   child: Image.asset(
-              //     ImagePath.appLogo,
-              //     width: 50,
-              //     height: 50,
-              //   ),
-              // ),
               // Darken the top half of the screen
               Positioned.fill(
                 child: Container(

@@ -14,7 +14,6 @@ import 'package:provider/provider.dart';
 // ── Brand colours (dark sheet) ────────────────────────────────────────────────
 const _sheetBg   = Color(0xFF0A0C12);
 const _surface   = Color(0xFF1A2332);
-const _surfaceEl = Color(0xFF121620);
 const _border    = Color(0xFF2A2F3D);
 const _lime      = Color(0xFFCCFF00);
 const _textPri   = Colors.white;

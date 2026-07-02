@@ -4,8 +4,6 @@ class AppPalete {
   static const Color backgroundColorBk = Color.fromRGBO(24, 24, 32, 1);
   static const Color backgroundColorWH = Color.fromRGBO(235, 235, 242, 1);
   static final Color accent1 = const Color.fromARGB(225, 26, 202, 49);
-  static final Color accent2 = Color(0xFFBEABA1);
-  static final Color offWhite = Color(0xFFF8ECE5);
   static const Color sparkGradient = Color.fromRGBO(187, 63, 221, 1);
   static const Color gradient2 = Color.fromRGBO(251, 109, 169, 1);
   static const Color gradient3 = Color.fromRGBO(255, 159, 124, 1);
@@ -14,4 +12,10 @@ class AppPalete {
   static const Color greyColor = Colors.grey;
   static const Color errorColor = Colors.redAccent;
   static const Color transparentColor = Colors.transparent;
+
+  // Dark-mode surface palette (used across all features)
+  static const Color lime = Color(0xFFCCFF00);
+  static const Color surfaceBg = Color(0xFF0A0C12);
+  static const Color surfaceCard = Color(0xFF111318);
+  static const Color surfaceBorder = Color(0xFF1E2330);
 }

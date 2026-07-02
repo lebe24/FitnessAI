@@ -83,22 +83,6 @@ class DecideStep extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Padding(
-                      //   padding: const EdgeInsets.symmetric(vertical: 8),
-                      //   child: _DecideCard(
-                      //     icon: Icons.smart_toy_rounded,
-                      //     label: 'Chat with AI Coach',
-                      //     description:
-                      //         'Describe your existing or specific goals and get a personalised plan built through conversation',
-                      //     delay: 0,
-                      //     onTap: () => context.push('/chat', extra: {
-                      //       'userId': userId,
-                      //       'userName': userName,
-                      //       'workoutPlan': null,
-                      //       'onboardingData': vm.data,
-                      //     }),
-                      //   ),
-                      // ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: _DecideCard(
