@@ -14,7 +14,6 @@
 		8C0546C7F9035B855BEA50B9 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CC4B0F503A090AFC3844C631 /* Pods_RunnerTests.framework */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
-		CD2606F02EEECF49007BF088 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CD2606EF2EEECF49007BF088 /* Assets.xcassets */; };
 		CD2606F22EEECF6B007BF088 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CD2606F12EEECF6B007BF088 /* Assets.xcassets */; };
 		D2C7FACF0F19B3421AF8A87C /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 206CC9D55C786F9F67034EED /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
@@ -65,7 +64,6 @@
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AEC50BA3C783A62E8D6269F5 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		CC4B0F503A090AFC3844C631 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		CD2606EF2EEECF49007BF088 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = "../../../../../../../Downloads/AppIcons (2)/Assets.xcassets"; sourceTree = "<group>"; };
 		CD2606F12EEECF6B007BF088 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -92,7 +90,6 @@
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
-				CD2606EF2EEECF49007BF088 /* Assets.xcassets */,
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 			);
 			path = RunnerTests;
@@ -255,7 +252,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CD2606F02EEECF49007BF088 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
