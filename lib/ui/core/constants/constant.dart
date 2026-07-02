@@ -8,17 +8,14 @@ class Constant {
   // Support / legal contact — update once a real support inbox exists.
   static const String supportEmail = "support@befitai.app";
 
-  // BACKEND BASE URL
-   static final backendUrl = dotenv.env['BACKEND_BASE_URL'] ?? "https://fwq1p840-8080.uks1.devtunnels.ms/";
-  // static final backendUrl = "https://2bq79ddl-8080.uks1.devtunnels.ms/";
+  // BACKEND BASE URL — production Cloud Run; override locally via .env
+  static final backendUrl = dotenv.env['BACKEND_BASE_URL'] ?? "https://fitness-agent-vjpfphelaa-uc.a.run.app/";
 
   // WebSocket chat server (separate Cloud Run service)
-   static const chatWsUrl = 'wss://fitness-agent-vjpfphelaa-uc.a.run.app/ws/chat';
-  // static const chatWsUrl = "wss://2bq79ddl-8080.uks1.devtunnels.ms/ws/chat";
+  static const chatWsUrl = 'wss://fitness-agent-vjpfphelaa-uc.a.run.app/ws/chat';
 
   // Personalised agent WebSocket — loads full user context from the DB server-side
   static const agentWsUrl = 'wss://fitness-agent-vjpfphelaa-uc.a.run.app/ws/agent';
-  // static const agentWsUrl = "wss://2bq79ddl-8080.uks1.devtunnels.ms/ws/agent";
 
   // supabase client
   static final supabaseUrl = dotenv.env['SUPABASE_URL'] ;
