@@ -125,20 +125,22 @@ class _BillingPageState extends State<BillingPage> {
             _PlanCard(
               name: 'Free',
               price: '\$0',
-              period: 'forever',
+              priceSuffix: '/forever',
+              description: 'Everything you need to start your fitness journey at no cost.',
               features: _freeFeatures,
               accent: _kDim,
               isCurrent: true,
               onTap: null,
             ).animate(delay: 120.ms).fadeIn(duration: 300.ms),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
             // ── Premium plan card ────────────────────────────────────
             _PlanCard(
               name: 'Premium',
-              price: _yearly ? '\$79.99' : '\$8.99',
-              period: _yearly ? '/year' : '/month',
+              price: _yearly ? '\$79' : '\$8',
+              priceSuffix: _yearly ? '.99/year' : '.99/month',
+              description: 'Best for serious training — unlimited AI plans, coaching, and analysis.',
               features: _premiumFeatures,
               accent: _kLime,
               isCurrent: false,
@@ -242,7 +244,8 @@ class _CycleTab extends StatelessWidget {
 class _PlanCard extends StatelessWidget {
   final String name;
   final String price;
-  final String period;
+  final String priceSuffix;
+  final String description;
   final List<String> features;
   final Color accent;
   final bool isCurrent;
@@ -252,7 +255,8 @@ class _PlanCard extends StatelessWidget {
   const _PlanCard({
     required this.name,
     required this.price,
-    required this.period,
+    required this.priceSuffix,
+    required this.description,
     required this.features,
     required this.accent,
     required this.isCurrent,
@@ -263,74 +267,114 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isHighlighted ? _kLime.withValues(alpha: 0.06) : _kCard,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: isHighlighted ? _kLime.withValues(alpha: 0.4) : _kBorder, width: isHighlighted ? 1.5 : 1),
+        color: _kCard,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isHighlighted ? _kLime.withValues(alpha: 0.35) : _kBorder,
+          width: isHighlighted ? 1.5 : 1,
+        ),
         boxShadow: isHighlighted
-            ? [BoxShadow(color: _kLime.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 6))]
+            ? [BoxShadow(color: _kLime.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 8))]
             : null,
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text(name, style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
-          if (isHighlighted) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: _kLime, borderRadius: BorderRadius.circular(20)),
-              child: Text('BEST VALUE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
-            ),
-          ],
-          const Spacer(),
-          RichText(
-            text: TextSpan(children: [
-              TextSpan(text: price, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
-              TextSpan(text: ' $period', style: GoogleFonts.inter(fontSize: 11, color: _kDim)),
-            ]),
+        // ── Header zone (gradient for the highlighted plan) ──────────
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          decoration: BoxDecoration(
+            gradient: isHighlighted
+                ? const LinearGradient(
+                    begin: Alignment.bottomLeft,
+                    end: Alignment.topRight,
+                    colors: [
+                      Color(0x00CCFF00),
+                      Color(0x1FF66DA9),
+                      Color(0x33BB3FDD),
+                    ],
+                  )
+                : null,
+            color: isHighlighted ? null : Colors.white.withValues(alpha: 0.02),
           ),
-        ]),
-        const SizedBox(height: 14),
-        ...features.map((f) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(Icons.check_circle_rounded, size: 16, color: accent),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Text(name, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+              if (isHighlighted) ...[
                 const SizedBox(width: 8),
-                Expanded(child: Text(f, style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: Colors.white.withValues(alpha: 0.85)))),
-              ]),
-            )),
-        const SizedBox(height: 6),
-        if (isCurrent)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _kBorder),
-            ),
-            child: Center(
-              child: Text('Current Plan', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: _kDim)),
-            ),
-          )
-        else
-          GestureDetector(
-            onTap: onTap,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.3), blurRadius: 14, offset: const Offset(0, 4))],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: _kLime, borderRadius: BorderRadius.circular(20)),
+                  child: Text('BEST VALUE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
+                ),
+              ],
+            ]),
+            const SizedBox(height: 14),
+            // Big price with small suffix, baseline-aligned like the template
+            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(price, style: GoogleFonts.poppins(fontSize: 40, fontWeight: FontWeight.w800, color: Colors.white, height: 1)),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, left: 2),
+                child: Text(priceSuffix, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kDim)),
               ),
-              child: Center(
-                child: Text('Upgrade to $name', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black)),
+            ]),
+            const SizedBox(height: 12),
+            Text(description, style: GoogleFonts.inter(fontSize: 13, height: 1.45, color: Colors.white.withValues(alpha: 0.7))),
+            const SizedBox(height: 18),
+            // Full-width pill CTA
+            if (isCurrent)
+              _PillButton(label: 'Current Plan', filled: false, onTap: null)
+            else
+              _PillButton(label: 'Start Free', filled: true, onTap: onTap),
+          ]),
+        ),
+        // ── Features zone ────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            for (int i = 0; i < features.length; i++)
+              Padding(
+                padding: EdgeInsets.only(bottom: i == features.length - 1 ? 0 : 14),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(Icons.check_circle_outline_rounded, size: 19, color: accent),
+                  const SizedBox(width: 11),
+                  Expanded(child: Text(features[i], style: GoogleFonts.inter(fontSize: 13, height: 1.35, color: Colors.white.withValues(alpha: 0.9)))),
+                ]),
               ),
-            ),
-          ),
+          ]),
+        ),
       ]),
+    );
+  }
+}
+
+// ── Pill CTA button ──────────────────────────────────────────────────────────────
+
+class _PillButton extends StatelessWidget {
+  final String label;
+  final bool filled;
+  final VoidCallback? onTap;
+  const _PillButton({required this.label, required this.filled, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        decoration: BoxDecoration(
+          color: filled ? Colors.black : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(30),
+          border: filled ? null : Border.all(color: _kBorder),
+        ),
+        child: Center(
+          child: Text(label, style: GoogleFonts.poppins(
+              fontSize: 14, fontWeight: FontWeight.w600,
+              color: filled ? Colors.white : _kDim)),
+        ),
+      ),
     );
   }
 }
