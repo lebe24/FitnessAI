@@ -1246,6 +1246,33 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
                       ],
                     ),
                   ),
+                  // ── Voice-log mic ────────────────────────────────────────
+                  GestureDetector(
+                    onTap: _sttAvailable ? _toggleListening : null,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: _isListening
+                            ? _kLime
+                            : Colors.white.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _isListening
+                              ? _kLime
+                              : Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: Icon(
+                        _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                        color: _isListening
+                            ? Colors.black
+                            : (_sttAvailable ? _kLime : Colors.white24),
+                        size: 18,
+                      ),
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
