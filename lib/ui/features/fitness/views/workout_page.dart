@@ -162,11 +162,12 @@ class _WorkoutPageState extends State<WorkoutPage> {
   }
 
   // ─── Reordering ─────────────────────────────────────────────────────────────
-  // Completion state is tracked by index (_completedExercises / _currentExerciseIndex),
-  // so a reorder must remap those to follow the exercises they point at — otherwise
-  // the "done"/"now" markers would stay on the old positions and land on the wrong
-  // exercises. We capture the tracked exercises by identity, move the list, then
-  // rebuild the indices from the new positions.
+  // The active ("NOW") exercise is always the first one not yet completed. So a
+  // reorder just needs to preserve which exercises are done (tracked by index)
+  // and then recompute the active pointer — dragging a card above the current
+  // active card hands the NOW status to the card now sitting first among the
+  // remaining exercises. We capture the completed exercises by identity, move
+  // the list, then rebuild the done indices and the active pointer.
   void _reorderExercises(int oldIndex, int newIndex) {
     setState(() {
       if (newIndex > oldIndex) newIndex -= 1;
@@ -174,10 +175,6 @@ class _WorkoutPageState extends State<WorkoutPage> {
       final completedRefs = {
         for (final i in _completedExercises) _localExercises[i],
       };
-      final activeRef = (_currentExerciseIndex >= 0 &&
-              _currentExerciseIndex < _localExercises.length)
-          ? _localExercises[_currentExerciseIndex]
-          : null;
 
       final moved = _localExercises.removeAt(oldIndex);
       _localExercises.insert(newIndex, moved);
@@ -188,9 +185,17 @@ class _WorkoutPageState extends State<WorkoutPage> {
           for (int i = 0; i < _localExercises.length; i++)
             if (completedRefs.contains(_localExercises[i])) i,
         ]);
-      _currentExerciseIndex =
-          activeRef == null ? -1 : _localExercises.indexOf(activeRef);
+      _currentExerciseIndex = _firstIncompleteIndex();
     });
+  }
+
+  /// First exercise not yet completed — the active ("NOW") card — or -1 if all
+  /// exercises are done.
+  int _firstIncompleteIndex() {
+    for (int i = 0; i < _localExercises.length; i++) {
+      if (!_completedExercises.contains(i)) return i;
+    }
+    return -1;
   }
 
   // ─── Exercise completion ──────────────────────────────────────────────────────
@@ -406,7 +411,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
                             physics: const BouncingScrollPhysics(),
                             itemCount: _exercises.length,
                             onReorder: _reorderExercises,
-                            // Long-press any exercise to drag it into a new order.
+                            // Drag via the explicit handle, not the whole tile,
+                            // so it doesn't fight with tap / double-tap gestures.
+                            buildDefaultDragHandles: false,
                             itemBuilder: (_, i) => _ExerciseItem(
                               key: ObjectKey(_exercises[i]),
                               exercise: _exercises[i],
@@ -825,6 +832,22 @@ class _ExerciseItem extends StatelessWidget {
                               onComplete: onComplete,
                             )
                           : _PendingCard(exercise: exercise, index: index),
+                ),
+              ),
+            ),
+          ),
+          // ── Drag handle ──────────────────────────────────────────────────
+          Padding(
+            padding: EdgeInsets.only(bottom: _isLast ? 0 : 12, left: 4),
+            child: ReorderableDragStartListener(
+              index: index,
+              child: Container(
+                width: 32,
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.drag_indicator_rounded,
+                  size: 20,
+                  color: Colors.white.withValues(alpha: 0.28),
                 ),
               ),
             ),
