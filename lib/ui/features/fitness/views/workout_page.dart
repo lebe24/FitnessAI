@@ -161,6 +161,38 @@ class _WorkoutPageState extends State<WorkoutPage> {
     });
   }
 
+  // ─── Reordering ─────────────────────────────────────────────────────────────
+  // Completion state is tracked by index (_completedExercises / _currentExerciseIndex),
+  // so a reorder must remap those to follow the exercises they point at — otherwise
+  // the "done"/"now" markers would stay on the old positions and land on the wrong
+  // exercises. We capture the tracked exercises by identity, move the list, then
+  // rebuild the indices from the new positions.
+  void _reorderExercises(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) newIndex -= 1;
+
+      final completedRefs = {
+        for (final i in _completedExercises) _localExercises[i],
+      };
+      final activeRef = (_currentExerciseIndex >= 0 &&
+              _currentExerciseIndex < _localExercises.length)
+          ? _localExercises[_currentExerciseIndex]
+          : null;
+
+      final moved = _localExercises.removeAt(oldIndex);
+      _localExercises.insert(newIndex, moved);
+
+      _completedExercises
+        ..clear()
+        ..addAll([
+          for (int i = 0; i < _localExercises.length; i++)
+            if (completedRefs.contains(_localExercises[i])) i,
+        ]);
+      _currentExerciseIndex =
+          activeRef == null ? -1 : _localExercises.indexOf(activeRef);
+    });
+  }
+
   // ─── Exercise completion ──────────────────────────────────────────────────────
   void _completeExercise(int index) {
     _completionTimestamps.add(DateTime.now());
@@ -369,11 +401,14 @@ class _WorkoutPageState extends State<WorkoutPage> {
                   Expanded(
                     child: _exercises.isEmpty
                         ? _EmptyState()
-                        : ListView.builder(
+                        : ReorderableListView.builder(
                             padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                             physics: const BouncingScrollPhysics(),
                             itemCount: _exercises.length,
+                            onReorder: _reorderExercises,
+                            // Long-press any exercise to drag it into a new order.
                             itemBuilder: (_, i) => _ExerciseItem(
+                              key: ObjectKey(_exercises[i]),
                               exercise: _exercises[i],
                               index: i,
                               total: total,
@@ -662,6 +697,7 @@ class _ExerciseItem extends StatelessWidget {
   final VoidCallback onDoubleTap;
 
   const _ExerciseItem({
+    super.key,
     required this.exercise,
     required this.index,
     required this.total,
