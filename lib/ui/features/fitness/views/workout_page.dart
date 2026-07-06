@@ -414,6 +414,14 @@ class _WorkoutPageState extends State<WorkoutPage> {
                             // Drag via the explicit handle, not the whole tile,
                             // so it doesn't fight with tap / double-tap gestures.
                             buildDefaultDragHandles: false,
+                            // The default proxy wraps the lifted item in an opaque
+                            // white Material — make it transparent so only the
+                            // card itself shows while dragging.
+                            proxyDecorator: (child, index, animation) =>
+                                Material(
+                              type: MaterialType.transparency,
+                              child: child,
+                            ),
                             itemBuilder: (_, i) => _ExerciseItem(
                               key: ObjectKey(_exercises[i]),
                               exercise: _exercises[i],
