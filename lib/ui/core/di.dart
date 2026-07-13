@@ -76,6 +76,7 @@ import 'package:fitness/ui/features/auth/view_models/auth_view_model.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:fitness/ui/features/chat/view_models/chat_view_model.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
+import 'package:fitness/data/services/billing/billing_remote_service.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:fitness/ui/features/home/view_models/upload_view_model.dart';
 import 'package:fitness/ui/features/nutrition/view_models/nutrition_view_model.dart';
@@ -96,6 +97,7 @@ Future<void> initDI() async {
   // Configured lazily from the billing page with the signed-in user's id;
   // no-ops gracefully when REVENUECAT_IOS_API_KEY is absent from .env.
   sl.registerLazySingleton<SubscriptionService>(() => SubscriptionService());
+  sl.registerLazySingleton<BillingRemoteService>(() => BillingRemoteService());
 
   // Generate a one-time nonce for Google Sign-In → Supabase ID-token exchange.
   // GIDSignIn 9.x embeds the nonce hash in the ID token; Supabase verifies by

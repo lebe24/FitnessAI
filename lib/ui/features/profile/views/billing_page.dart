@@ -1,3 +1,4 @@
+import 'package:fitness/data/services/billing/billing_remote_service.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/ui/core/di.dart';
@@ -44,6 +45,8 @@ class _BillingPageState extends State<BillingPage> {
   bool _busy = false;
 
   final _subs = sl<SubscriptionService>();
+  final _billing = sl<BillingRemoteService>();
+  UserSubscription? _subscription;
 
   @override
   void initState() {
@@ -51,6 +54,12 @@ class _BillingPageState extends State<BillingPage> {
     _subs.addListener(_onSubsChanged);
     final userId = sl<GetCurrentUser>()()?.id;
     _subs.init(userId);
+    _loadSubscription();
+  }
+
+  Future<void> _loadSubscription() async {
+    final sub = await _billing.getSubscription();
+    if (mounted) setState(() => _subscription = sub);
   }
 
   @override
@@ -85,7 +94,12 @@ class _BillingPageState extends State<BillingPage> {
     setState(() => _busy = true);
     try {
       final ok = await _subs.purchase(package);
-      if (ok && mounted) _snack('Welcome to BeFit Premium! 🎉');
+      if (ok && mounted) {
+        _snack('Welcome to BeFit Premium! 🎉');
+        // The webhook writes the subscription row server-side; give it a
+        // moment before refreshing the details card.
+        Future.delayed(const Duration(seconds: 3), _loadSubscription);
+      }
     } catch (_) {
       if (mounted) _snack('Purchase failed — you have not been charged.');
     } finally {
@@ -172,6 +186,14 @@ class _BillingPageState extends State<BillingPage> {
                 ),
               ]),
             ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.06, end: 0, curve: Curves.easeOut),
+
+            // ── Subscription details (from user_subscriptions via backend) ──
+            if (_subscription != null) ...[
+              const SizedBox(height: 14),
+              _SubscriptionDetailsCard(subscription: _subscription!)
+                  .animate(delay: 60.ms)
+                  .fadeIn(duration: 300.ms),
+            ],
 
             const SizedBox(height: 28),
             _SectionLabel(label: 'Plans', icon: Icons.stacked_bar_chart_rounded),
@@ -475,6 +497,95 @@ class _PillButton extends StatelessWidget {
               color: filled ? Colors.white : _kDim)),
         ),
       ),
+    );
+  }
+}
+
+// ── Subscription details card ─────────────────────────────────────────────────
+
+class _SubscriptionDetailsCard extends StatelessWidget {
+  final UserSubscription subscription;
+  const _SubscriptionDetailsCard({required this.subscription});
+
+  static String _date(DateTime? d) {
+    if (d == null) return '—';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = subscription;
+    final isCancelled = s.status == 'cancelled';
+    final isExpired = s.status == 'expired';
+    final expiryLabel = isExpired
+        ? 'Expired'
+        : isCancelled
+            ? 'Ends'
+            : 'Renews';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text('SUBSCRIPTION',
+              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _kDim, letterSpacing: 0.8)),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: isExpired
+                  ? Colors.redAccent.withValues(alpha: 0.12)
+                  : isCancelled
+                      ? Colors.orangeAccent.withValues(alpha: 0.12)
+                      : _kLime.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              s.status.toUpperCase(),
+              style: GoogleFonts.inter(
+                  fontSize: 9, fontWeight: FontWeight.w800,
+                  color: isExpired
+                      ? Colors.redAccent
+                      : isCancelled
+                          ? Colors.orangeAccent
+                          : _kLime),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        _DetailRow(label: 'Plan', value: s.planLabel),
+        _DetailRow(label: 'Subscribed', value: _date(s.subscribedAt)),
+        _DetailRow(label: expiryLabel, value: _date(s.expiresAt)),
+        if (s.amountLabel.isNotEmpty) _DetailRow(label: 'Amount paid', value: s.amountLabel),
+      ]),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 12, color: _kDim)),
+        const Spacer(),
+        Text(value,
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9))),
+      ]),
     );
   }
 }
