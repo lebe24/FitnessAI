@@ -75,6 +75,14 @@ class ExerciseLogModel extends ExerciseLogEntity {
 }
 
 class WorkoutSessionModel extends WorkoutSessionEntity {
+  /// Exercises logged in this session — the JSONB `workout_logs` array from
+  /// the single-row workout_sessions schema. Each entry has at least
+  /// `name`, `sets`, `reps` and optionally `notes` / `muscle_group`.
+  final List<Map<String, dynamic>> workoutLogs;
+
+  /// AI workout-analysis feedback saved after the session (may be empty).
+  final Map<String, dynamic> feedback;
+
   const WorkoutSessionModel({
     super.id,
     required super.sessionDate,
@@ -86,6 +94,8 @@ class WorkoutSessionModel extends WorkoutSessionEntity {
     super.startedAt,
     super.completedAt,
     super.exerciseLogs,
+    this.workoutLogs = const [],
+    this.feedback = const {},
   });
 
   factory WorkoutSessionModel.fromJson(Map<String, dynamic> j) =>
@@ -103,6 +113,14 @@ class WorkoutSessionModel extends WorkoutSessionEntity {
         completedAt: j['completed_at'] != null
             ? DateTime.parse(j['completed_at'] as String)
             : null,
+        workoutLogs: (j['workout_logs'] as List?)
+                ?.whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList() ??
+            const [],
+        feedback: j['feedback'] is Map
+            ? Map<String, dynamic>.from(j['feedback'] as Map)
+            : const {},
       );
 
   Map<String, dynamic> toCreateJson() => {

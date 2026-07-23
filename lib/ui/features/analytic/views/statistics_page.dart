@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:fitness/data/models/workout_log/workout_log_model.dart';
 import 'package:fitness/data/services/fitness/progress_photo_service.dart';
+import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
 import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
@@ -76,12 +78,34 @@ class _StatisticsPageState extends State<StatisticsPage> {
   List<ProgressPhoto> _photos = [];
   bool _photosLoading = false;
 
+  // Workout session logs (single-row schema: workout_logs + feedback)
+  final _workoutLog = sl<WorkoutLogRemoteDataSource>();
+  List<WorkoutSessionModel> _sessions = [];
+  bool _sessionsLoading = true;
+
   @override
   void initState() {
     super.initState();
     _loadData();
     _loadPhotos();
     _loadBodyWeight();
+    _loadSessions();
+  }
+
+  Future<void> _loadSessions() async {
+    try {
+      final sessions = await _workoutLog.listSessions(limit: 10);
+      // Newest first; only sessions that actually logged exercises are useful.
+      sessions.sort((a, b) => b.sessionDate.compareTo(a.sessionDate));
+      if (mounted) {
+        setState(() {
+          _sessions = sessions;
+          _sessionsLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _sessionsLoading = false);
+    }
   }
 
   @override
@@ -655,6 +679,19 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
+            // ── Workout session logs ──────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _WorkoutSessionsCard(
+                  sessions: _sessions,
+                  isLoading: _sessionsLoading,
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+
             // ── Progress photos ───────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
@@ -900,6 +937,234 @@ class _ChartCard extends StatelessWidget {
 }
 
 // ── Progress photos card ──────────────────────────────────────────────────────
+
+// ── Workout session logs ──────────────────────────────────────────────────────
+
+class _WorkoutSessionsCard extends StatelessWidget {
+  final List<WorkoutSessionModel> sessions;
+  final bool isLoading;
+
+  const _WorkoutSessionsCard({required this.sessions, required this.isLoading});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text('Workout Sessions', style: GoogleFonts.poppins(
+              fontSize: 15, fontWeight: FontWeight.w700, color: _kText)),
+          const Spacer(),
+          if (sessions.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _kLime.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text('${sessions.length} recent', style: GoogleFonts.inter(
+                  fontSize: 10, fontWeight: FontWeight.w700, color: _kLime)),
+            ),
+        ]),
+        const SizedBox(height: 14),
+        if (isLoading)
+          Column(children: List.generate(3, (_) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          )))
+        else if (sessions.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Center(child: Column(children: [
+              Icon(Icons.fitness_center_rounded,
+                  size: 32, color: _kSub.withValues(alpha: 0.4)),
+              const SizedBox(height: 8),
+              Text('No workout sessions logged yet',
+                  style: GoogleFonts.inter(fontSize: 12, color: _kSub)),
+            ])),
+          )
+        else
+          ...sessions.map((s) => _SessionTile(session: s)),
+      ]),
+    );
+  }
+}
+
+class _SessionTile extends StatefulWidget {
+  final WorkoutSessionModel session;
+  const _SessionTile({required this.session});
+
+  @override
+  State<_SessionTile> createState() => _SessionTileState();
+}
+
+class _SessionTileState extends State<_SessionTile> {
+  bool _expanded = false;
+
+  static String _date(DateTime d) => DateFormat('EEE, MMM d').format(d);
+
+  /// Pull a human-readable summary out of the AI feedback map, whatever
+  /// shape the agent returned it in.
+  String? get _feedbackSummary {
+    final f = widget.session.feedback;
+    for (final key in ['summary', 'overall', 'message', 'analysis', 'feedback']) {
+      final v = f[key];
+      if (v is String && v.trim().isNotEmpty) return v.trim();
+    }
+    final firstString =
+        f.values.whereType<String>().where((v) => v.trim().isNotEmpty);
+    return firstString.isEmpty ? null : firstString.first.trim();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.session;
+    final logs = s.workoutLogs;
+    final hasDetail = logs.isNotEmpty || _feedbackSummary != null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: hasDetail ? () => setState(() => _expanded = !_expanded) : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _kCard2,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _expanded ? _kLime.withValues(alpha: 0.3) : _kBorder,
+            ),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                width: 38, height: 38,
+                decoration: BoxDecoration(
+                  color: _kLime.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.fitness_center_rounded,
+                    color: _kLime, size: 17),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(
+                    s.dayLabel?.isNotEmpty == true
+                        ? s.dayLabel!
+                        : _date(s.sessionDate),
+                    style: GoogleFonts.poppins(fontSize: 13,
+                        fontWeight: FontWeight.w600, color: _kText),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      if (s.dayLabel?.isNotEmpty == true) _date(s.sessionDate),
+                      '${logs.length} exercise${logs.length == 1 ? '' : 's'}',
+                      if ((s.durationMins ?? 0) > 0) '${s.durationMins} min',
+                    ].join(' · '),
+                    style: GoogleFonts.inter(fontSize: 11, color: _kSub),
+                  ),
+                ]),
+              ),
+              if (hasDetail)
+                AnimatedRotation(
+                  turns: _expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(Icons.keyboard_arrow_down_rounded,
+                      color: _kSub, size: 20),
+                ),
+            ]),
+            // ── Expanded detail: exercises + AI feedback ──────────────────
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 200),
+              crossFadeState: _expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...logs.map((e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(children: [
+                        Container(
+                          width: 5, height: 5,
+                          decoration: const BoxDecoration(
+                              shape: BoxShape.circle, color: _kLime),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            e['name']?.toString() ?? 'Exercise',
+                            style: GoogleFonts.inter(fontSize: 12,
+                                color: _kText.withValues(alpha: 0.85)),
+                          ),
+                        ),
+                        Text(
+                          '${e['sets'] ?? '-'} × ${e['reps'] ?? '-'}',
+                          style: GoogleFonts.inter(fontSize: 11,
+                              fontWeight: FontWeight.w600, color: _kSub),
+                        ),
+                      ]),
+                    )),
+                    if (_feedbackSummary != null) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _kLime.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: _kLime.withValues(alpha: 0.15)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              const Icon(Icons.auto_awesome_rounded,
+                                  size: 12, color: _kLime),
+                              const SizedBox(width: 5),
+                              Text('AI FEEDBACK', style: GoogleFonts.inter(
+                                  fontSize: 9, fontWeight: FontWeight.w800,
+                                  color: _kLime, letterSpacing: 0.8)),
+                            ]),
+                            const SizedBox(height: 6),
+                            Text(
+                              _feedbackSummary!,
+                              style: GoogleFonts.inter(fontSize: 11,
+                                  height: 1.5,
+                                  color: _kText.withValues(alpha: 0.75)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
 
 class _ProgressPhotosCard extends StatelessWidget {
   final List<ProgressPhoto> photos;
