@@ -13,6 +13,8 @@ import 'package:fitness/ui/features/profile/views/legal_document_page.dart';
 import 'package:fitness/ui/features/profile/views/personal_details.dart';
 import 'package:fitness/ui/features/profile/views/profile_dialogs.dart';
 import 'package:fitness/ui/features/profile/views/support_contact_page.dart';
+import 'package:fitness/ui/core/constants/server_config.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -668,7 +670,123 @@ List<_Item> _generalItems(AppLocalizations t) => [
       MaterialPageRoute(builder: (_) => const LanguageSettingsPage()),
     ),
   ),
+  // Debug builds only — dev/prod backend switch. Never shipped to users.
+  if (kDebugMode)
+    _Item(
+      icon: Icons.dns_rounded,
+      title: 'Server (${ServerConfig.isLocal ? 'Local' : 'Live'})',
+      onTap: (ctx) => _showServerPicker(ctx),
+    ),
 ];
+
+// ── Dev server picker (kDebugMode only) ───────────────────────────────────────
+
+void _showServerPicker(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: _kCard,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheetState) {
+        Widget option({
+          required ServerEnvironment env,
+          required String label,
+          required String url,
+          required IconData icon,
+        }) {
+          final selected = ServerConfig.current == env;
+          return GestureDetector(
+            onTap: () async {
+              await ServerConfig.setEnvironment(env);
+              setSheetState(() {});
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: selected
+                    ? _kLime.withValues(alpha: 0.06)
+                    : Colors.white.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: selected ? _kLime.withValues(alpha: 0.4) : _kBorder,
+                ),
+              ),
+              child: Row(children: [
+                Icon(icon, size: 18, color: selected ? _kLime : _kDim),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label, style: GoogleFonts.poppins(
+                          fontSize: 14, fontWeight: FontWeight.w600,
+                          color: Colors.white)),
+                      const SizedBox(height: 2),
+                      Text(url, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(fontSize: 11, color: _kDim)),
+                    ],
+                  ),
+                ),
+                Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.circle_outlined,
+                  size: 20,
+                  color: selected ? _kLime : _kDim,
+                ),
+              ]),
+            ),
+          );
+        }
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Backend Server', style: GoogleFonts.poppins(
+                    fontSize: 17, fontWeight: FontWeight.w700,
+                    color: Colors.white)),
+                const SizedBox(height: 4),
+                Text('Switch between the live server and your local Docker server.',
+                    style: GoogleFonts.inter(fontSize: 12, color: _kDim)),
+                const SizedBox(height: 16),
+                option(
+                  env: ServerEnvironment.production,
+                  label: 'Live — Google Cloud',
+                  url: ServerConfig.productionUrl,
+                  icon: Icons.cloud_done_rounded,
+                ),
+                option(
+                  env: ServerEnvironment.local,
+                  label: 'Local — Docker (devtunnel)',
+                  url: ServerConfig.localUrl,
+                  icon: Icons.computer_rounded,
+                ),
+                const SizedBox(height: 4),
+                Row(children: [
+                  Icon(Icons.restart_alt_rounded, size: 14, color: _kDim),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Restart the app after switching — services keep their server until relaunch.',
+                      style: GoogleFonts.inter(fontSize: 11, color: _kDim),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
 
 List<_Item> _legalItems(AppLocalizations t) => [
   _Item(

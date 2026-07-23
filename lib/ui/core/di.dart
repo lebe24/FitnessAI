@@ -72,6 +72,7 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:fitness/ui/core/constants/constant.dart';
+import 'package:fitness/ui/core/constants/server_config.dart';
 import 'package:fitness/ui/features/auth/view_models/auth_view_model.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:fitness/ui/features/chat/view_models/chat_view_model.dart';
@@ -88,6 +89,10 @@ final sl = GetIt.instance;
 
 Future<void> initDI() async {
   await initializeStorage();
+
+  // ── Server switch (dev/prod) ──────────────────────────────────────────────
+  // Must load before any Dio-backed service captures its baseUrl.
+  await ServerConfig.load();
 
   // ── Localization ──────────────────────────────────────────────────────────
   sl.registerLazySingleton<LocaleProvider>(() => LocaleProvider());

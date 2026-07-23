@@ -1,3 +1,4 @@
+import 'package:fitness/ui/core/constants/server_config.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Constant {
@@ -8,14 +9,11 @@ class Constant {
   // Support / legal contact — update once a real support inbox exists.
   static const String supportEmail = "support@befitai.app";
 
-  // BACKEND BASE URL — production Cloud Run; override locally via .env
-  static final backendUrl = dotenv.env['BACKEND_BASE_URL'] ?? "https://fitness-agent-vjpfphelaa-uc.a.run.app/";
-
-  // WebSocket chat server (separate Cloud Run service)
-  static const chatWsUrl = 'wss://fitness-agent-vjpfphelaa-uc.a.run.app/ws/chat';
-
-  // Personalised agent WebSocket — loads full user context from the DB server-side
-  static const agentWsUrl = 'wss://fitness-agent-vjpfphelaa-uc.a.run.app/ws/agent';
+  // Backend URLs — resolved through the dev/prod server switch
+  // (ServerConfig; debug-only picker in Profile → Server).
+  static String get backendUrl => ServerConfig.backendUrl;
+  static String get chatWsUrl => ServerConfig.chatWsUrl;
+  static String get agentWsUrl => ServerConfig.agentWsUrl;
 
   // supabase client
   static final supabaseUrl = dotenv.env['SUPABASE_URL'] ;
