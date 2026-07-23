@@ -1018,7 +1018,11 @@ class _SessionTileState extends State<_SessionTile> {
   /// shape the agent returned it in.
   String? get _feedbackSummary {
     final f = widget.session.feedback;
-    for (final key in ['summary', 'overall', 'message', 'analysis', 'feedback']) {
+    // 'session_analysis' is the key the workout-session agent actually uses
+    // (verified against production rows); the rest are fallbacks.
+    for (final key in [
+      'session_analysis', 'summary', 'overall', 'message', 'analysis', 'feedback',
+    ]) {
       final v = f[key];
       if (v is String && v.trim().isNotEmpty) return v.trim();
     }
