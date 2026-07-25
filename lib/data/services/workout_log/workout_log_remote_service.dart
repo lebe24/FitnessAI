@@ -114,7 +114,7 @@ class WorkoutLogRemoteDataSourceImpl implements WorkoutLogRemoteDataSource {
     int limit = 20,
     int offset = 0,
   }) async {
-    final res = await _dio.get('/api/v1/logs/sessions', queryParameters: {
+    final res = await _dio.get('/api/v1/analytic/sessions', queryParameters: {
       if (fromDate != null) 'from_date': _dateStr(fromDate),
       if (toDate != null) 'to_date': _dateStr(toDate),
       'limit': limit,
@@ -190,7 +190,7 @@ class WorkoutLogRemoteDataSourceImpl implements WorkoutLogRemoteDataSource {
 
   @override
   Future<WorkoutStreakModel> getStreak() async {
-    final res = await _dio.get('/api/v1/logs/streak');
+    final res = await _dio.get('/api/v1/analytic/streak');
     return WorkoutStreakModel.fromJson(res.data as Map<String, dynamic>);
   }
 
