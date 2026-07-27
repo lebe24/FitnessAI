@@ -178,10 +178,10 @@ class _ProfileHero extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.edit_outlined, size: 13, color: _kLime),
+                              Icon(Icons.person_outline_rounded, size: 13, color: _kLime),
                               const SizedBox(width: 5),
                               Text(
-                                t.editAction,
+                                t.viewProfileAction,
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
