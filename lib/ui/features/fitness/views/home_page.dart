@@ -1528,7 +1528,7 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
 
 // ─── Strip cell ───────────────────────────────────────────────────────────────
 
-class _StripCell extends StatelessWidget {
+class _StripCell extends StatefulWidget {
   final DateTime date;
   final bool isSelected, hasWorkout, isCompleted;
   const _StripCell({
@@ -1538,70 +1538,138 @@ class _StripCell extends StatelessWidget {
     required this.isCompleted,
   });
 
-  String get _dayLabel =>
-      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1];
+  @override
+  State<_StripCell> createState() => _StripCellState();
+}
 
-  Color get _borderColor {
-    if (isSelected)  return Colors.white.withValues(alpha: 0.4);
-    if (isCompleted) return Colors.red.withValues(alpha: 0.8);
-    if (hasWorkout)  return _kLime.withValues(alpha: 0.6);
+class _StripCellState extends State<_StripCell>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  /// A date with a planned workout that hasn't been done yet — tapping it
+  /// opens the workout modal, so it gets the glow that invites the tap.
+  bool get _isStartable => widget.hasWorkout && !widget.isCompleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    if (_isStartable) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _StripCell old) {
+    super.didUpdateWidget(old);
+    // Cells are recycled by the ListView, so keep the animation in sync with
+    // whatever date/state this cell now represents.
+    if (_isStartable && !_pulse.isAnimating) {
+      _pulse.repeat(reverse: true);
+    } else if (!_isStartable && _pulse.isAnimating) {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  String get _dayLabel =>
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][widget.date.weekday - 1];
+
+  Color _borderColor(double t) {
+    if (widget.isSelected)  return Colors.white.withValues(alpha: 0.4);
+    if (widget.isCompleted) return Colors.red.withValues(alpha: 0.8);
+    // Startable dates breathe between a dim and a bright lime border.
+    if (widget.hasWorkout)  return _kLime.withValues(alpha: 0.6 + 0.4 * t);
     return Colors.white.withValues(alpha: 0.1);
   }
 
   double get _borderWidth =>
-      (isSelected || isCompleted || hasWorkout) ? 2 : 1;
+      (widget.isSelected || widget.isCompleted || widget.hasWorkout) ? 2 : 1;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 60,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            width: 56, height: 56,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? _kLime.withValues(alpha: 0.15)
-                  : Colors.transparent,
-              border: Border.all(color: _borderColor, width: _borderWidth),
-              boxShadow: isSelected
-                  ? [BoxShadow(
-                      color: _kLime.withValues(alpha: 0.12),
-                      blurRadius: 12, offset: const Offset(0, 4))]
-                  : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(_dayLabel,
-                  style: GoogleFonts.inter(
-                    fontSize: 12, fontWeight: FontWeight.w500,
-                    color: isSelected ? _kLime : Colors.white70)),
-                const SizedBox(height: 2),
-                Text('${date.day}',
-                  style: GoogleFonts.inter(
-                    fontSize: 16, fontWeight: FontWeight.bold,
-                    color: isSelected ? _kLime : Colors.white)),
-              ],
-            ),
-          ),
-          if ((hasWorkout || isCompleted) && !isSelected)
-            Positioned(
-              top: 4, right: 4,
-              child: Container(
-                width: 8, height: 8,
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) {
+        final t = _isStartable
+            ? Curves.easeInOut.transform(_pulse.value)
+            : 0.0;
+        return Container(
+          width: 60,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                width: 56, height: 56,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isCompleted ? Colors.red : _kLime,
+                  color: widget.isSelected
+                      ? _kLime.withValues(alpha: 0.15)
+                      : _isStartable
+                          ? _kLime.withValues(alpha: 0.04 + 0.06 * t)
+                          : Colors.transparent,
+                  border: Border.all(color: _borderColor(t), width: _borderWidth),
+                  boxShadow: [
+                    if (_isStartable)
+                      BoxShadow(
+                        color: _kLime.withValues(alpha: 0.10 + 0.30 * t),
+                        blurRadius: 8 + 14 * t,
+                        spreadRadius: 1 * t,
+                      ),
+                    if (widget.isSelected)
+                      BoxShadow(
+                        color: _kLime.withValues(alpha: 0.12),
+                        blurRadius: 12, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(_dayLabel,
+                      style: GoogleFonts.inter(
+                        fontSize: 12, fontWeight: FontWeight.w500,
+                        color: widget.isSelected ? _kLime : Colors.white70)),
+                    const SizedBox(height: 2),
+                    Text('${widget.date.day}',
+                      style: GoogleFonts.inter(
+                        fontSize: 16, fontWeight: FontWeight.bold,
+                        color: widget.isSelected ? _kLime : Colors.white)),
+                  ],
                 ),
               ),
-            ),
-        ],
-      ),
+              if ((widget.hasWorkout || widget.isCompleted) && !widget.isSelected)
+                Positioned(
+                  top: 4, right: 4,
+                  child: Container(
+                    width: 8, height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.isCompleted ? Colors.red : _kLime,
+                      // Halo expands with the pulse so the marker reads as
+                      // "live" rather than a static status dot.
+                      boxShadow: _isStartable
+                          ? [BoxShadow(
+                              color: _kLime.withValues(alpha: 0.5 * (1 - t)),
+                              blurRadius: 2 + 4 * t,
+                              spreadRadius: 1 + 3 * t)]
+                          : null,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
