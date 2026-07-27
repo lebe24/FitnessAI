@@ -58,3 +58,6 @@ app.*.map.json
 
 # Stray local scratch files
 /temp.txt
+
+# Local working notes
+doc/FeedbackNote.md
