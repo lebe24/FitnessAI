@@ -9,6 +9,7 @@ import 'package:fitness/ui/core/theme/app_pallet.dart';
 import 'package:fitness/ui/core/widgets/app_widget.dart';
 import 'package:fitness/ui/core/widgets/greeting.dart';
 import 'package:fitness/domain/models/workout_day_mapping.dart';
+import 'package:fitness/ui/features/fitness/views/saved_workouts_card.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
 import 'package:fitness/ui/features/fitness/views/motivate_page.dart';
 import 'package:fitness/ui/features/fitness/views/streak_sheet.dart';
@@ -391,6 +392,13 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 24),
+
+                    // ── Saved workouts ───────────────────────────────────────
+                    _SectionLabel(label: 'Your Workouts Data'),
+                    const SizedBox(height: 12),
+                    const SavedWorkoutsCard(),
+
+                    const SizedBox(height: 28),
 
                     // ── Food Scan ────────────────────────────────────────────
                     _SectionLabel(label: 'Nutrition Scanner'),
