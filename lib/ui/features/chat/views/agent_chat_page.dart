@@ -305,30 +305,27 @@ class _PulsingBackButtonState extends State<_PulsingBackButton>
           onTap: widget.onTap,
           behavior: HitTestBehavior.opaque,
           child: Center(
-            child: Container(
-              width: 34,
-              height: 34,
-              // Nudged right: the iOS chevron glyph sits left of its own box.
-              alignment: const Alignment(0.15, 0),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: p.lime.withValues(alpha: 0.06 + 0.10 * t),
-                border: Border.all(
-                  color: p.lime.withValues(alpha: 0.25 + 0.45 * t),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: p.lime.withValues(alpha: 0.30 * (1 - t)),
-                    blurRadius: 6 + 10 * t,
-                    spreadRadius: 1 + 3 * t,
-                  ),
-                ],
-              ),
+            // Scale is subtle — the glyph is small, so a big pulse reads as
+            // jitter rather than a breath.
+            child: Transform.scale(
+              scale: 1.0 + 0.10 * t,
               child: Icon(
                 Icons.arrow_back_ios_new_rounded,
-                color: p.textPri.withValues(alpha: 0.7 + 0.3 * t),
-                size: 16,
+                size: 18,
+                // Fades from the normal chevron colour toward brand lime.
+                color: Color.lerp(
+                  p.textPri.withValues(alpha: 0.7),
+                  p.lime,
+                  0.15 + 0.65 * t,
+                ),
+                // The glow itself: cast off the glyph, brightening and
+                // spreading as the pulse peaks.
+                shadows: [
+                  Shadow(
+                    color: p.lime.withValues(alpha: 0.35 + 0.45 * t),
+                    blurRadius: 5 + 13 * t,
+                  ),
+                ],
               ),
             ),
           ),
