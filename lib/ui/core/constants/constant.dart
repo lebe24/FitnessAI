@@ -10,7 +10,8 @@ class Constant {
   static const String supportEmail = "support@befitai.app";
 
   // Backend URLs — resolved through the dev/prod server switch
-  // (ServerConfig; debug-only picker in Profile → Server).
+  // (ServerConfig; flip _kDevEnvironment in server_config.dart to develop
+  // against the local Docker server).
   static String get backendUrl => ServerConfig.backendUrl;
   static String get chatWsUrl => ServerConfig.chatWsUrl;
   static String get agentWsUrl => ServerConfig.agentWsUrl;
