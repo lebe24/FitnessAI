@@ -430,7 +430,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                               isActive: _isActive(i),
                               isDone: _isDone(i),
                               onComplete: () => _completeExercise(i),
-                              onDoubleTap: () => _openHeroPage(i),
+                              onOpen: () => _openHeroPage(i),
                             ),
                           ),
                   ),
@@ -709,7 +709,7 @@ class _ExerciseItem extends StatelessWidget {
   final bool      isActive;
   final bool      isDone;
   final VoidCallback onComplete;
-  final VoidCallback onDoubleTap;
+  final VoidCallback onOpen;
 
   const _ExerciseItem({
     super.key,
@@ -719,7 +719,7 @@ class _ExerciseItem extends StatelessWidget {
     required this.isActive,
     required this.isDone,
     required this.onComplete,
-    required this.onDoubleTap,
+    required this.onOpen,
   });
 
   bool get _isLast => index == total - 1;
@@ -802,7 +802,7 @@ class _ExerciseItem extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(bottom: _isLast ? 0 : 12),
               child: GestureDetector(
-                onDoubleTap: onDoubleTap,
+                onTap: onOpen,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOut,
@@ -943,14 +943,14 @@ class _ActiveCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 6),
-          // Double-tap hint
+          // Tap hint
           Row(
             children: [
               Icon(Icons.touch_app_rounded,
                   size: 12, color: Colors.white.withValues(alpha: 0.3)),
               const SizedBox(width: 4),
               Text(
-                'Double tap to view demo',
+                'Tap to view demo',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: Colors.white.withValues(alpha: 0.3),
