@@ -15,12 +15,6 @@ const _kLime   = Color(0xFFCCFF00);
 const _kBlue   = Color(0xFF4D9EFF);
 const _kDim    = Color(0x80FFFFFF);
 
-const _freeFeatures = [
-  'AI workout plan generation (1 per month)',
-  'Body composition photo analysis',
-  'Basic progress tracking',
-];
-
 const _premiumFeatures = [
   'Unlimited AI workout plan generation',
   'Unlimited body composition analysis',
@@ -212,20 +206,6 @@ class _BillingPageState extends State<BillingPage> {
                 Expanded(child: _CycleTab(label: 'Yearly · Save 20%', isSelected: _yearly, onTap: () => setState(() => _yearly = true))),
               ]),
             ).animate(delay: 80.ms).fadeIn(duration: 280.ms),
-
-            const SizedBox(height: 16),
-
-            // ── Free plan card ───────────────────────────────────────
-            _PlanCard(
-              name: 'Free',
-              price: '\$0',
-              priceSuffix: '/forever',
-              description: 'Everything you need to start your fitness journey at no cost.',
-              features: _freeFeatures,
-              accent: _kDim,
-              isCurrent: !_subs.isPremium,
-              onTap: null,
-            ).animate(delay: 120.ms).fadeIn(duration: 300.ms),
 
             const SizedBox(height: 16),
 
