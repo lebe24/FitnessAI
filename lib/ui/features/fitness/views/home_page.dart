@@ -393,13 +393,6 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                   children: [
                     const SizedBox(height: 24),
 
-                    // ── Saved workouts ───────────────────────────────────────
-                    _SectionLabel(label: 'Your Workouts Data'),
-                    const SizedBox(height: 12),
-                    const SavedWorkoutsCard(),
-
-                    const SizedBox(height: 28),
-
                     // ── Food Scan ────────────────────────────────────────────
                     _SectionLabel(label: 'Nutrition Scanner'),
                     const SizedBox(height: 12),
@@ -426,6 +419,13 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                       onTap: _openTonePicker,
                       child: _MotivationBanner(),
                     ),
+
+                    const SizedBox(height: 28),
+
+                    // ── Saved workouts ───────────────────────────────────────
+                    _SectionLabel(label: 'My Workout Program'),
+                    const SizedBox(height: 12),
+                    const SavedWorkoutsCard(),
 
                     const SizedBox(height: 28),
 
