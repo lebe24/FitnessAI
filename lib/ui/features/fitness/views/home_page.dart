@@ -10,6 +10,8 @@ import 'package:fitness/ui/core/widgets/greeting.dart';
 import 'package:fitness/ui/features/fitness/views/saved_workouts_card.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
 import 'package:fitness/ui/features/fitness/views/motivate_page.dart';
+import 'package:fitness/ui/features/fitness/views/motivation_schedule_sheet.dart';
+import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.dart';
 import 'package:fitness/ui/features/fitness/views/streak_sheet.dart';
 import 'package:fitness/ui/features/fitness/views/workout_modal.dart';
 import 'package:fitness/data/services/fitness/body_composition_service.dart';
@@ -46,6 +48,7 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
   final ScrollController _dateScrollCtrl = ScrollController();
 
   String? _selectedTone;
+  final _motivationVm = sl<MotivationViewModel>();
 
   @override
   void initState() {
@@ -54,6 +57,7 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
       if (!mounted) return;
       context.read<FitnessViewModel>().loadFitnessPlans();
       _scrollToToday();
+      _motivationVm.load();
     });
     _greetingTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) {
@@ -209,6 +213,21 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                 builder: (_) => MotivatePage(
                   tone: tone.toLowerCase().replaceAll(' ', '-'),
                 ),
+              ),
+            );
+          },
+          // Step 2: pick when the daily AI notification should arrive.
+          onScheduleDaily: () {
+            final tone = _selectedTone;
+            if (tone == null) return;
+            Navigator.of(sheetCtx).pop();
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              isScrollControlled: true,
+              builder: (_) => MotivationScheduleSheet(
+                tone: tone,
+                vm: _motivationVm,
               ),
             );
           },
@@ -846,12 +865,14 @@ class _TonePickerSheet extends StatelessWidget {
   final String? selected;
   final ValueChanged<String> onSelect;
   final VoidCallback onMotivate;
+  final VoidCallback onScheduleDaily;
 
   const _TonePickerSheet({
     required this.tones,
     required this.selected,
     required this.onSelect,
     required this.onMotivate,
+    required this.onScheduleDaily,
   });
 
   /// Icon per tone, matched on keyword so the female/male lists — and any
@@ -1003,13 +1024,47 @@ class _TonePickerSheet extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      canMotivate ? 'Motivate me' : 'Select a tone',
+                      canMotivate ? 'Motivate me now' : 'Select a tone',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: canMotivate ? Colors.black : _kDimWhite,
                       ),
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Secondary path: schedule a daily AI notification in this tone
+              // instead of reading one right now.
+              GestureDetector(
+                onTap: canMotivate ? onScheduleDaily : null,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: canMotivate
+                          ? _kLime.withValues(alpha: 0.35)
+                          : _kBorder,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.notifications_active_rounded,
+                          size: 15,
+                          color: canMotivate ? _kLime : _kDimWhite),
+                      const SizedBox(width: 7),
+                      Text('Remind me daily',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: canMotivate ? _kLime : _kDimWhite,
+                          )),
+                    ],
                   ),
                 ),
               ),
