@@ -6,7 +6,6 @@ import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/core/constants/constant.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/theme/app_pallet.dart';
-import 'package:fitness/ui/core/widgets/app_widget.dart';
 import 'package:fitness/ui/core/widgets/greeting.dart';
 import 'package:fitness/ui/features/fitness/views/saved_workouts_card.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
@@ -192,120 +191,27 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
             : 'male';
     final toneList = List<String>.from(Constant.toneOptions.first[userGender] ?? []);
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (dialogCtx, setDialog) => Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 4,
-          child: SizedBox(
-            width: 400,
-            height: 500,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(
-                        'Pick your tone',
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: toneList.isEmpty
-                          ? const Center(
-                              child: Text('No tone options available',
-                                  style: TextStyle(color: Colors.grey)))
-                          : ListView.builder(
-                              itemCount: toneList.length,
-                              itemBuilder: (_, i) {
-                                final tone       = toneList[i];
-                                final isSelected = _selectedTone == tone;
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
-                                  child: GestureDetector(
-                                    onTap: () => setDialog(
-                                        () => setState(() => _selectedTone = tone)),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? AppPalete.borderColor.withValues(alpha: 0.3)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? AppPalete.borderColor
-                                              : Colors.grey.withValues(alpha: 0.3),
-                                          width: isSelected ? 2 : 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              tone,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.bold
-                                                    : FontWeight.normal,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                          if (isSelected)
-                                            Icon(Icons.check_circle,
-                                                color: AppPalete.borderColor,
-                                                size: 20),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: AppWidgets.roundbtnText(
-                          onPressed: _selectedTone != null
-                              ? () {
-                                  Navigator.of(dialogCtx).pop();
-                                  Navigator.of(dialogCtx, rootNavigator: true).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => MotivatePage(
-                                        tone: _selectedTone!
-                                            .toLowerCase()
-                                            .replaceAll(' ', '-'),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              : () => ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Please select a tone'),
-                                      backgroundColor: Colors.orange,
-                                    ),
-                                  ),
-                          text: 'Motivate',
-                        ),
-                      ),
-                    ),
-                  ],
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) => _TonePickerSheet(
+          tones: toneList,
+          selected: _selectedTone,
+          onSelect: (tone) => setSheet(() => setState(() => _selectedTone = tone)),
+          onMotivate: () {
+            final tone = _selectedTone;
+            if (tone == null) return;
+            Navigator.of(sheetCtx).pop();
+            Navigator.of(sheetCtx, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder: (_) => MotivatePage(
+                  tone: tone.toLowerCase().replaceAll(' ', '-'),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -925,6 +831,252 @@ class _MotivationBanner extends StatelessWidget {
           ),
           // Play icon
         ],
+      ),
+    );
+  }
+}
+
+// ─── Tone picker sheet ────────────────────────────────────────────────────────
+
+/// Tone chooser for the motivation feature. Replaces the old stock Material
+/// dialog, which rendered on a light Card with black text and clashed with
+/// the rest of the dark app.
+class _TonePickerSheet extends StatelessWidget {
+  final List<String> tones;
+  final String? selected;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onMotivate;
+
+  const _TonePickerSheet({
+    required this.tones,
+    required this.selected,
+    required this.onSelect,
+    required this.onMotivate,
+  });
+
+  /// Icon per tone, matched on keyword so the female/male lists — and any
+  /// tone added later — all resolve to something sensible.
+  static IconData _iconFor(String tone) {
+    final t = tone.toLowerCase();
+    if (t.contains('alpha') || t.contains('dominant')) return Icons.bolt_rounded;
+    if (t.contains('calm') || t.contains('disciplin')) {
+      return Icons.self_improvement_rounded;
+    }
+    if (t.contains('warrior')) return Icons.shield_rounded;
+    if (t.contains('coach')) return Icons.sports_rounded;
+    if (t.contains('hype') || t.contains('energy')) {
+      return Icons.local_fire_department_rounded;
+    }
+    if (t.contains('confident') || t.contains('empower')) {
+      return Icons.auto_awesome_rounded;
+    }
+    if (t.contains('soft') || t.contains('encourag')) {
+      return Icons.favorite_rounded;
+    }
+    if (t.contains('self-care') || t.contains('care')) return Icons.spa_rounded;
+    if (t.contains('goal')) return Icons.flag_rounded;
+    return Icons.graphic_eq_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canMotivate = selected != null;
+    return Container(
+      decoration: const BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        border: Border(top: BorderSide(color: _kBorder)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // grab handle
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(children: [
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: _kLime.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(Icons.campaign_rounded, color: _kLime, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pick your tone',
+                          style: GoogleFonts.poppins(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      const SizedBox(height: 2),
+                      Text('How should your coach speak to you?',
+                          style: GoogleFonts.inter(
+                              fontSize: 12, color: _kDimWhite)),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(Icons.close_rounded,
+                        color: Colors.white54, size: 16),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 18),
+              if (tones.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 28),
+                  child: Center(
+                    child: Text('No tone options available',
+                        style: GoogleFonts.inter(
+                            fontSize: 13, color: _kDimWhite)),
+                  ),
+                )
+              else
+                // Constrained so a long tone list scrolls instead of
+                // overflowing the sheet on small screens.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.45,
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        for (final tone in tones)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _ToneOption(
+                              label: tone,
+                              icon: _iconFor(tone),
+                              isSelected: selected == tone,
+                              onTap: () => onSelect(tone),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              // CTA — visibly inert until a tone is chosen, rather than
+              // firing a "please select" snackbar like the old dialog.
+              GestureDetector(
+                onTap: canMotivate ? onMotivate : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(
+                    color: canMotivate
+                        ? _kLime
+                        : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: canMotivate
+                        ? [BoxShadow(
+                            color: _kLime.withValues(alpha: 0.25),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6))]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      canMotivate ? 'Motivate me' : 'Select a tone',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: canMotivate ? Colors.black : _kDimWhite,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToneOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ToneOption({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? _kLime.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? _kLime.withValues(alpha: 0.5) : _kBorder,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(children: [
+          Icon(icon,
+              size: 18, color: isSelected ? _kLime : Colors.white38),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? _kLime : Colors.white,
+              ),
+            ),
+          ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: isSelected
+                ? const Icon(Icons.check_circle_rounded,
+                    key: ValueKey('on'), color: _kLime, size: 20)
+                : Icon(Icons.circle_outlined,
+                    key: const ValueKey('off'),
+                    color: Colors.white.withValues(alpha: 0.2),
+                    size: 20),
+          ),
+        ]),
       ),
     );
   }
