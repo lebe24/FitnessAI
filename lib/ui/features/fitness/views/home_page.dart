@@ -12,12 +12,14 @@ import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart'
 import 'package:fitness/ui/features/fitness/views/motivate_page.dart';
 import 'package:fitness/ui/features/fitness/views/motivation_schedule_sheet.dart';
 import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.dart';
+import 'package:fitness/data/services/motivation/motivation_notification_service.dart';
 import 'package:fitness/ui/features/fitness/views/streak_sheet.dart';
 import 'package:fitness/ui/features/fitness/views/workout_modal.dart';
 import 'package:fitness/data/services/fitness/body_composition_service.dart';
 import 'package:fitness/data/services/fitness/body_scan_storage.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/ui/features/fitness/views/body_composition_result_page.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -183,6 +185,24 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
     );
   }
 
+
+  /// Debug-only: verify notifications actually reach the tray.
+  Future<void> _sendTestNotification() async {
+    final ok = await sl<MotivationNotificationService>()
+        .sendTestNotification(seconds: 10);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+        ok
+            ? 'Test notification scheduled — background the app, it lands in 10s.'
+            : 'Notifications are blocked. Enable them in Settings.',
+        style: GoogleFonts.inter(fontSize: 13),
+      ),
+      backgroundColor: ok ? const Color(0xFF1A2A00) : Colors.redAccent,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
   void _openTonePicker() {
     String? gender;
     try {
@@ -341,6 +361,9 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                     const SizedBox(height: 12),
                     GestureDetector(
                       onTap: _openTonePicker,
+                      // Debug builds: long-press to fire a test notification
+                      // 10s out and confirm OS delivery on a real device.
+                      onLongPress: kDebugMode ? _sendTestNotification : null,
                       child: _MotivationBanner(),
                     ),
 

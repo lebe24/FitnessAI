@@ -135,6 +135,32 @@ class MotivationNotificationService {
     return scheduled;
   }
 
+  /// Fire a single notification [seconds] from now to verify OS delivery and
+  /// how the copy actually looks in the tray. Debug aid — sits above the
+  /// per-message ids so it never overwrites a scheduled day, but stays inside
+  /// the range cancelAll() sweeps so it gets cleaned up with the rest.
+  ///
+  /// Returns false when permission was refused or scheduling threw.
+  Future<bool> sendTestNotification({int seconds = 10}) async {
+    await init();
+    if (!await requestPermission()) return false;
+    try {
+      await _plugin.zonedSchedule(
+        _baseId + 99,
+        'Test — your coach is live',
+        'If you can read this, motivation notifications are working. '
+            'Real ones arrive at your chosen time.',
+        tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds)),
+        _details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('sendTestNotification failed: $e');
+      return false;
+    }
+  }
+
   Future<void> cancelAll() async {
     await init();
     // Only clear our own id range — other features may schedule notifications.
