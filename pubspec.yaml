@@ -40,6 +40,7 @@ dependencies:
   purchases_flutter: ^8.10.6
   flutter_markdown: ^0.7.3
   speech_to_text: ^7.4.0
+  purchases_ui_flutter: ^8.11.0
 
 
 dev_dependencies:

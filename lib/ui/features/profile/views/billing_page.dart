@@ -1,4 +1,5 @@
 import 'package:fitness/data/services/billing/billing_remote_service.dart';
+import 'package:fitness/data/services/billing/paywall_service.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/ui/core/di.dart';
@@ -39,6 +40,7 @@ class _BillingPageState extends State<BillingPage> {
   bool _busy = false;
 
   final _subs = sl<SubscriptionService>();
+  final _paywall = sl<PaywallService>();
   final _billing = sl<BillingRemoteService>();
   UserSubscription? _subscription;
 
@@ -86,19 +88,44 @@ class _BillingPageState extends State<BillingPage> {
       return;
     }
     setState(() => _busy = true);
-    try {
-      final ok = await _subs.purchase(package);
-      if (ok && mounted) {
-        _snack('Welcome to BeFit Premium! 🎉');
-        // The webhook writes the subscription row server-side; give it a
-        // moment before refreshing the details card.
-        Future.delayed(const Duration(seconds: 3), _loadSubscription);
-      }
-    } catch (_) {
-      if (mounted) _snack('Purchase failed — you have not been charged.');
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    final result = await _subs.purchase(package);
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    if (result.isSuccess) {
+      _snack('Welcome to BeFit Pro! 🎉');
+      // The webhook writes the subscription row server-side; give it a
+      // moment before refreshing the details card.
+      Future.delayed(const Duration(seconds: 3), _loadSubscription);
+    } else if (result.shouldShowMessage) {
+      // Cancellation is deliberately silent — it isn't a failure.
+      _snack(result.message ?? 'Purchase failed.');
     }
+  }
+
+  /// RevenueCat's hosted paywall — pricing and copy are edited in the
+  /// dashboard, so they can change without an App Store release.
+  Future<void> _openPaywall() async {
+    if (!_subs.isConfigured) {
+      _showComingSoon();
+      return;
+    }
+    final purchased = await _paywall.present();
+    if (!mounted) return;
+    if (purchased) {
+      _snack('Welcome to BeFit Pro! 🎉');
+      Future.delayed(const Duration(seconds: 3), _loadSubscription);
+    }
+  }
+
+  /// Self-service management: cancel, request a refund, change plan.
+  Future<void> _openCustomerCenter() async {
+    if (!_subs.isConfigured) {
+      _showComingSoon();
+      return;
+    }
+    await _paywall.presentCustomerCenter();
+    if (mounted) _loadSubscription();
   }
 
   Future<void> _restore() async {
@@ -110,7 +137,7 @@ class _BillingPageState extends State<BillingPage> {
     final ok = await _subs.restore();
     if (mounted) {
       setState(() => _busy = false);
-      _snack(ok ? 'Premium restored.' : 'No previous purchases found.');
+      _snack(ok ? 'Pro restored.' : 'No previous purchases found.');
     }
   }
 
@@ -165,9 +192,9 @@ class _BillingPageState extends State<BillingPage> {
                     Text('CURRENT PLAN',
                         style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _kDim, letterSpacing: 0.8)),
                     const SizedBox(height: 3),
-                    Text(_subs.isPremium ? 'Premium' : 'Free',
+                    Text(_subs.isPro ? 'Pro' : 'Free',
                         style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800,
-                            color: _subs.isPremium ? _kLime : Colors.white)),
+                            color: _subs.isPro ? _kLime : Colors.white)),
                   ]),
                 ),
                 Container(
@@ -219,37 +246,99 @@ class _BillingPageState extends State<BillingPage> {
                 description: 'Best for serious training — unlimited AI plans, coaching, and analysis.',
                 features: _premiumFeatures,
                 accent: _kLime,
-                isCurrent: _subs.isPremium,
+                isCurrent: _subs.isPro,
                 isHighlighted: true,
                 onTap: _busy ? null : _purchase,
               );
             }).animate(delay: 160.ms).fadeIn(duration: 300.ms),
 
+            const SizedBox(height: 14),
+            // Hosted paywall — shows every package including Lifetime, which
+            // the monthly/yearly toggle above can't represent.
+            GestureDetector(
+              onTap: _busy ? null : _openPaywall,
+              child: Center(
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.list_alt_rounded, size: 14, color: _kLime),
+                  const SizedBox(width: 6),
+                  Text('See all plans',
+                      style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _kLime)),
+                ]),
+              ),
+            ).animate(delay: 180.ms).fadeIn(duration: 300.ms),
+
             const SizedBox(height: 28),
             _SectionLabel(label: 'Billing', icon: Icons.credit_card_outlined),
             const SizedBox(height: 12),
 
-            // Payment is handled by Apple — no card entry in-app.
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _kCard,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _kBorder),
-              ),
-              child: Row(children: [
-                Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(color: _kBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(11)),
-                  child: Icon(Icons.apple_rounded, color: _kBlue, size: 19),
+            // Subscribers get RevenueCat's Customer Center — cancel, refund,
+            // or change plan without leaving the app. Non-subscribers would
+            // only see an empty screen, so they get the Apple billing note.
+            if (_subs.isPro)
+              GestureDetector(
+                onTap: _busy ? null : _openCustomerCenter,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _kCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _kBorder),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                          color: _kBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(11)),
+                      child: Icon(Icons.settings_rounded, color: _kBlue, size: 19),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Manage subscription',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white)),
+                          const SizedBox(height: 2),
+                          Text('Change plan, cancel, or request a refund',
+                              style: GoogleFonts.inter(fontSize: 11, color: _kDim)),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded,
+                        color: Colors.white.withValues(alpha: 0.25), size: 20),
+                  ]),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Billed through your Apple ID. Manage or cancel any time in Settings → Apple ID → Subscriptions.',
-                      style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: _kDim)),
+              ).animate(delay: 200.ms).fadeIn(duration: 300.ms)
+            else
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _kCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: _kBorder),
                 ),
-              ]),
-            ).animate(delay: 200.ms).fadeIn(duration: 300.ms),
+                child: Row(children: [
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                        color: _kBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(11)),
+                    child: Icon(Icons.apple_rounded, color: _kBlue, size: 19),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('Billed through your Apple ID. Manage or cancel any time in Settings → Apple ID → Subscriptions.',
+                        style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: _kDim)),
+                  ),
+                ]),
+              ).animate(delay: 200.ms).fadeIn(duration: 300.ms),
 
             const SizedBox(height: 16),
             GestureDetector(

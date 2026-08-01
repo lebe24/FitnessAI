@@ -80,6 +80,7 @@ import 'package:fitness/data/services/motivation/motivation_notification_service
 import 'package:fitness/data/services/motivation/motivation_remote_service.dart';
 import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.dart';
 import 'package:fitness/data/services/billing/billing_remote_service.dart';
+import 'package:fitness/data/services/billing/paywall_service.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:fitness/ui/features/home/view_models/upload_view_model.dart';
 import 'package:fitness/ui/features/nutrition/view_models/nutrition_view_model.dart';
@@ -101,6 +102,7 @@ Future<void> initDI() async {
   // no-ops gracefully when REVENUECAT_IOS_API_KEY is absent from .env.
   sl.registerLazySingleton<SubscriptionService>(() => SubscriptionService());
   sl.registerLazySingleton<BillingRemoteService>(() => BillingRemoteService());
+  sl.registerLazySingleton<PaywallService>(() => PaywallService(sl()));
 
   // ── Motivation reminders ──────────────────────────────────────────────────
   sl.registerLazySingleton<MotivationNotificationService>(
