@@ -30,7 +30,7 @@ class WorkoutSessionAnalysisService {
     String? focus,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
-      '/api/v1/analytic/workout-session',
+      '/api/v1/analysis/workout-session',
       data: {
         'exercises': exercises,
         'duration_mins': durationMins,
