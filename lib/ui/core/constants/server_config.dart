@@ -14,7 +14,7 @@ enum ServerEnvironment { local, production }
 //  can never ship. Restart the app after changing it — Dio services capture
 //  their base URL when they are constructed.
 // ─────────────────────────────────────────────────────────────────────────────
-const ServerEnvironment _kDevEnvironment = ServerEnvironment.local;
+const ServerEnvironment _kDevEnvironment = ServerEnvironment.production;
 
 /// Resolves the backend URLs for the selected environment.
 ///
