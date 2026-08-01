@@ -33,16 +33,16 @@ void showDeleteAccountDialog(BuildContext context) {
             });
           }
           return AlertDialog(
-            backgroundColor: AppPalete.borderColor.withOpacity(0.9),
+            backgroundColor: AppPalete.borderColor.withValues(alpha: 0.9),
             title: Text('Delete Account',
                 style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: AppPalete.whiteColor)),
             content: Text(
                 'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.',
-                style: GoogleFonts.poppins(fontSize: 14, color: AppPalete.whiteColor.withOpacity(0.9))),
+                style: GoogleFonts.poppins(fontSize: 14, color: AppPalete.whiteColor.withValues(alpha: 0.9))),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text('Cancel', style: GoogleFonts.poppins(color: AppPalete.whiteColor.withOpacity(0.7))),
+                child: Text('Cancel', style: GoogleFonts.poppins(color: AppPalete.whiteColor.withValues(alpha: 0.7))),
               ),
               TextButton(
                 onPressed: vm.isLoading ? null : () => vm.deleteAccount(),
@@ -85,15 +85,15 @@ void handleLogout(BuildContext context) {
             });
           }
           return AlertDialog(
-            backgroundColor: AppPalete.borderColor.withOpacity(0.9),
+            backgroundColor: AppPalete.borderColor.withValues(alpha: 0.9),
             title: Text('Logout',
                 style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: AppPalete.whiteColor)),
             content: Text('Are you sure you want to logout?',
-                style: GoogleFonts.poppins(fontSize: 14, color: AppPalete.whiteColor.withOpacity(0.9))),
+                style: GoogleFonts.poppins(fontSize: 14, color: AppPalete.whiteColor.withValues(alpha: 0.9))),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text('Cancel', style: GoogleFonts.poppins(color: AppPalete.whiteColor.withOpacity(0.7))),
+                child: Text('Cancel', style: GoogleFonts.poppins(color: AppPalete.whiteColor.withValues(alpha: 0.7))),
               ),
               TextButton(
                 onPressed: vm.isLoading ? null : () => vm.signOut(),

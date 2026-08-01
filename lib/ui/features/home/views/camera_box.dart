@@ -8,7 +8,7 @@ class CameraBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return  Container(
+    return  SizedBox(
       width: double.infinity,
       height: MediaQuery.of(context).size.height * 0.55,
       child: Stack(

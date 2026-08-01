@@ -20,7 +20,7 @@ class SavedWorkoutsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context);
     // watch, not read: the card must repaint once plans finish loading,
     // otherwise it can sit on a stale empty state.
     final fitnessVm = context.watch<FitnessViewModel>();

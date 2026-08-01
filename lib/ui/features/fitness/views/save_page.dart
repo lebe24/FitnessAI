@@ -33,14 +33,13 @@ class SavedItem {
 }
 
 class SavedPage extends StatefulWidget {
-  const SavedPage({Key? key}) : super(key: key);
+  const SavedPage({super.key});
 
   @override
   _SavedPageState createState() => _SavedPageState();
 }
 
 class _SavedPageState extends State<SavedPage> {
-  int _current = 0;
   SavedItem? _selectedItem;
   final CarouselSliderController _carouselController = CarouselSliderController();
   List<SavedItem> _savedData = [];
@@ -206,7 +205,6 @@ class _SavedPageState extends State<SavedPage> {
             pageSnapping: true,
             onPageChanged: (index, reason) {
               setState(() {
-                _current = index;
                             _selectedItem = null;
               });
                         },
@@ -244,7 +242,7 @@ class _SavedPageState extends State<SavedPage> {
                                         ]
                                       : [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
+                          color: Colors.grey.withValues(alpha: 0.2),
                           blurRadius: 20,
                                             offset: const Offset(0, 5),
                         )

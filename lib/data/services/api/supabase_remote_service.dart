@@ -30,7 +30,7 @@ class SupabaseRemoteDataSourceImpl implements SupabaseRemoteDataSource {
           .eq('gender', normalizedGender);
 
       // Convert to List if needed
-      List<dynamic> records = response is List ? response : [];
+      List<dynamic> records = response;
       
       debugPrint('Initial query returned ${records.length} records for gender: $normalizedGender');
 
@@ -41,7 +41,7 @@ class SupabaseRemoteDataSourceImpl implements SupabaseRemoteDataSource {
             .from('motivation_content')
             .select('*')
             .eq('gender', gender);
-        records = altResponse is List ? altResponse : [];
+        records = altResponse;
       }
 
       // If still no results, try case-insensitive by fetching all and filtering
@@ -51,7 +51,7 @@ class SupabaseRemoteDataSourceImpl implements SupabaseRemoteDataSource {
             .from('motivation_content')
             .select('*');
 
-        if (allRecords != null && allRecords is List && allRecords.isNotEmpty) {
+        if (allRecords.isNotEmpty) {
           final filtered = (allRecords as List).where((record) {
             final recordGender = (record['gender'] as String? ?? '').toLowerCase();
             return recordGender == gender.toLowerCase() ||

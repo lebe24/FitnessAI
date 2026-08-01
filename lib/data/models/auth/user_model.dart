@@ -2,11 +2,11 @@ import 'package:fitness/domain/models/user.dart';
 
 class UserModel extends UserEntity {
   UserModel({
-    required String id,
-    String? email,
-    String? name,
-    String? avatarUrl,
-  }) : super(id: id, email: email, name: name, avatarUrl: avatarUrl);
+    required super.id,
+    super.email,
+    super.name,
+    super.avatarUrl,
+  });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     final userMetadata = map['user_metadata'] as Map<String, dynamic>?;

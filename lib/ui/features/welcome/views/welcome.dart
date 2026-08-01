@@ -1,8 +1,6 @@
 import 'package:fitness/ui/core/constants/assets.dart';
-import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/widgets/app_widget.dart';
 import 'package:fitness/ui/core/common_lib.dart';
-import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -124,9 +122,6 @@ class Welcome extends StatelessWidget {
                           TextSpan(
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
-                                final getCurrentUser = sl<GetCurrentUser>();
-                                final user = getCurrentUser();
-          
                                 context.go('/login');
                               },
                             style: TextStyle(

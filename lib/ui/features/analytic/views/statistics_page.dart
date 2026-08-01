@@ -29,7 +29,7 @@ const _kBlue    = Color(0xFF4D9EFF);
 const _kPurple  = Color(0xFFB47EFF);
 
 class StatisticsPage extends StatefulWidget {
-  const StatisticsPage({Key? key}) : super(key: key);
+  const StatisticsPage({super.key});
 
   @override
   _StatisticsPageState createState() => _StatisticsPageState();
@@ -172,11 +172,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
       if (saved != null) {
         final v    = (saved as num).toDouble();
         final unit = savedUnit ?? 'kg';
-        if (mounted) setState(() {
+        if (mounted) {
+          setState(() {
           _bodyWeight   = v;
           _weightUnit   = unit;
           _displayUnit  = unit;
         });
+        }
         return;
       }
 

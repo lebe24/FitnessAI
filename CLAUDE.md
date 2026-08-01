@@ -1,9 +1,11 @@
 # FitnessAI — Claude Context
 
 ## Project Overview
+
 Flutter fitness app (package: `fitness`) that combines AI-powered workout planning, nutrition scanning, and progress tracking. Backend is Supabase; AI features call a custom agent API.
 
 ## Architecture
+
 Clean architecture with three layers:
 
 ```
@@ -21,25 +23,26 @@ lib/
 State management: `provider` (ChangeNotifier). DI: `get_it` via `lib/ui/core/di.dart` (`sl<T>()`).
 
 ## Routing (`lib/ui/core/routes/app_router.dart`)
+
 Uses `go_router`, configured via `ScreenPaths.appRouter`. `context.push(...)` works from any
 screen regardless of whether it was reached via `go_router` or a plain `Navigator.push`
 (`MaterialPageRoute`) — the `GoRouter` instance is app-wide. Key routes:
 
-| Path | Screen |
-|------|--------|
-| `/` | SplashScreen |
-| `/welcome` | Welcome |
-| `/login` | AuthLoginPage |
-| `/onboarding` | OnboardingScreen |
-| `/analysis` | AnalysisPageWithData (loads OnboardingData from storage, wraps AnalysisPage) |
-| `/onboarding-analysis` | Same as `/analysis` (re-uses `AnalysisPageWithData`) |
-| `/home` | HomePage |
-| `/settings` | SettingsPage |
-| `/workout` | WorkoutPage (`extra: {workoutDay, date}`) |
-| `/nutrition` | NutritionPage |
-| `/nutrition-analysis` | AnalysisOutputPage |
-| `/workout-plan-detail` | WorkoutPlanDetailPage (`extra: {storedPlan}`) |
-| `/chat` | ChatScreen (`extra: {userId, userName, workoutPlan, onboardingData}`) |
+| Path                     | Screen                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `/`                    | SplashScreen                                                                 |
+| `/welcome`             | Welcome                                                                      |
+| `/login`               | AuthLoginPage                                                                |
+| `/onboarding`          | OnboardingScreen                                                             |
+| `/analysis`            | AnalysisPageWithData (loads OnboardingData from storage, wraps AnalysisPage) |
+| `/onboarding-analysis` | Same as`/analysis` (re-uses `AnalysisPageWithData`)                      |
+| `/home`                | HomePage                                                                     |
+| `/settings`            | SettingsPage                                                                 |
+| `/workout`             | WorkoutPage (`extra: {workoutDay, date}`)                                  |
+| `/nutrition`           | NutritionPage                                                                |
+| `/nutrition-analysis`  | AnalysisOutputPage                                                           |
+| `/workout-plan-detail` | WorkoutPlanDetailPage (`extra: {storedPlan}`)                              |
+| `/chat`                | ChatScreen (`extra: {userId, userName, workoutPlan, onboardingData}`)      |
 
 Several pages reached via `Navigator.push(MaterialPageRoute(...))` (e.g. `PersonalDetailsPage`,
 `AdjustWorkoutPlanPage`, `SavedProgramPage`) still successfully call `context.push('/analysis')` /
@@ -47,6 +50,7 @@ Several pages reached via `Navigator.push(MaterialPageRoute(...))` (e.g. `Person
 not a bug.
 
 ## Design System
+
 - **Accent colour**: `_lime = Color(0xFFCCFF00)` — used for highlights, selected states, CTA glows
 - **Dark surfaces**: `0xFF060705` (top), `0xFF0D0F14` (bottom), `0xFF0A0C12` (sheet)
 - **Fonts**: `GoogleFonts.poppins` (headings, buttons), `GoogleFonts.inter` (body, captions)
@@ -54,6 +58,7 @@ not a bug.
 - **Animations**: `flutter_animate` everywhere; standard delays 200 ms → 600 ms stagger
 
 ## Key Asset Paths (`lib/ui/core/constants/assets.dart`)
+
 ```dart
 ImagePath.appLogo       // assets/logo/app-logo.png
 ImagePath.loginCover    // assets/image/login-cover.jpg
@@ -61,6 +66,7 @@ ImagePath.googleLogo    // assets/logo/google_logo.png
 ```
 
 ## Auth (`lib/ui/features/auth/`)
+
 - `AuthLoginPage` — sign-in screen; dark cinematic layout (WelcomeView-inspired)
   - Split gradient background, ShaderMask hero image fade, `AnimatedPositioned` content
   - Top bar: back button (left) + centred logo (no app-name text)
@@ -70,21 +76,25 @@ ImagePath.googleLogo    // assets/logo/google_logo.png
 - `AuthViewModel` — `ChangeNotifier`; exposes `signInWithGoogle()`, `signInWithGmail(email)`, `isLoading`, `error`, `isAuthenticated`, `user`
 
 ## Onboarding (`lib/ui/features/onboarding/`)
+
 Multi-step flow driven by `OnboardingViewModel`. Steps in order:
 `gender → workoutDays → goal → experience → heightAndWeight → dob → signup → summary → motivationQuote`
 
-All steps use `BaseStepLayout` (in `share_screen.dart`).  
+All steps use `BaseStepLayout` (in `share_screen.dart`).
 `GoalStep` uses emoji preset cards (`🔥 💪 ⚖️ 🎨`) — emoji Text widgets need `fontFamilyFallback` to render correctly on iOS 26+.
 
 ## Backend (separate repo: `codes/backend_befit`)
+
 FastAPI service backed by Supabase Postgres (SQLAlchemy async ORM, asyncpg, Alembic migrations).
 Supabase JWT auth — `user_id` is always resolved server-side from the token, never trusted from
 the request body. AI calls (workout plans, body composition, nutrition, workout-session feedback)
 go through this backend, not directly from the Flutter client to an AI provider.
 
 ### `workout_sessions` table — one row per day, not per exercise
+
 Each day's session is a single row. Exercises and AI feedback are embedded as JSONB rather than
 living in separate child tables:
+
 - `workout_logs` (JSONB array) — `[{name, sets, reps, notes?, muscle_group?, equipment?, order_index}]`
 - `feedback` (JSONB object) — written by the AI session-analysis agent after the workout completes
 - `POST /api/v1/logs/sessions/complete` **upserts by `user_id + session_date`** — calling it twice
@@ -96,6 +106,7 @@ living in separate child tables:
   longer written to or relied on by current code.
 
 ### Workout plan model casting
+
 `WorkoutPlanModel`/`WorkoutPlanDataModel` (and their nested `WeeklySplitModel`, `WorkoutDayModel`,
 `ExerciseModel`, `TrainingGuidelinesModel`, `NutritionGuidelinesModel`) each expose a safe
 `.fromEntity()` / `.fromData()` / `.fromSplit()` / `.fromDay()` / `.fromExercise()` /
@@ -105,10 +116,12 @@ plain domain entity (e.g. when it round-trips through a use case), and a hard ca
 `type WorkoutPlanEntity is not a subtype of WorkoutPlanModel`. Use the factory instead.
 
 ## Local storage (Hive)
+
 Initialized in `lib/data/services/storage/storage_init.dart`. Key boxes: `onboarding_data`,
 `fitness_plans`, `nutrition_analyses`, `progress_photos`, `body_scans`, `completed_workout_dates`.
 
 ### Gotcha: never persist absolute file paths
+
 `getApplicationDocumentsDirectory()`'s absolute path prefix (the iOS sandbox container UUID) is
 **not guaranteed stable across app sessions**, even though the relative folder layout underneath
 it survives. Two past bugs were caused by storing the absolute path directly in Hive
@@ -116,6 +129,7 @@ it survives. Two past bugs were caused by storing the absolute path directly in 
 unreachable after a restart and the UI fell back to a placeholder/broken-image icon.
 
 Fix pattern now in place:
+
 - `ProgressPhotoService.saveImageFile()` and `FileStorageDataSourceImpl.saveImageFile()` both
   return a path **relative** to the documents dir (e.g. `"fitness_images/123_photo.jpg"`).
 - `lib/data/services/storage/image_path_resolver.dart` — `ImagePathResolver.resolve(storedPath)`
@@ -129,6 +143,7 @@ Fix pattern now in place:
   call without resolving first.
 
 ## Localization (`flutter gen-l10n`)
+
 Official Flutter tooling, not a third-party package. Configured via `l10n.yaml` at the repo root
 with `synthetic-package: false`, so generated code is **visible and committable** at
 `lib/l10n/generated/app_localizations.dart` rather than hidden in `.dart_tool/`.
@@ -155,6 +170,7 @@ with `synthetic-package: false`, so generated code is **visible and committable*
   `Text('...')` for `Text(t.yourKey)`.
 
 ## Profile feature (`lib/ui/features/profile/`)
+
 - `PersonalDetailsPage` — read-only profile display; computes BMI (with category + colour-coded
   gauge) and BMR (Mifflin-St Jeor) client-side from the stored height/weight/age/gender, since the
   backend doesn't expose these as derived fields.
@@ -167,6 +183,7 @@ with `synthetic-package: false`, so generated code is **visible and committable*
   the photo-analysis flow.
 
 ## Notes
+
 - iOS target: tested on iOS 26.2 beta — several platform-specific fixes applied (see recent commits)
 - Supabase is the auth + data backend
 - YouTube integration for workout videos (`youtube_player_flutter`)

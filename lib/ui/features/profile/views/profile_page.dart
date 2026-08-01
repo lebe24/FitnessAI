@@ -26,7 +26,7 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context);
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => di.sl<ProfileViewModel>()..loadProfile()),
@@ -111,7 +111,7 @@ class _ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context);
     return Consumer<ProfileViewModel>(
       builder: (_, vm, __) {
         final profile = vm.profile;
