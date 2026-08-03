@@ -257,8 +257,8 @@ class _BillingPageState extends State<BillingPage> {
             }).animate(delay: 160.ms).fadeIn(duration: 300.ms),
 
             const SizedBox(height: 14),
-            // Hosted paywall — shows every package including Lifetime, which
-            // the monthly/yearly toggle above can't represent.
+            // Hosted paywall — pricing and copy live in the RevenueCat
+            // dashboard, so they can change without an App Store release.
             GestureDetector(
               onTap: _busy ? null : _openPaywall,
               child: Center(

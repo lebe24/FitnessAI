@@ -12,7 +12,6 @@ void main() {
     test('product ids match App Store Connect', () {
       expect(ProProducts.monthly, 'monthly');
       expect(ProProducts.yearly, 'yearly');
-      expect(ProProducts.lifetime, 'lifetime');
     });
   });
 
@@ -49,6 +48,7 @@ void main() {
     expect(s.isConfigured, isFalse);
     expect(s.isPro, isFalse, reason: 'never grant Pro without RevenueCat');
     expect(s.availablePackages, isEmpty);
-    expect(s.lifetime, isNull);
+    expect(s.monthly, isNull);
+    expect(s.yearly, isNull);
   });
 }

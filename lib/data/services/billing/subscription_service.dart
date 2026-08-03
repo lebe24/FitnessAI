@@ -18,7 +18,6 @@ const String kProEntitlement = 'pro';
 class ProProducts {
   static const String monthly = 'monthly';
   static const String yearly = 'yearly';
-  static const String lifetime = 'lifetime';
 }
 
 /// What went wrong on a purchase, in terms the UI can act on.
@@ -197,33 +196,17 @@ class SubscriptionService extends ChangeNotifier {
   Package? get monthly => _offerings?.current?.monthly;
   Package? get yearly => _offerings?.current?.annual;
 
-  /// Lifetime is a non-subscription purchase. Prefer the typed accessor, but
-  /// fall back to matching the product id for custom-configured offerings.
-  Package? get lifetime {
-    final current = _offerings?.current;
-    if (current == null) return null;
-    return current.lifetime ??
-        current.availablePackages
-            .where((p) =>
-                p.packageType == PackageType.lifetime ||
-                p.storeProduct.identifier.contains(ProProducts.lifetime))
-            .firstOrNull;
-  }
-
   // ── Entitlement detail ─────────────────────────────────────────────────────
 
   EntitlementInfo? get _proEntitlement =>
       _customerInfo?.entitlements.active[kProEntitlement];
 
-  /// When the current period ends. Null for lifetime purchases, which never
-  /// expire — check [isLifetime] before showing a renewal date.
+  /// When the current period ends — the renewal date, or the cut-off date if
+  /// the user has cancelled (see [willRenew]).
   DateTime? get expirationDate {
     final raw = _proEntitlement?.expirationDate;
     return raw == null ? null : DateTime.tryParse(raw);
   }
-
-  bool get isLifetime =>
-      _isPro && _proEntitlement?.expirationDate == null;
 
   /// True when the user cancelled but still has paid time remaining.
   bool get willRenew => _proEntitlement?.willRenew ?? false;
