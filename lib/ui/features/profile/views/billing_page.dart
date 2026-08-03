@@ -83,7 +83,11 @@ class _BillingPageState extends State<BillingPage> {
     }
     final package = _yearly ? _subs.yearly : _subs.monthly;
     if (package == null) {
-      _snack('Plans are still loading — try again in a moment.');
+      // Distinguish "products aren't set up in App Store Connect yet" from
+      // "offerings simply haven't loaded", so this isn't a mystery in testing.
+      _snack(_subs.productsUnavailable
+          ? 'Plans are not available yet — check back soon.'
+          : 'Plans are still loading — try again in a moment.');
       _subs.refresh();
       return;
     }

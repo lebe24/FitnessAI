@@ -54,8 +54,11 @@ class BillingRemoteService {
   BillingRemoteService() {
     _dio = Dio(BaseOptions(
       baseUrl: Constant.backendUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      // Short by design: this only feeds an optional details card, so a slow
+      // or undeployed backend must not stall the billing page. RevenueCat is
+      // the source of truth for entitlement — this is supplementary history.
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 8),
     ));
 
     _dio.interceptors.add(InterceptorsWrapper(

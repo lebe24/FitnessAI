@@ -141,16 +141,51 @@ class SubscriptionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// True when the SDK is configured but the store returned no products.
+  ///
+  /// Normal during setup: it means the products aren't live in App Store
+  /// Connect yet (or the Paid Apps agreement isn't active). Entitlements
+  /// still work — only purchasing is unavailable.
+  bool get productsUnavailable => _configured && _offerings?.current == null;
+
   /// Re-read entitlements and offerings.
+  ///
+  /// The two are fetched independently: offerings fail whenever products
+  /// aren't configured yet, and that must not stop us reading entitlement
+  /// state (a user can hold Pro via a promo or another platform even when
+  /// this store has no products).
   Future<void> refresh() async {
     if (!_configured) return;
+
     try {
       _onCustomerInfo(await Purchases.getCustomerInfo());
-      _offerings = await Purchases.getOfferings();
-      notifyListeners();
     } catch (e) {
-      debugPrint('SubscriptionService: refresh failed — $e');
+      debugPrint('SubscriptionService: customer info failed — $e');
     }
+
+    try {
+      _offerings = await Purchases.getOfferings();
+      if (_offerings?.current == null) {
+        debugPrint('SubscriptionService: no current offering — check that a '
+            'default Offering exists in the RevenueCat dashboard.');
+      }
+    } on PlatformException catch (e) {
+      // CONFIGURATION_ERROR is the expected state before products are live in
+      // App Store Connect. Log one actionable line instead of the SDK's wall
+      // of text on every refresh.
+      if (PurchasesErrorHelper.getErrorCode(e) ==
+          PurchasesErrorCode.configurationError) {
+        debugPrint('SubscriptionService: products not available yet — create '
+            'them in App Store Connect, sign the Paid Apps agreement, and '
+            'attach them to an Offering. Purchasing stays disabled until then.');
+      } else {
+        debugPrint('SubscriptionService: offerings failed — $e');
+      }
+    } catch (e) {
+      debugPrint('SubscriptionService: offerings failed — $e');
+    }
+
+    notifyListeners();
   }
 
   // ── Packages ───────────────────────────────────────────────────────────────
