@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:fitness/ui/core/routes/app_router.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
+import 'package:fitness/ui/core/routes/plan_gate.dart';
 import 'package:fitness/ui/features/onboarding/views/onboarding_storage.dart';
 import 'package:fitness/ui/core/widgets/app_widget.dart';
 import 'package:flutter/material.dart';
@@ -30,8 +31,12 @@ class _SplashScreenState extends State<SplashScreen> {
     final user = _getCurrentUser();
 
     if (user != null) {
-      // Authenticated → always go home
-      context.go(ScreenPaths.home);
+      // Authenticated → home only when a workout plan exists; users who
+      // quit mid-onboarding are sent back to the analysis page to finish
+      // generating their plan.
+      final destination = await PlanGate.resolvedHome();
+      if (!mounted) return;
+      context.go(destination);
       return;
     }
 

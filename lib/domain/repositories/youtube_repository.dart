@@ -1,4 +1,3 @@
-import 'package:fitness/domain/models/youtube_video.dart';
 
 /// Repository interface for YouTube Data API
 abstract class YouTubeRepository {

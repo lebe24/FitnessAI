@@ -4,17 +4,14 @@ import 'package:flutter/material.dart';
 class AppTheme {
   // White/Light Theme Mode
   static final whiteThemeMode = ThemeData.light().copyWith(
-    useMaterial3: true,
     colorScheme: ColorScheme.light(
       // primary: AppPalete.gradient1,
       secondary: AppPalete.gradient2,
       surface: AppPalete.whiteColor,
-      background: AppPalete.backgroundColorWH,
       error: AppPalete.errorColor,
       onPrimary: AppPalete.whiteColor,
       onSecondary: AppPalete.whiteColor,
       onSurface: Colors.black87,
-      onBackground: Colors.black87,
       onError: AppPalete.whiteColor,
     ),
     scaffoldBackgroundColor: AppPalete.backgroundColorWH,
@@ -125,7 +122,7 @@ class AppTheme {
         color: Colors.black87,
         size: 24,
       ),
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -176,8 +173,8 @@ class AppTheme {
       backgroundColor: AppPalete.whiteColor,
       deleteIconColor: Colors.black54,
       disabledColor: Colors.grey.shade300,
-      // selectedColor: AppPalete.gradient1.withOpacity(0.2),
-      secondarySelectedColor: AppPalete.gradient2.withOpacity(0.2),
+      // selectedColor: AppPalete.gradient1.withValues(alpha: 0.2),
+      secondarySelectedColor: AppPalete.gradient2.withValues(alpha: 0.2),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       labelStyle: const TextStyle(
         color: Colors.black87,
@@ -251,7 +248,7 @@ class AppTheme {
       size: 24,
     ),
     dividerTheme: DividerThemeData(
-      color: Colors.black.withOpacity(0.12),
+      color: Colors.black.withValues(alpha: 0.12),
       thickness: 1,
       space: 1,
     ),
@@ -265,17 +262,14 @@ class AppTheme {
 
   // Dark Theme Mode
   static final darkThemeMode = ThemeData.dark().copyWith(
-    useMaterial3: true,
     colorScheme: ColorScheme.dark(
       // primary: AppPalete.gradient1,
       secondary: AppPalete.gradient2,
       surface: AppPalete.backgroundColorBk,
-      background: AppPalete.backgroundColorBk,
       error: AppPalete.errorColor,
       onPrimary: AppPalete.whiteColor,
       onSecondary: AppPalete.whiteColor,
       onSurface: Colors.white,
-      onBackground: Colors.white,
       onError: AppPalete.whiteColor,
     ),
     scaffoldBackgroundColor: AppPalete.backgroundColorBk,
@@ -386,7 +380,7 @@ class AppTheme {
         color: Colors.white,
         size: 24,
       ),
-      shadowColor: Colors.black.withOpacity(0.3),
+      shadowColor: Colors.black.withValues(alpha: 0.3),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -434,11 +428,11 @@ class AppTheme {
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: AppPalete.backgroundColorBk.withOpacity(0.6),
+      backgroundColor: AppPalete.backgroundColorBk.withValues(alpha: 0.6),
       deleteIconColor: Colors.white70,
       disabledColor: Colors.grey.shade800,
-      // selectedColor: AppPalete.gradient1.withOpacity(0.3),
-      secondarySelectedColor: AppPalete.gradient2.withOpacity(0.3),
+      // selectedColor: AppPalete.gradient1.withValues(alpha: 0.3),
+      secondarySelectedColor: AppPalete.gradient2.withValues(alpha: 0.3),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       labelStyle: const TextStyle(
         color: Colors.white,
@@ -460,10 +454,10 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppPalete.backgroundColorBk.withOpacity(0.6),
+      fillColor: AppPalete.backgroundColorBk.withValues(alpha: 0.6),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      // border: _border(Colors.white.withOpacity(0.2)),
-      // enabledBorder: _border(Colors.white.withOpacity(0.2)),
+      // border: _border(Colors.white.withValues(alpha: 0.2)),
+      // enabledBorder: _border(Colors.white.withValues(alpha: 0.2)),
       // focusedBorder: _border(AppPalete.gradient2),
       // errorBorder: _border(AppPalete.errorColor),
       // focusedErrorBorder: _border(AppPalete.errorColor),
@@ -512,7 +506,7 @@ class AppTheme {
       size: 24,
     ),
     dividerTheme: DividerThemeData(
-      color: Colors.white.withOpacity(0.12),
+      color: Colors.white.withValues(alpha: 0.12),
       thickness: 1,
       space: 1,
     ),

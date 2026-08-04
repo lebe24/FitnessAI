@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'package:fitness/data/models/chat/chat_message_model.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// Helper class to save and load chat history for specific dates
@@ -36,8 +36,7 @@ class ChatHistoryStorage {
         'lastUpdated': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      // Handle error silently
-      print('Error saving chat history: $e');
+      debugPrint('Error saving chat history: $e');
     }
   }
 
@@ -61,8 +60,7 @@ class ChatHistoryStorage {
           .map((json) => ChatMessageModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      // Handle error silently
-      print('Error loading chat history: $e');
+      debugPrint('Error loading chat history: $e');
       return [];
     }
   }
@@ -74,7 +72,7 @@ class ChatHistoryStorage {
       final key = _getStorageKey(userId, date, context: context);
       await box.delete(key);
     } catch (e) {
-      print('Error clearing chat history: $e');
+      debugPrint('Error clearing chat history: $e');
     }
   }
 

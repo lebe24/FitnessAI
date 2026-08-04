@@ -4,7 +4,7 @@
   "profileTitle": "Profile",
   "@profileTitle": { "description": "Title of the Profile tab" },
 
-  "editAction": "Edit",
+  "viewProfileAction": "View Profile",
   "sectionYourWorkoutsData": "Your Workouts Data",
   "sectionGeneral": "General",
   "sectionLegalSupport": "Legal & Support",

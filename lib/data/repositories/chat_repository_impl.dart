@@ -1,6 +1,4 @@
 import 'package:fitness/data/services/chat/chat_remote_service.dart';
-import 'package:fitness/data/models/chat/chat_message_model.dart';
-import 'package:fitness/data/models/chat/chat_response_model.dart';
 import 'package:fitness/domain/models/chat_message.dart';
 import 'package:fitness/domain/models/chat_response.dart';
 import 'package:fitness/domain/repositories/chat_repository.dart';

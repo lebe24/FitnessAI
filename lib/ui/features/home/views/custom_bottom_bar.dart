@@ -20,7 +20,7 @@ class CustomBottombar extends StatelessWidget {
         decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: const Color.fromARGB(255, 7, 224, 72).withOpacity(0.2),
+                color: const Color.fromARGB(255, 7, 224, 72).withValues(alpha: 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 7),
               ),

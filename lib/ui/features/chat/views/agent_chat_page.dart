@@ -262,6 +262,79 @@ class _AgentChatPageState extends State<AgentChatPage>
   }
 }
 
+// ── Back button ───────────────────────────────────────────────────────────────
+
+/// Back arrow wrapped in a breathing lime halo — the chat opens over the app
+/// as a full screen, so the way out needs to be obvious.
+class _PulsingBackButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final ChatPalette palette;
+  const _PulsingBackButton({required this.onTap, required this.palette});
+
+  @override
+  State<_PulsingBackButton> createState() => _PulsingBackButtonState();
+}
+
+class _PulsingBackButtonState extends State<_PulsingBackButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.palette;
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) {
+        final t = Curves.easeInOut.transform(_pulse.value);
+        return GestureDetector(
+          onTap: widget.onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Center(
+            // Scale is subtle — the glyph is small, so a big pulse reads as
+            // jitter rather than a breath.
+            child: Transform.scale(
+              scale: 1.0 + 0.10 * t,
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 18,
+                // Fades from the normal chevron colour toward brand lime.
+                color: Color.lerp(
+                  p.textPri.withValues(alpha: 0.7),
+                  p.lime,
+                  0.15 + 0.65 * t,
+                ),
+                // The glow itself: cast off the glyph, brightening and
+                // spreading as the pulse peaks.
+                shadows: [
+                  Shadow(
+                    color: p.lime.withValues(alpha: 0.35 + 0.45 * t),
+                    blurRadius: 5 + 13 * t,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 // ── AppBar ────────────────────────────────────────────────────────────────────
 
 class _AppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -294,11 +367,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: onBack != null
           ? Padding(
               padding: const EdgeInsets.only(left: 12),
-              child: GestureDetector(
-                onTap: onBack,
-                child: Icon(Icons.arrow_back_ios_new_rounded,
-                    color: p.textPri.withValues(alpha: 0.7), size: 18),
-              ),
+              child: _PulsingBackButton(onTap: onBack!, palette: p),
             )
           : null,
       title: Row(children: [

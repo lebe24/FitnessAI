@@ -4,6 +4,7 @@ import 'package:fitness/data/services/fitness/equipment_scan_service.dart';
 import 'package:fitness/data/services/fitness/exercise_advisor_service.dart';
 import 'package:fitness/data/services/fitness/workout_session_analysis_service.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
+import 'package:fitness/data/services/workout_log/workout_draft_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/features/chat/view_models/chat_view_model.dart';
@@ -53,6 +54,14 @@ class _WorkoutPageState extends State<WorkoutPage> {
   final _workoutLog     = sl<WorkoutLogRemoteDataSource>();
   final _getCurrentUser = sl<GetCurrentUser>();
 
+  /// The day this workout belongs to — also the draft's identity.
+  DateTime get _workoutDate => widget.date ?? DateTime.now();
+
+  /// Sets the user typed in the exercise log dialog, keyed by exercise name.
+  /// Held here (not in the hero page) so they persist across the hero page
+  /// being closed and the app being killed.
+  Map<String, List<DraftSet>> _setLogs = {};
+
   // ─── Lifecycle ────────────────────────────────────────────────────────────────
   @override
   void initState() {
@@ -62,6 +71,44 @@ class _WorkoutPageState extends State<WorkoutPage> {
     if (_localExercises.isEmpty) {
       _currentExerciseIndex = -1;
     }
+    _restoreDraft();
+  }
+
+  /// Reload an in-progress workout for this date, if one survived a restart.
+  Future<void> _restoreDraft() async {
+    final draft = await WorkoutDraftStorage.load(_workoutDate);
+    if (draft == null || draft.isEmpty || !mounted) return;
+    setState(() {
+      // The stored list carries the user's reordering and any exercises they
+      // added, so it wins over the plan's original order.
+      if (draft.exercises.isNotEmpty) _localExercises = List.of(draft.exercises);
+      _completedExercises
+        ..clear()
+        ..addAll(draft.completed.where((i) => i < _localExercises.length));
+      _currentExerciseIndex = _firstIncompleteIndex();
+      _completionTimestamps
+        ..clear()
+        ..addAll(draft.completionTimestamps);
+      _setLogs = Map.of(draft.setLogs);
+    });
+    if (mounted && _completedExercises.isNotEmpty) {
+      _showSnack('Resumed your workout — '
+          '${_completedExercises.length} of ${_localExercises.length} done');
+    }
+  }
+
+  /// Persist the current progress. Called after every mutation; the draft is
+  /// only removed once the session reaches Supabase.
+  void _saveDraft() {
+    WorkoutDraftStorage.save(WorkoutDraft(
+      dateKey: WorkoutDraftStorage.dateKey(_workoutDate),
+      dayLabel: widget.workoutDay?.day,
+      exercises: _localExercises,
+      completed: _completedExercises,
+      currentIndex: _currentExerciseIndex,
+      completionTimestamps: _completionTimestamps,
+      setLogs: _setLogs,
+    ));
   }
 
   @override
@@ -187,6 +234,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
         ]);
       _currentExerciseIndex = _firstIncompleteIndex();
     });
+    _saveDraft();
   }
 
   /// First exercise not yet completed — the active ("NOW") card — or -1 if all
@@ -208,6 +256,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
         _currentExerciseIndex = index + 1;
       }
     });
+    _saveDraft();
     if (_completedExercises.length == _exercises.length &&
         _exercises.isNotEmpty) {
       _showDurationDialog();
@@ -240,10 +289,18 @@ class _WorkoutPageState extends State<WorkoutPage> {
       );
       return;
     }
+    final name = _exercises[index].name;
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ExerciseHeroPage(
         exercise: _exercises[index],
         exerciseIndex: index,
+        // Seed the log dialog with anything already typed for this exercise,
+        // and keep every edit in the draft so it survives an app restart.
+        initialSets: _setLogs[name],
+        onSetsChanged: (sets) {
+          _setLogs[name] = sets;
+          _saveDraft();
+        },
         onComplete: () {
           Navigator.of(context).pop();
           // Wait for the pop animation to finish before completing so
@@ -287,6 +344,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
         dayLabel: widget.workoutDay?.day,
         durationMins: duration.round(),
       );
+      // Uploaded — the local draft has served its purpose. Cleared here and
+      // nowhere else, so a failed upload keeps the user's progress.
+      await WorkoutDraftStorage.clear(workoutDate);
       if (mounted) {
         _showSnack('Workout saved!');
         _showRestTimeDialog(duration, workoutDate, sessionId: session.id);
@@ -430,7 +490,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                               isActive: _isActive(i),
                               isDone: _isDone(i),
                               onComplete: () => _completeExercise(i),
-                              onDoubleTap: () => _openHeroPage(i),
+                              onOpen: () => _openHeroPage(i),
                             ),
                           ),
                   ),
@@ -506,6 +566,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
         _localExercises = [..._localExercises, ...added];
         if (_currentExerciseIndex == -1) _currentExerciseIndex = 0;
       });
+      _saveDraft();
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -709,7 +770,7 @@ class _ExerciseItem extends StatelessWidget {
   final bool      isActive;
   final bool      isDone;
   final VoidCallback onComplete;
-  final VoidCallback onDoubleTap;
+  final VoidCallback onOpen;
 
   const _ExerciseItem({
     super.key,
@@ -719,7 +780,7 @@ class _ExerciseItem extends StatelessWidget {
     required this.isActive,
     required this.isDone,
     required this.onComplete,
-    required this.onDoubleTap,
+    required this.onOpen,
   });
 
   bool get _isLast => index == total - 1;
@@ -802,7 +863,7 @@ class _ExerciseItem extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(bottom: _isLast ? 0 : 12),
               child: GestureDetector(
-                onDoubleTap: onDoubleTap,
+                onTap: onOpen,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOut,
@@ -943,14 +1004,14 @@ class _ActiveCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 6),
-          // Double-tap hint
+          // Tap hint
           Row(
             children: [
               Icon(Icons.touch_app_rounded,
                   size: 12, color: Colors.white.withValues(alpha: 0.3)),
               const SizedBox(width: 4),
               Text(
-                'Double tap to view demo',
+                'Tap to view demo',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: Colors.white.withValues(alpha: 0.3),

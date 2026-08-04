@@ -371,8 +371,6 @@ class _BmiCard extends StatelessWidget {
     final bmi = metrics.bmi!;
     final category = metrics.bmiCategory!;
     final color = metrics.bmiColor!;
-    // BMI visual range 15–40 mapped to 0.0–1.0
-    final fraction = ((bmi - 15) / (40 - 15)).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -406,28 +404,145 @@ class _BmiCard extends StatelessWidget {
             ]),
           ),
         ]),
-        const SizedBox(height: 16),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: Stack(children: [
-            Container(height: 6, color: Colors.white.withValues(alpha: 0.07)),
-            FractionallySizedBox(
-              widthFactor: fraction,
-              child: Container(height: 6, decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  gradient: LinearGradient(colors: [color.withValues(alpha: 0.5), color]))),
+        const SizedBox(height: 14),
+        _BmiScale(bmi: bmi),
+      ]),
+    );
+  }
+}
+
+// ── BMI scale ─────────────────────────────────────────────────────────────────────
+
+/// One WHO BMI band. [start]/[end] are BMI values on the 15–40 visual range.
+class _BmiBand {
+  final double start, end;
+  final String label;
+  final Color color;
+  const _BmiBand(this.start, this.end, this.label, this.color);
+}
+
+const double _kBmiMin = 15;
+const double _kBmiMax = 40;
+
+// Colours match the category colours assigned in _BodyMetrics.
+const List<_BmiBand> _kBmiBands = [
+  _BmiBand(15,   18.5, 'Underweight', Color(0xFF4D9EFF)),
+  _BmiBand(18.5, 25,   'Normal',      Color(0xFFCCFF00)),
+  _BmiBand(25,   30,   'Overweight',  Color(0xFFFFAA00)),
+  _BmiBand(30,   40,   'Obese',       Color(0xFFFF5C5C)),
+];
+
+/// Segmented BMI scale: each WHO band is drawn to width, boundary values are
+/// ticked underneath, and a marker points at where the user sits. The band the
+/// user falls into is shown at full strength; the rest are dimmed.
+class _BmiScale extends StatelessWidget {
+  final double bmi;
+  const _BmiScale({required this.bmi});
+
+  @override
+  Widget build(BuildContext context) {
+    final value = bmi.clamp(_kBmiMin, _kBmiMax);
+    // Boundaries between bands, plus the two outer ends.
+    final ticks = <double>[_kBmiMin, for (final b in _kBmiBands) b.end];
+
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      double xFor(double v) =>
+          ((v - _kBmiMin) / (_kBmiMax - _kBmiMin)) * width;
+
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ── Marker ────────────────────────────────────────────────────────
+        SizedBox(
+          height: 14,
+          child: Stack(clipBehavior: Clip.none, children: [
+            Positioned(
+              left: (xFor(value) - 9).clamp(0.0, width - 18),
+              bottom: -4,
+              child: const Icon(Icons.arrow_drop_down_rounded,
+                  size: 18, color: Colors.white),
             ),
           ]),
         ),
-        const SizedBox(height: 8),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('15', style: GoogleFonts.inter(fontSize: 10, color: _kDim)),
-          Text('Underweight · Normal · Overweight · Obese',
-              style: GoogleFonts.inter(fontSize: 9, color: _kDim)),
-          Text('40', style: GoogleFonts.inter(fontSize: 10, color: _kDim)),
-        ]),
-      ]),
-    );
+        // ── Bands ─────────────────────────────────────────────────────────
+        Row(
+          children: [
+            for (int i = 0; i < _kBmiBands.length; i++) ...[
+              if (i > 0) const SizedBox(width: 2),
+              Expanded(
+                // Flex proportional to each band's BMI span, ×2 to stay integral
+                // (spans are 3.5 / 6.5 / 5 / 10).
+                flex: ((_kBmiBands[i].end - _kBmiBands[i].start) * 2).round(),
+                child: Container(
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: _isActive(i)
+                        ? _kBmiBands[i].color
+                        : _kBmiBands[i].color.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.horizontal(
+                      left: Radius.circular(i == 0 ? 4 : 1),
+                      right: Radius.circular(i == _kBmiBands.length - 1 ? 4 : 1),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 5),
+        // ── Boundary ticks ────────────────────────────────────────────────
+        SizedBox(
+          height: 13,
+          child: Stack(clipBehavior: Clip.none, children: [
+            for (final t in ticks)
+              Positioned(
+                left: (xFor(t) - 14).clamp(0.0, width - 28),
+                child: SizedBox(
+                  width: 28,
+                  child: Text(
+                    t == t.roundToDouble()
+                        ? t.toStringAsFixed(0)
+                        : t.toStringAsFixed(1),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 9, color: _kDim),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+        const SizedBox(height: 4),
+        // ── Band labels ───────────────────────────────────────────────────
+        Row(
+          children: [
+            for (int i = 0; i < _kBmiBands.length; i++) ...[
+              if (i > 0) const SizedBox(width: 2),
+              Expanded(
+                flex: ((_kBmiBands[i].end - _kBmiBands[i].start) * 2).round(),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _kBmiBands[i].label,
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight:
+                          _isActive(i) ? FontWeight.w700 : FontWeight.w500,
+                      color: _isActive(i) ? _kBmiBands[i].color : _kDim,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ]);
+    });
+  }
+
+  /// The band containing the user's BMI. Upper bounds are exclusive so a BMI of
+  /// exactly 25 reads as Overweight, matching the category thresholds.
+  bool _isActive(int i) {
+    final b = _kBmiBands[i];
+    final isLast = i == _kBmiBands.length - 1;
+    return bmi >= b.start && (isLast ? true : bmi < b.end);
   }
 }
 

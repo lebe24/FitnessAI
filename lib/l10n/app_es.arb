@@ -3,7 +3,7 @@
 
   "profileTitle": "Perfil",
 
-  "editAction": "Editar",
+  "viewProfileAction": "Ver Perfil",
   "sectionYourWorkoutsData": "Tus Datos de Entrenamiento",
   "sectionGeneral": "General",
   "sectionLegalSupport": "Legal y Soporte",

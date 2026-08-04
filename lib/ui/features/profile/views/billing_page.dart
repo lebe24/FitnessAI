@@ -1,3 +1,9 @@
+import 'package:fitness/data/services/billing/billing_remote_service.dart';
+import 'package:fitness/data/services/billing/paywall_service.dart';
+import 'package:fitness/data/services/billing/subscription_service.dart';
+import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
+import 'package:fitness/ui/core/di.dart';
+import 'package:fitness/ui/features/profile/views/legal_document_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,12 +16,6 @@ const _kLime   = Color(0xFFCCFF00);
 const _kBlue   = Color(0xFF4D9EFF);
 const _kDim    = Color(0x80FFFFFF);
 
-const _freeFeatures = [
-  'AI workout plan generation (1 per month)',
-  'Body composition photo analysis',
-  'Basic progress tracking',
-];
-
 const _premiumFeatures = [
   'Unlimited AI workout plan generation',
   'Unlimited body composition analysis',
@@ -25,10 +25,9 @@ const _premiumFeatures = [
   'Early access to new features',
 ];
 
-/// Billing/subscription overview. No payment processor is wired up yet —
-/// this is the UI shell; "Upgrade" surfaces a "coming soon" message rather
-/// than faking a purchase. Wire to RevenueCat/Stripe/in_app_purchase when
-/// monetization is ready.
+/// Billing/subscription overview, backed by RevenueCat (Apple IAP).
+/// When RevenueCat isn't configured (no API key in .env) the page degrades
+/// to the pre-billing "coming soon" behaviour instead of crashing.
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
 
@@ -38,11 +37,121 @@ class BillingPage extends StatefulWidget {
 
 class _BillingPageState extends State<BillingPage> {
   bool _yearly = true;
+  bool _busy = false;
+
+  final _subs = sl<SubscriptionService>();
+  final _paywall = sl<PaywallService>();
+  final _billing = sl<BillingRemoteService>();
+  UserSubscription? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _subs.addListener(_onSubsChanged);
+    final userId = sl<GetCurrentUser>()()?.id;
+    _subs.init(userId);
+    _loadSubscription();
+  }
+
+  Future<void> _loadSubscription() async {
+    final sub = await _billing.getSubscription();
+    if (mounted) setState(() => _subscription = sub);
+  }
+
+  @override
+  void dispose() {
+    _subs.removeListener(_onSubsChanged);
+    super.dispose();
+  }
+
+  void _onSubsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _snack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Premium billing isn\'t live yet — check back soon!')),
-    );
+    _snack('Premium billing isn\'t live yet — check back soon!');
+  }
+
+  Future<void> _purchase() async {
+    if (!_subs.isConfigured) {
+      _showComingSoon();
+      return;
+    }
+    final package = _yearly ? _subs.yearly : _subs.monthly;
+    if (package == null) {
+      // Distinguish "products aren't set up in App Store Connect yet" from
+      // "offerings simply haven't loaded", so this isn't a mystery in testing.
+      _snack(_subs.productsUnavailable
+          ? 'Plans are not available yet — check back soon.'
+          : 'Plans are still loading — try again in a moment.');
+      _subs.refresh();
+      return;
+    }
+    setState(() => _busy = true);
+    final result = await _subs.purchase(package);
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    if (result.isSuccess) {
+      _snack('Welcome to BeFit Pro! 🎉');
+      // The webhook writes the subscription row server-side; give it a
+      // moment before refreshing the details card.
+      Future.delayed(const Duration(seconds: 3), _loadSubscription);
+    } else if (result.shouldShowMessage) {
+      // Cancellation is deliberately silent — it isn't a failure.
+      _snack(result.message ?? 'Purchase failed.');
+    }
+  }
+
+  /// RevenueCat's hosted paywall — pricing and copy are edited in the
+  /// dashboard, so they can change without an App Store release.
+  Future<void> _openPaywall() async {
+    if (!_subs.isConfigured) {
+      _showComingSoon();
+      return;
+    }
+    final purchased = await _paywall.present();
+    if (!mounted) return;
+    if (purchased) {
+      _snack('Welcome to BeFit Pro! 🎉');
+      Future.delayed(const Duration(seconds: 3), _loadSubscription);
+    }
+  }
+
+  /// Self-service management: cancel, request a refund, change plan.
+  Future<void> _openCustomerCenter() async {
+    if (!_subs.isConfigured) {
+      _showComingSoon();
+      return;
+    }
+    await _paywall.presentCustomerCenter();
+    if (mounted) _loadSubscription();
+  }
+
+  Future<void> _restore() async {
+    if (!_subs.isConfigured) {
+      _showComingSoon();
+      return;
+    }
+    setState(() => _busy = true);
+    final ok = await _subs.restore();
+    if (mounted) {
+      setState(() => _busy = false);
+      _snack(ok ? 'Pro restored.' : 'No previous purchases found.');
+    }
+  }
+
+  /// Localized store price when offerings are loaded; fallback to the
+  /// designed placeholder strings otherwise.
+  (String, String) _premiumPrice() {
+    final package = _yearly ? _subs.yearly : _subs.monthly;
+    final price = package?.storeProduct.priceString;
+    if (price != null) return (price, _yearly ? '/year' : '/month');
+    return (_yearly ? '\$79' : '\$8', _yearly ? '.99/year' : '.99/month');
   }
 
   @override
@@ -87,7 +196,9 @@ class _BillingPageState extends State<BillingPage> {
                     Text('CURRENT PLAN',
                         style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _kDim, letterSpacing: 0.8)),
                     const SizedBox(height: 3),
-                    Text('Free', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                    Text(_subs.isPro ? 'Pro' : 'Free',
+                        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800,
+                            color: _subs.isPro ? _kLime : Colors.white)),
                   ]),
                 ),
                 Container(
@@ -100,6 +211,14 @@ class _BillingPageState extends State<BillingPage> {
                 ),
               ]),
             ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.06, end: 0, curve: Curves.easeOut),
+
+            // ── Subscription details (from user_subscriptions via backend) ──
+            if (_subscription != null) ...[
+              const SizedBox(height: 14),
+              _SubscriptionDetailsCard(subscription: _subscription!)
+                  .animate(delay: 60.ms)
+                  .fadeIn(duration: 300.ms),
+            ],
 
             const SizedBox(height: 28),
             _SectionLabel(label: 'Plans', icon: Icons.stacked_bar_chart_rounded),
@@ -121,40 +240,88 @@ class _BillingPageState extends State<BillingPage> {
 
             const SizedBox(height: 16),
 
-            // ── Free plan card ───────────────────────────────────────
-            _PlanCard(
-              name: 'Free',
-              price: '\$0',
-              priceSuffix: '/forever',
-              description: 'Everything you need to start your fitness journey at no cost.',
-              features: _freeFeatures,
-              accent: _kDim,
-              isCurrent: true,
-              onTap: null,
-            ).animate(delay: 120.ms).fadeIn(duration: 300.ms),
-
-            const SizedBox(height: 16),
-
             // ── Premium plan card ────────────────────────────────────
-            _PlanCard(
-              name: 'Premium',
-              price: _yearly ? '\$79' : '\$8',
-              priceSuffix: _yearly ? '.99/year' : '.99/month',
-              description: 'Best for serious training — unlimited AI plans, coaching, and analysis.',
-              features: _premiumFeatures,
-              accent: _kLime,
-              isCurrent: false,
-              isHighlighted: true,
-              onTap: _showComingSoon,
-            ).animate(delay: 160.ms).fadeIn(duration: 300.ms),
+            Builder(builder: (_) {
+              final (price, suffix) = _premiumPrice();
+              return _PlanCard(
+                name: 'Premium',
+                price: price,
+                priceSuffix: suffix,
+                description: 'Best for serious training — unlimited AI plans, coaching, and analysis.',
+                features: _premiumFeatures,
+                accent: _kLime,
+                isCurrent: _subs.isPro,
+                isHighlighted: true,
+                onTap: _busy ? null : _purchase,
+              );
+            }).animate(delay: 160.ms).fadeIn(duration: 300.ms),
+
+            const SizedBox(height: 14),
+            // Hosted paywall — pricing and copy live in the RevenueCat
+            // dashboard, so they can change without an App Store release.
+            GestureDetector(
+              onTap: _busy ? null : _openPaywall,
+              child: Center(
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.list_alt_rounded, size: 14, color: _kLime),
+                  const SizedBox(width: 6),
+                  Text('See all plans',
+                      style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _kLime)),
+                ]),
+              ),
+            ).animate(delay: 180.ms).fadeIn(duration: 300.ms),
 
             const SizedBox(height: 28),
-            _SectionLabel(label: 'Payment Method', icon: Icons.credit_card_outlined),
+            _SectionLabel(label: 'Billing', icon: Icons.credit_card_outlined),
             const SizedBox(height: 12),
 
-            GestureDetector(
-              onTap: _showComingSoon,
-              child: Container(
+            // Subscribers get RevenueCat's Customer Center — cancel, refund,
+            // or change plan without leaving the app. Non-subscribers would
+            // only see an empty screen, so they get the Apple billing note.
+            if (_subs.isPro)
+              GestureDetector(
+                onTap: _busy ? null : _openCustomerCenter,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _kCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _kBorder),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                          color: _kBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(11)),
+                      child: Icon(Icons.settings_rounded, color: _kBlue, size: 19),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Manage subscription',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white)),
+                          const SizedBox(height: 2),
+                          Text('Change plan, cancel, or request a refund',
+                              style: GoogleFonts.inter(fontSize: 11, color: _kDim)),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded,
+                        color: Colors.white.withValues(alpha: 0.25), size: 20),
+                  ]),
+                ),
+              ).animate(delay: 200.ms).fadeIn(duration: 300.ms)
+            else
+              Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: _kCard,
@@ -164,27 +331,55 @@ class _BillingPageState extends State<BillingPage> {
                 child: Row(children: [
                   Container(
                     width: 40, height: 40,
-                    decoration: BoxDecoration(color: _kBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(11)),
-                    child: Icon(Icons.add_card_rounded, color: _kBlue, size: 19),
+                    decoration: BoxDecoration(
+                        color: _kBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(11)),
+                    child: Icon(Icons.apple_rounded, color: _kBlue, size: 19),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text('No payment method on file',
-                        style: GoogleFonts.inter(fontSize: 13, color: _kDim)),
+                    child: Text('Billed through your Apple ID. Manage or cancel any time in Settings → Apple ID → Subscriptions.',
+                        style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: _kDim)),
                   ),
-                  Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.25), size: 20),
                 ]),
-              ),
-            ).animate(delay: 200.ms).fadeIn(duration: 300.ms),
+              ).animate(delay: 200.ms).fadeIn(duration: 300.ms),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             GestureDetector(
-              onTap: _showComingSoon,
+              onTap: _busy ? null : _restore,
               child: Center(
                 child: Text('Restore purchases',
                     style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _kDim)),
               ),
             ).animate(delay: 240.ms).fadeIn(duration: 300.ms),
+
+            // ── Legal (required on any paywall by App Review) ─────────
+            const SizedBox(height: 20),
+            Text(
+              'Subscriptions renew automatically unless cancelled at least 24 hours '
+              'before the end of the current period. Payment is charged to your '
+              'Apple ID account at confirmation of purchase.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 10, height: 1.5, color: Colors.white.withValues(alpha: 0.35)),
+            ),
+            const SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const TermsAndConditionsPage())),
+                child: Text('Terms of Use',
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: _kDim,
+                        decoration: TextDecoration.underline, decorationColor: _kDim)),
+              ),
+              Text('  ·  ', style: GoogleFonts.inter(fontSize: 11, color: _kDim)),
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const PrivacyPolicyPage())),
+                child: Text('Privacy Policy',
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: _kDim,
+                        decoration: TextDecoration.underline, decorationColor: _kDim)),
+              ),
+            ]),
           ],
         ),
       ),
@@ -375,6 +570,95 @@ class _PillButton extends StatelessWidget {
               color: filled ? Colors.white : _kDim)),
         ),
       ),
+    );
+  }
+}
+
+// ── Subscription details card ─────────────────────────────────────────────────
+
+class _SubscriptionDetailsCard extends StatelessWidget {
+  final UserSubscription subscription;
+  const _SubscriptionDetailsCard({required this.subscription});
+
+  static String _date(DateTime? d) {
+    if (d == null) return '—';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = subscription;
+    final isCancelled = s.status == 'cancelled';
+    final isExpired = s.status == 'expired';
+    final expiryLabel = isExpired
+        ? 'Expired'
+        : isCancelled
+            ? 'Ends'
+            : 'Renews';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text('SUBSCRIPTION',
+              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _kDim, letterSpacing: 0.8)),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: isExpired
+                  ? Colors.redAccent.withValues(alpha: 0.12)
+                  : isCancelled
+                      ? Colors.orangeAccent.withValues(alpha: 0.12)
+                      : _kLime.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              s.status.toUpperCase(),
+              style: GoogleFonts.inter(
+                  fontSize: 9, fontWeight: FontWeight.w800,
+                  color: isExpired
+                      ? Colors.redAccent
+                      : isCancelled
+                          ? Colors.orangeAccent
+                          : _kLime),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        _DetailRow(label: 'Plan', value: s.planLabel),
+        _DetailRow(label: 'Subscribed', value: _date(s.subscribedAt)),
+        _DetailRow(label: expiryLabel, value: _date(s.expiresAt)),
+        if (s.amountLabel.isNotEmpty) _DetailRow(label: 'Amount paid', value: s.amountLabel),
+      ]),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 12, color: _kDim)),
+        const Spacer(),
+        Text(value,
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9))),
+      ]),
     );
   }
 }

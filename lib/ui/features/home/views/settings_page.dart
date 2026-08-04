@@ -84,14 +84,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         Icon(
                           Icons.error_outline,
                           size: 64,
-                          color: AppPalete.whiteColor.withOpacity(0.5),
+                          color: AppPalete.whiteColor.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           _errorMessage!,
                           style: GoogleFonts.inter(
                             fontSize: 16,
-                            color: AppPalete.whiteColor.withOpacity(0.7),
+                            color: AppPalete.whiteColor.withValues(alpha: 0.7),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -115,7 +115,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             Icon(
                               Icons.fitness_center,
                               size: 64,
-                              color: AppPalete.whiteColor.withOpacity(0.5),
+                              color: AppPalete.whiteColor.withValues(alpha: 0.5),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -131,7 +131,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               'Generate your first plan to see it here',
                               style: GoogleFonts.inter(
                                 fontSize: 14,
-                                color: AppPalete.whiteColor.withOpacity(0.7),
+                                color: AppPalete.whiteColor.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -175,10 +175,10 @@ class _FitnessPlanCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: AppPalete.borderColor.withOpacity(0.3),
+          color: AppPalete.borderColor.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppPalete.borderColor.withOpacity(0.2),
+            color: AppPalete.borderColor.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -199,7 +199,7 @@ class _FitnessPlanCard extends StatelessWidget {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return Container(
-                              color: AppPalete.borderColor.withOpacity(0.5),
+                              color: AppPalete.borderColor.withValues(alpha: 0.5),
                               child: const Center(
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
@@ -216,7 +216,7 @@ class _FitnessPlanCard extends StatelessWidget {
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
                                   color:
-                                      AppPalete.borderColor.withOpacity(0.5),
+                                      AppPalete.borderColor.withValues(alpha: 0.5),
                                   child: const Icon(
                                     Icons.broken_image,
                                     color: AppPalete.whiteColor,
@@ -227,7 +227,7 @@ class _FitnessPlanCard extends StatelessWidget {
                             );
                           }
                           return Container(
-                            color: AppPalete.borderColor.withOpacity(0.5),
+                            color: AppPalete.borderColor.withValues(alpha: 0.5),
                             child: const Icon(
                               Icons.fitness_center,
                               color: AppPalete.whiteColor,
@@ -237,7 +237,7 @@ class _FitnessPlanCard extends StatelessWidget {
                         },
                       )
                     : Container(
-                        color: AppPalete.borderColor.withOpacity(0.5),
+                        color: AppPalete.borderColor.withValues(alpha: 0.5),
                         child: const Icon(
                           Icons.fitness_center,
                           color: AppPalete.whiteColor,
@@ -273,7 +273,7 @@ class _FitnessPlanCard extends StatelessWidget {
                           plan.workoutPlan.plan.focus,
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: AppPalete.whiteColor.withOpacity(0.7),
+                            color: AppPalete.whiteColor.withValues(alpha: 0.7),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -287,7 +287,7 @@ class _FitnessPlanCard extends StatelessWidget {
                           _formatDate(plan.createdAt),
                           style: GoogleFonts.inter(
                             fontSize: 10,
-                            color: AppPalete.whiteColor.withOpacity(0.5),
+                            color: AppPalete.whiteColor.withValues(alpha: 0.5),
                           ),
                         ),
                         if (plan.isSynced)

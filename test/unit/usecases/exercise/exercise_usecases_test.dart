@@ -4,7 +4,6 @@ import 'package:fitness/domain/use_cases/exercise/get_exercise_by_id_usecase.dar
 import 'package:fitness/domain/use_cases/exercise/search_youtube_videos_usecase.dart';
 import '../../../fakes/fake_exercise_repository.dart';
 import '../../../fakes/fake_youtube_repository.dart';
-import '../../../fixtures/fixtures.dart';
 
 void main() {
   // ── SearchExercisesUsecase ─────────────────────────────────────────────────

@@ -1,5 +1,3 @@
-import 'package:fitness/ui/core/di.dart' as di;
-import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -15,10 +13,6 @@ class DecideStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.read<OnboardingViewModel>();
-    final user = di.sl<GetCurrentUser>()();
-    final userName = user?.name ?? user?.email ?? 'Athlete';
-    final userId = user?.id ?? '';
-
     return Scaffold(
       body: SafeArea(
         child: Padding(

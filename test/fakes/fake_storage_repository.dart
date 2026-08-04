@@ -1,7 +1,6 @@
 import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:fitness/domain/models/workout_plan.dart';
 import 'package:fitness/domain/repositories/storage_repository.dart';
-import '../fixtures/fixtures.dart';
 
 class FakeStorageRepository implements StorageRepository {
   final Map<String, StoredFitnessPlanEntity> _store = {};
@@ -10,6 +9,7 @@ class FakeStorageRepository implements StorageRepository {
   Exception? saveError;
   Exception? deleteError;
   Exception? updateSyncError;
+  Exception? updateError;
 
   bool deleteCalled = false;
   String? lastDeletedId;
@@ -68,6 +68,13 @@ class FakeStorageRepository implements StorageRepository {
     final existing = _store[id];
     if (existing == null) throw Exception('Plan $id not found');
     _store[id] = existing.copyWith(isSynced: isSynced, cloudId: cloudId);
+  }
+
+  @override
+  Future<void> updateFitnessPlan(StoredFitnessPlanEntity plan) async {
+    if (updateError != null) throw updateError!;
+    if (!_store.containsKey(plan.id)) throw Exception('Plan ${plan.id} not found');
+    _store[plan.id] = plan;
   }
 
   @override

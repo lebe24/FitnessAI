@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fitness/domain/use_cases/chat/connect_chat_usecase.dart';
 import 'package:fitness/domain/use_cases/chat/send_message_usecase.dart';
 import '../../../fakes/fake_chat_repository.dart';
-import '../../../fixtures/fixtures.dart';
 
 void main() {
   late FakesChatRepo repo;

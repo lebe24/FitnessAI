@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:fitness/data/services/nutrition/nutrition_local_service.dart';
 import 'package:fitness/data/services/nutrition/nutrition_remote_service.dart';
-import 'package:fitness/data/models/nutrition/nutrition_analysis_model.dart';
 import 'package:fitness/data/models/nutrition/stored_nutrition_analysis_model.dart';
 import 'package:fitness/domain/models/nutrition_analysis.dart';
 import 'package:fitness/domain/models/stored_nutrition_analysis.dart';
