@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitness/data/repositories/storage_repository_impl.dart';
+import 'package:fitness/data/services/storage/workout_plan_sync_service.dart';
+import 'package:fitness/domain/models/workout_plan.dart';
 import 'package:fitness/data/services/storage/local_storage_service.dart';
 import 'package:fitness/data/services/storage/file_storage_service.dart';
 import 'package:fitness/data/models/storage/stored_fitness_plan_model.dart';
@@ -66,17 +68,42 @@ class FakeFileStorage implements FileStorageDataSource {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
+/// StorageRepositoryImpl gained a cloud-sync dependency; this fake records
+/// calls so tests can assert on them without touching the network.
+class FakeSyncStorage implements WorkoutPlanSyncDataSource {
+  String cloudId = 'cloud-1';
+  Exception? saveError;
+  int saveCallCount = 0;
+
+  @override
+  Future<String> saveToCloud({
+    required WorkoutPlanEntity plan,
+    String? localImagePath,
+  }) async {
+    saveCallCount++;
+    if (saveError != null) throw saveError!;
+    return cloudId;
+  }
+
+  @override
+  Future<({int current, int longest})> getStreakFromPlan() async =>
+      (current: 0, longest: 0);
+}
+
 void main() {
   late FakeLocalStorage localStore;
   late FakeFileStorage fileStore;
+  late FakeSyncStorage syncStore;
   late StorageRepositoryImpl repo;
 
   setUp(() {
     localStore = FakeLocalStorage();
     fileStore = FakeFileStorage();
+    syncStore = FakeSyncStorage();
     repo = StorageRepositoryImpl(
       localDataSource: localStore,
       fileDataSource: fileStore,
+      syncDataSource: syncStore,
     );
   });
 

@@ -115,7 +115,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   borderRadius: BorderRadius.circular(15),
                   boxShadow: [
                     BoxShadow(
-                      color: item.color.withOpacity(0.4),
+                      color: item.color.withValues(alpha: 0.4),
                       blurRadius: 14,
                     ),
                   ],

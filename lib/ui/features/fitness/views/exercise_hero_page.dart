@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:fitness/data/services/api/youtube_video_cache.dart';
 import 'package:fitness/data/services/fitness/log_parser_service.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
+import 'package:fitness/data/services/workout_log/workout_draft_storage.dart';
 import 'package:fitness/domain/use_cases/exercise/search_youtube_videos_usecase.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/features/fitness/views/yt_player.dart';
@@ -23,11 +24,19 @@ class ExerciseHeroPage extends StatefulWidget {
   final int exerciseIndex;
   final VoidCallback onComplete;
 
+  /// Sets already logged for this exercise (restored from the workout draft).
+  final List<DraftSet>? initialSets;
+
+  /// Fired whenever the user edits a set, so the parent can persist it.
+  final void Function(List<DraftSet>)? onSetsChanged;
+
   const ExerciseHeroPage({
     super.key,
     required this.exercise,
     required this.exerciseIndex,
     required this.onComplete,
+    this.initialSets,
+    this.onSetsChanged,
   });
 
   @override
@@ -52,11 +61,23 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   @override
   void initState() {
     super.initState();
-    _weightCtls = List.generate(widget.exercise.sets, (_) => TextEditingController());
+    final saved = widget.initialSets;
+    _weightCtls = List.generate(
+      widget.exercise.sets,
+      (i) => TextEditingController(
+          text: (saved != null && i < saved.length) ? saved[i].weight : ''),
+    );
     _repsCtls = List.generate(
       widget.exercise.sets,
-      (_) => TextEditingController(text: widget.exercise.reps),
+      (i) => TextEditingController(
+          text: (saved != null && i < saved.length && saved[i].reps.isNotEmpty)
+              ? saved[i].reps
+              : widget.exercise.reps),
     );
+    // Persist every keystroke through the parent so a kill mid-set loses nothing.
+    for (final c in [..._weightCtls, ..._repsCtls]) {
+      c.addListener(_publishSets);
+    }
     _loadCachedVideos();
   }
 
@@ -65,6 +86,14 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
     for (final c in _weightCtls) { c.dispose(); }
     for (final c in _repsCtls) { c.dispose(); }
     super.dispose();
+  }
+
+
+  void _publishSets() {
+    widget.onSetsChanged?.call([
+      for (int i = 0; i < _weightCtls.length; i++)
+        DraftSet(weight: _weightCtls[i].text, reps: _repsCtls[i].text),
+    ]);
   }
 
   Future<void> _openLogDialog() async {

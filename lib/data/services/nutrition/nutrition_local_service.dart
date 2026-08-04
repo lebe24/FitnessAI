@@ -111,16 +111,11 @@ class NutritionLocalDataSourceImpl implements NutritionLocalDataSource {
           if (data != null) {
             // Convert Hive's Map<dynamic, dynamic> to Map<String, dynamic>
             Map<String, dynamic> jsonData;
-            if (data is Map) {
-              jsonData = data.map((k, v) => MapEntry(
-                k.toString(),
-                v is Map ? _convertMap(v) : v,
-              ));
-            } else {
-              debugPrint('Invalid data type for key $key: ${data.runtimeType}');
-              continue;
-            }
-            
+            jsonData = data.map((k, v) => MapEntry(
+              k.toString(),
+              v is Map ? _convertMap(v) : v,
+            ));
+                      
             final analysis = StoredNutritionAnalysisModel.fromJson(jsonData);
             analyses.add(analysis);
             debugPrint('Successfully loaded nutrition analysis: ${analysis.id}');
@@ -175,16 +170,11 @@ class NutritionLocalDataSourceImpl implements NutritionLocalDataSource {
       
       // Convert Hive's Map<dynamic, dynamic> to Map<String, dynamic>
       Map<String, dynamic> jsonData;
-      if (data is Map) {
-        jsonData = data.map((k, v) => MapEntry(
-          k.toString(),
-          v is Map ? _convertMap(v) : v,
-        ));
-      } else {
-        debugPrint('Invalid data type for nutrition analysis $id: ${data.runtimeType}');
-        return null;
-      }
-      
+      jsonData = data.map((k, v) => MapEntry(
+        k.toString(),
+        v is Map ? _convertMap(v) : v,
+      ));
+          
       return StoredNutritionAnalysisModel.fromJson(jsonData);
     } catch (e, stackTrace) {
       debugPrint('Error loading nutrition analysis by id $id: $e');

@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:fitness/l10n/generated/app_localizations.dart';
 import 'package:fitness/ui/core/di.dart' as di;
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
-import 'package:fitness/ui/features/fitness/views/saved_program.dart';
 import 'package:fitness/ui/features/profile/view_models/profile_view_model.dart';
 import 'package:fitness/ui/features/profile/views/adjust_workout_plan_page.dart';
 import 'package:fitness/ui/features/profile/views/billing_page.dart';
@@ -29,7 +26,7 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context);
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => di.sl<ProfileViewModel>()..loadProfile()),
@@ -42,18 +39,6 @@ class ProfilePage extends StatelessWidget {
           slivers: [
             const SliverToBoxAdapter(child: _ProfileHero()),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _SectionLabel(label: t.sectionYourWorkoutsData),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            const SliverToBoxAdapter(child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: _SavedDataCard(),
-            )),
-            const SliverToBoxAdapter(child: SizedBox(height: 28)),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -126,7 +111,7 @@ class _ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context);
     return Consumer<ProfileViewModel>(
       builder: (_, vm, __) {
         final profile = vm.profile;
@@ -176,10 +161,10 @@ class _ProfileHero extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.edit_outlined, size: 13, color: _kLime),
+                              Icon(Icons.person_outline_rounded, size: 13, color: _kLime),
                               const SizedBox(width: 5),
                               Text(
-                                t.editAction,
+                                t.viewProfileAction,
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -360,142 +345,6 @@ class _StatDivider extends StatelessWidget {
         width: 1,
         height: 28,
         color: _kBorder,
-      );
-}
-
-// ── Saved data card ───────────────────────────────────────────────────────────
-
-class _SavedDataCard extends StatelessWidget {
-  const _SavedDataCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final fitnessVm = context.read<FitnessViewModel>();
-    final savedPath = fitnessVm.plans.isNotEmpty ? fitnessVm.plans.first.imagePath : null;
-
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider.value(
-            value: fitnessVm,
-            child: const SavedProgramPage(),
-          ),
-        ),
-      ),
-      child: Container(
-        height: 130,
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _kBorder),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // image panel
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
-              child: SizedBox(
-                width: 110,
-                height: double.infinity,
-                child: savedPath != null
-                    ? FutureBuilder<bool>(
-                        future: File(savedPath).exists(),
-                        builder: (_, snap) {
-                          if (snap.connectionState == ConnectionState.waiting) {
-                            return _ImagePlaceholder();
-                          }
-                          return snap.data == true
-                              ? Image.file(File(savedPath),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => _ImagePlaceholder())
-                              : _ImagePlaceholder();
-                        },
-                      )
-                    : _ImagePlaceholder(),
-              ),
-            ),
-            // text + cta
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      t.savedWorkoutsTitle,
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      t.savedWorkoutsSubtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        height: 1.4,
-                        color: _kDim,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.folder_open_rounded,
-                              color: Colors.white.withValues(alpha: 0.6), size: 13),
-                          const SizedBox(width: 5),
-                          Text(
-                            t.viewAllAction,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ImagePlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        color: Colors.white.withValues(alpha: 0.05),
-        child: Center(
-          child: Icon(
-            Icons.folder_copy_outlined,
-            color: Colors.white.withValues(alpha: 0.2),
-            size: 36,
-          ),
-        ),
       );
 }
 

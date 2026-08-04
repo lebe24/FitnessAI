@@ -35,8 +35,12 @@ dependencies:
   flutter_native_splash: ^2.3.3
   google_maps_flutter: ^2.14.0
   crypto: ^3.0.3
+  flutter_local_notifications: ^19.4.2
+  timezone: ^0.10.1
+  purchases_flutter: ^8.10.6
   flutter_markdown: ^0.7.3
   speech_to_text: ^7.4.0
+  purchases_ui_flutter: ^8.11.0
 
 
 dev_dependencies:

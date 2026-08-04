@@ -1,5 +1,6 @@
 import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/core/di.dart' as di;
+import 'package:fitness/ui/core/routes/plan_gate.dart';
 import 'package:fitness/ui/features/auth/view_models/auth_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -72,9 +73,16 @@ class _AuthLoginBodyState extends State<_AuthLoginBody> {
         vm.clearError();
       }
       if (vm.isAuthenticated) {
-        context.go('/home');
+        _goToResolvedHome();
       }
     });
+  }
+
+  /// After login, land on home only when a workout plan already exists —
+  /// otherwise resume onboarding at the analysis page to generate one.
+  Future<void> _goToResolvedHome() async {
+    final destination = await PlanGate.resolvedHome();
+    if (mounted) context.go(destination);
   }
 
   @override

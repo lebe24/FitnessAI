@@ -5,7 +5,6 @@ import 'package:fitness/domain/use_cases/auth/sign_in_gmail.dart';
 import 'package:fitness/domain/use_cases/auth/sign_out.dart';
 import 'package:fitness/domain/use_cases/auth/delete_account.dart';
 import '../../../fakes/fake_auth_repository.dart';
-import '../../../fixtures/fixtures.dart';
 
 void main() {
   late FakeAuthRepository repo;

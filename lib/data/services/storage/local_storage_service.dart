@@ -2,7 +2,6 @@ import 'package:fitness/data/models/storage/stored_fitness_plan_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 /// Data source for local storage using Hive
 abstract class LocalStorageDataSource {
@@ -117,16 +116,11 @@ class LocalStorageDataSourceImpl implements LocalStorageDataSource {
           if (data != null) {
             // Convert Hive's Map<dynamic, dynamic> to Map<String, dynamic>
             Map<String, dynamic> jsonData;
-            if (data is Map) {
-              jsonData = data.map((k, v) => MapEntry(
-                k.toString(),
-                v is Map ? _convertMap(v) : v,
-              ));
-            } else {
-              debugPrint('Invalid data type for key $key: ${data.runtimeType}');
-              continue;
-            }
-            
+            jsonData = data.map((k, v) => MapEntry(
+              k.toString(),
+              v is Map ? _convertMap(v) : v,
+            ));
+                      
             final plan = StoredFitnessPlanModel.fromJson(jsonData);
             plans.add(plan);
             debugPrint('Successfully loaded fitness plan: ${plan.id}');

@@ -62,6 +62,7 @@ class StoredFitnessPlanModel extends StoredFitnessPlanEntity {
     };
   }
 
+  @override
   StoredFitnessPlanModel copyWith({
     String? id,
     WorkoutPlanEntity? workoutPlan,

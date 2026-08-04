@@ -58,3 +58,49 @@ app.*.map.json
 
 # Stray local scratch files
 /temp.txt
+
+# Local working notes
+doc/FeedbackNote.md
+doc/Payment_plan.md
+
+# ── Nested build output ───────────────────────────────────────────────────────
+# The bare /build/ above only matches the repo root; Gradle also writes to
+# android/build/. Trailing slash keeps android/build.gradle.kts tracked.
+**/build/
+.cxx/
+
+# ── Signing material — never commit ───────────────────────────────────────────
+*.jks
+*.keystore
+key.properties
+*.p12
+*.pem
+*.cer
+*.certSigningRequest
+*.mobileprovision
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+# /.env is covered above; catch the variants too, but keep the template.
+.env.*
+!.env.example
+
+# ── Packaged build outputs ────────────────────────────────────────────────────
+*.apk
+*.aab
+*.ipa
+*.app.zip
+*.xcarchive
+
+# ── Native dependency caches ──────────────────────────────────────────────────
+# Podfile.lock stays tracked (reproducible builds); the installed pods do not.
+ios/Pods/
+macos/Pods/
+**/.symlinks/
+**/Flutter/ephemeral/
+
+# ── Tooling ───────────────────────────────────────────────────────────────────
+.fvm/
+*.iws
+coverage/

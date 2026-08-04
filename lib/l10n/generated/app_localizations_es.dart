@@ -12,7 +12,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profileTitle => 'Perfil';
 
   @override
-  String get editAction => 'Editar';
+  String get viewProfileAction => 'Ver Perfil';
 
   @override
   String get sectionYourWorkoutsData => 'Tus Datos de Entrenamiento';

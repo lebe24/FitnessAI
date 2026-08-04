@@ -1,5 +1,4 @@
 import 'package:fitness/ui/core/di.dart';
-import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/ui/features/home/view_models/upload_view_model.dart';
 import 'package:fitness/ui/features/home/views/result_modal.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
@@ -118,9 +117,6 @@ class _PageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = sl<GetCurrentUser>()();
-    final firstName = (user?.name ?? user?.email ?? 'Athlete').split(' ').first;
-
     return Scaffold(
       backgroundColor: _bgTop,
       body: Container(

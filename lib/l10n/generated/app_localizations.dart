@@ -104,11 +104,11 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get profileTitle;
 
-  /// No description provided for @editAction.
+  /// No description provided for @viewProfileAction.
   ///
   /// In en, this message translates to:
-  /// **'Edit'**
-  String get editAction;
+  /// **'View Profile'**
+  String get viewProfileAction;
 
   /// No description provided for @sectionYourWorkoutsData.
   ///

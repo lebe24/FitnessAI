@@ -45,7 +45,6 @@ class _ResultModalPageState extends State<ResultModalPage> {
   ModalState _currentState = ModalState.init;
   String? _resultMessage;
   TextSpan? _formattedMessage;
-  WorkoutPlanEntity? _workoutPlan;
   double _progress = 0.0;
   Timer? _progressTimer;
   UploadViewModel? _uploadVm;
@@ -85,7 +84,6 @@ class _ResultModalPageState extends State<ResultModalPage> {
     if (!mounted) return;
     setState(() {
       _currentState = ModalState.success;
-      _workoutPlan = plan;
       _formattedMessage = _formatWorkoutPlanMessage(plan);
       _resultMessage = _textSpanToPlainText(_formattedMessage!);
     });

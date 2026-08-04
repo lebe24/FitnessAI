@@ -6,17 +6,20 @@ import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/core/constants/constant.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/theme/app_pallet.dart';
-import 'package:fitness/ui/core/widgets/app_widget.dart';
 import 'package:fitness/ui/core/widgets/greeting.dart';
-import 'package:fitness/domain/models/workout_day_mapping.dart';
+import 'package:fitness/ui/features/fitness/views/saved_workouts_card.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
 import 'package:fitness/ui/features/fitness/views/motivate_page.dart';
+import 'package:fitness/ui/features/fitness/views/motivation_schedule_sheet.dart';
+import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.dart';
+import 'package:fitness/data/services/motivation/motivation_notification_service.dart';
 import 'package:fitness/ui/features/fitness/views/streak_sheet.dart';
 import 'package:fitness/ui/features/fitness/views/workout_modal.dart';
 import 'package:fitness/data/services/fitness/body_composition_service.dart';
 import 'package:fitness/data/services/fitness/body_scan_storage.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/ui/features/fitness/views/body_composition_result_page.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -47,6 +50,7 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
   final ScrollController _dateScrollCtrl = ScrollController();
 
   String? _selectedTone;
+  final _motivationVm = sl<MotivationViewModel>();
 
   @override
   void initState() {
@@ -55,6 +59,7 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
       if (!mounted) return;
       context.read<FitnessViewModel>().loadFitnessPlans();
       _scrollToToday();
+      _motivationVm.load();
     });
     _greetingTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) {
@@ -180,6 +185,24 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
     );
   }
 
+
+  /// Debug-only: verify notifications actually reach the tray.
+  Future<void> _sendTestNotification() async {
+    final ok = await sl<MotivationNotificationService>()
+        .sendTestNotification(seconds: 10);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+        ok
+            ? 'Test notification scheduled — background the app, it lands in 10s.'
+            : 'Notifications are blocked. Enable them in Settings.',
+        style: GoogleFonts.inter(fontSize: 13),
+      ),
+      backgroundColor: ok ? const Color(0xFF1A2A00) : Colors.redAccent,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
   void _openTonePicker() {
     String? gender;
     try {
@@ -192,120 +215,42 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
             : 'male';
     final toneList = List<String>.from(Constant.toneOptions.first[userGender] ?? []);
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (dialogCtx, setDialog) => Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 4,
-          child: SizedBox(
-            width: 400,
-            height: 500,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(
-                        'Pick your tone',
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: toneList.isEmpty
-                          ? const Center(
-                              child: Text('No tone options available',
-                                  style: TextStyle(color: Colors.grey)))
-                          : ListView.builder(
-                              itemCount: toneList.length,
-                              itemBuilder: (_, i) {
-                                final tone       = toneList[i];
-                                final isSelected = _selectedTone == tone;
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
-                                  child: GestureDetector(
-                                    onTap: () => setDialog(
-                                        () => setState(() => _selectedTone = tone)),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? AppPalete.borderColor.withValues(alpha: 0.3)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? AppPalete.borderColor
-                                              : Colors.grey.withValues(alpha: 0.3),
-                                          width: isSelected ? 2 : 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              tone,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.bold
-                                                    : FontWeight.normal,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                          if (isSelected)
-                                            Icon(Icons.check_circle,
-                                                color: AppPalete.borderColor,
-                                                size: 20),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: AppWidgets.roundbtnText(
-                          onPressed: _selectedTone != null
-                              ? () {
-                                  Navigator.of(dialogCtx).pop();
-                                  Navigator.of(dialogCtx, rootNavigator: true).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => MotivatePage(
-                                        tone: _selectedTone!
-                                            .toLowerCase()
-                                            .replaceAll(' ', '-'),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              : () => ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Please select a tone'),
-                                      backgroundColor: Colors.orange,
-                                    ),
-                                  ),
-                          text: 'Motivate',
-                        ),
-                      ),
-                    ),
-                  ],
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) => _TonePickerSheet(
+          tones: toneList,
+          selected: _selectedTone,
+          onSelect: (tone) => setSheet(() => setState(() => _selectedTone = tone)),
+          onMotivate: () {
+            final tone = _selectedTone;
+            if (tone == null) return;
+            Navigator.of(sheetCtx).pop();
+            Navigator.of(sheetCtx, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder: (_) => MotivatePage(
+                  tone: tone.toLowerCase().replaceAll(' ', '-'),
                 ),
               ),
-            ),
-          ),
+            );
+          },
+          // Step 2: pick when the daily AI notification should arrive.
+          onScheduleDaily: () {
+            final tone = _selectedTone;
+            if (tone == null) return;
+            Navigator.of(sheetCtx).pop();
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              isScrollControlled: true,
+              builder: (_) => MotivationScheduleSheet(
+                tone: tone,
+                vm: _motivationVm,
+              ),
+            );
+          },
         ),
       ),
     );
@@ -416,18 +361,18 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                     const SizedBox(height: 12),
                     GestureDetector(
                       onTap: _openTonePicker,
+                      // Debug builds: long-press to fire a test notification
+                      // 10s out and confirm OS delivery on a real device.
+                      onLongPress: kDebugMode ? _sendTestNotification : null,
                       child: _MotivationBanner(),
                     ),
 
                     const SizedBox(height: 28),
 
-                    // ── Weekly Progress ──────────────────────────────────────
-                    _SectionLabel(label: 'This Week'),
+                    // ── Saved workouts ───────────────────────────────────────
+                    _SectionLabel(label: 'My Workout Program'),
                     const SizedBox(height: 12),
-                    _WeeklyProgressCard(
-                      completedDates: fitnessVm.completedDates,
-                      workoutMappings: fitnessVm.workoutMappings,
-                    ),
+                    const SavedWorkoutsCard(),
 
                     const SizedBox(height: 110),
                   ],
@@ -933,193 +878,283 @@ class _MotivationBanner extends StatelessWidget {
   }
 }
 
-// ── Weekly progress card ──────────────────────────────────────────────────────
+// ─── Tone picker sheet ────────────────────────────────────────────────────────
 
-class _WeeklyProgressCard extends StatelessWidget {
-  final Set<DateTime> completedDates;
-  final Map<DateTime, WorkoutDayMappingEntity> workoutMappings;
-  const _WeeklyProgressCard({
-    required this.completedDates,
-    required this.workoutMappings,
+/// Tone chooser for the motivation feature. Replaces the old stock Material
+/// dialog, which rendered on a light Card with black text and clashed with
+/// the rest of the dark app.
+class _TonePickerSheet extends StatelessWidget {
+  final List<String> tones;
+  final String? selected;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onMotivate;
+  final VoidCallback onScheduleDaily;
+
+  const _TonePickerSheet({
+    required this.tones,
+    required this.selected,
+    required this.onSelect,
+    required this.onMotivate,
+    required this.onScheduleDaily,
   });
+
+  /// Icon per tone, matched on keyword so the female/male lists — and any
+  /// tone added later — all resolve to something sensible.
+  static IconData _iconFor(String tone) {
+    final t = tone.toLowerCase();
+    if (t.contains('alpha') || t.contains('dominant')) return Icons.bolt_rounded;
+    if (t.contains('calm') || t.contains('disciplin')) {
+      return Icons.self_improvement_rounded;
+    }
+    if (t.contains('warrior')) return Icons.shield_rounded;
+    if (t.contains('coach')) return Icons.sports_rounded;
+    if (t.contains('hype') || t.contains('energy')) {
+      return Icons.local_fire_department_rounded;
+    }
+    if (t.contains('confident') || t.contains('empower')) {
+      return Icons.auto_awesome_rounded;
+    }
+    if (t.contains('soft') || t.contains('encourag')) {
+      return Icons.favorite_rounded;
+    }
+    if (t.contains('self-care') || t.contains('care')) return Icons.spa_rounded;
+    if (t.contains('goal')) return Icons.flag_rounded;
+    return Icons.graphic_eq_rounded;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
-    // Monday-anchored week
-    final monday = today.subtract(Duration(days: today.weekday - 1));
-    final days = List.generate(7, (i) => DateTime(
-          monday.year,
-          monday.month,
-          monday.day + i,
-        ));
-
-    const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    final done = days.where((d) => completedDates.contains(d)).length;
-    final planned = days.where((d) => workoutMappings.containsKey(d)).length;
-    final progress = planned == 0 ? 0.0 : (done / planned).clamp(0.0, 1.0);
-
+    final canMotivate = selected != null;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        border: Border(top: BorderSide(color: _kBorder)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // title + count
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Weekly Workouts',
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  height: 1,
+              // grab handle
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$done',
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: _kLime,
-                        height: 1,
-                      ),
+              const SizedBox(height: 18),
+              Row(children: [
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: _kLime.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(Icons.campaign_rounded, color: _kLime, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pick your tone',
+                          style: GoogleFonts.poppins(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      const SizedBox(height: 2),
+                      Text('How should your coach speak to you?',
+                          style: GoogleFonts.inter(
+                              fontSize: 12, color: _kDimWhite)),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(9),
                     ),
-                    TextSpan(
-                      text: ' / $planned',
+                    child: const Icon(Icons.close_rounded,
+                        color: Colors.white54, size: 16),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 18),
+              if (tones.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 28),
+                  child: Center(
+                    child: Text('No tone options available',
+                        style: GoogleFonts.inter(
+                            fontSize: 13, color: _kDimWhite)),
+                  ),
+                )
+              else
+                // Constrained so a long tone list scrolls instead of
+                // overflowing the sheet on small screens.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.45,
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        for (final tone in tones)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _ToneOption(
+                              label: tone,
+                              icon: _iconFor(tone),
+                              isSelected: selected == tone,
+                              onTap: () => onSelect(tone),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              // CTA — visibly inert until a tone is chosen, rather than
+              // firing a "please select" snackbar like the old dialog.
+              GestureDetector(
+                onTap: canMotivate ? onMotivate : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(
+                    color: canMotivate
+                        ? _kLime
+                        : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: canMotivate
+                        ? [BoxShadow(
+                            color: _kLime.withValues(alpha: 0.25),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6))]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      canMotivate ? 'Motivate me now' : 'Select a tone',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: _kDimWhite,
-                        height: 1,
+                        fontWeight: FontWeight.w700,
+                        color: canMotivate ? Colors.black : _kDimWhite,
                       ),
                     ),
-                  ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Secondary path: schedule a daily AI notification in this tone
+              // instead of reading one right now.
+              GestureDetector(
+                onTap: canMotivate ? onScheduleDaily : null,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: canMotivate
+                          ? _kLime.withValues(alpha: 0.35)
+                          : _kBorder,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.notifications_active_rounded,
+                          size: 15,
+                          color: canMotivate ? _kLime : _kDimWhite),
+                      const SizedBox(width: 7),
+                      Text('Remind me daily',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: canMotivate ? _kLime : _kDimWhite,
+                          )),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
 
-          const SizedBox(height: 16),
+class _ToneOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-          // day dots
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (i) {
-              final day     = days[i];
-              final isToday = day.year == today.year &&
-                              day.month == today.month &&
-                              day.day == today.day;
-              final done    = completedDates.contains(day);
-              final planned = workoutMappings.containsKey(day);
-              final isPast  = day.isBefore(DateTime(today.year, today.month, today.day));
+  const _ToneOption({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
 
-              Color dotColor;
-              Color labelColor;
-              if (done) {
-                dotColor   = _kLime;
-                labelColor = _kLime;
-              } else if (isToday) {
-                dotColor   = Colors.white.withValues(alpha: 0.5);
-                labelColor = Colors.white;
-              } else if (planned && isPast) {
-                dotColor   = const Color(0xFFFF5B5B).withValues(alpha: 0.7);
-                labelColor = _kDimWhite;
-              } else if (planned) {
-                dotColor   = Colors.white.withValues(alpha: 0.25);
-                labelColor = _kDimWhite;
-              } else {
-                dotColor   = Colors.white.withValues(alpha: 0.08);
-                labelColor = Colors.white.withValues(alpha: 0.3);
-              }
-
-              return Column(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: done ? _kLime.withValues(alpha: 0.15) : Colors.transparent,
-                      border: Border.all(
-                        color: dotColor,
-                        width: isToday ? 2 : 1.5,
-                      ),
-                    ),
-                    child: done
-                        ? Icon(Icons.check_rounded, size: 16, color: _kLime)
-                        : isToday
-                            ? Center(
-                                child: Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              )
-                            : null,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    labels[i],
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-                      color: labelColor,
-                    ),
-                  ),
-                ],
-              );
-            }),
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? _kLime.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? _kLime.withValues(alpha: 0.5) : _kBorder,
+            width: isSelected ? 1.5 : 1,
           ),
-
-          const SizedBox(height: 16),
-
-          // progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 5,
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
-              valueColor: const AlwaysStoppedAnimation<Color>(_kLime),
+        ),
+        child: Row(children: [
+          Icon(icon,
+              size: 18, color: isSelected ? _kLime : Colors.white38),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? _kLime : Colors.white,
+              ),
             ),
           ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            done == planned && planned > 0
-                ? 'Full week complete! Outstanding work.'
-                : done == 0
-                    ? 'No workouts logged yet this week.'
-                    : '$done of $planned planned workouts done.',
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: _kDimWhite,
-              height: 1.4,
-            ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: isSelected
+                ? const Icon(Icons.check_circle_rounded,
+                    key: ValueKey('on'), color: _kLime, size: 20)
+                : Icon(Icons.circle_outlined,
+                    key: const ValueKey('off'),
+                    color: Colors.white.withValues(alpha: 0.2),
+                    size: 20),
           ),
-        ],
+        ]),
       ),
     );
   }
@@ -1528,7 +1563,7 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
 
 // ─── Strip cell ───────────────────────────────────────────────────────────────
 
-class _StripCell extends StatelessWidget {
+class _StripCell extends StatefulWidget {
   final DateTime date;
   final bool isSelected, hasWorkout, isCompleted;
   const _StripCell({
@@ -1538,70 +1573,138 @@ class _StripCell extends StatelessWidget {
     required this.isCompleted,
   });
 
-  String get _dayLabel =>
-      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1];
+  @override
+  State<_StripCell> createState() => _StripCellState();
+}
 
-  Color get _borderColor {
-    if (isSelected)  return Colors.white.withValues(alpha: 0.4);
-    if (isCompleted) return Colors.red.withValues(alpha: 0.8);
-    if (hasWorkout)  return _kLime.withValues(alpha: 0.6);
+class _StripCellState extends State<_StripCell>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  /// A date with a planned workout that hasn't been done yet — tapping it
+  /// opens the workout modal, so it gets the glow that invites the tap.
+  bool get _isStartable => widget.hasWorkout && !widget.isCompleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    if (_isStartable) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _StripCell old) {
+    super.didUpdateWidget(old);
+    // Cells are recycled by the ListView, so keep the animation in sync with
+    // whatever date/state this cell now represents.
+    if (_isStartable && !_pulse.isAnimating) {
+      _pulse.repeat(reverse: true);
+    } else if (!_isStartable && _pulse.isAnimating) {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  String get _dayLabel =>
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][widget.date.weekday - 1];
+
+  Color _borderColor(double t) {
+    if (widget.isSelected)  return Colors.white.withValues(alpha: 0.4);
+    if (widget.isCompleted) return Colors.red.withValues(alpha: 0.8);
+    // Startable dates breathe between a dim and a bright lime border.
+    if (widget.hasWorkout)  return _kLime.withValues(alpha: 0.6 + 0.4 * t);
     return Colors.white.withValues(alpha: 0.1);
   }
 
   double get _borderWidth =>
-      (isSelected || isCompleted || hasWorkout) ? 2 : 1;
+      (widget.isSelected || widget.isCompleted || widget.hasWorkout) ? 2 : 1;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 60,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            width: 56, height: 56,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? _kLime.withValues(alpha: 0.15)
-                  : Colors.transparent,
-              border: Border.all(color: _borderColor, width: _borderWidth),
-              boxShadow: isSelected
-                  ? [BoxShadow(
-                      color: _kLime.withValues(alpha: 0.12),
-                      blurRadius: 12, offset: const Offset(0, 4))]
-                  : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(_dayLabel,
-                  style: GoogleFonts.inter(
-                    fontSize: 12, fontWeight: FontWeight.w500,
-                    color: isSelected ? _kLime : Colors.white70)),
-                const SizedBox(height: 2),
-                Text('${date.day}',
-                  style: GoogleFonts.inter(
-                    fontSize: 16, fontWeight: FontWeight.bold,
-                    color: isSelected ? _kLime : Colors.white)),
-              ],
-            ),
-          ),
-          if ((hasWorkout || isCompleted) && !isSelected)
-            Positioned(
-              top: 4, right: 4,
-              child: Container(
-                width: 8, height: 8,
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) {
+        final t = _isStartable
+            ? Curves.easeInOut.transform(_pulse.value)
+            : 0.0;
+        return Container(
+          width: 60,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                width: 56, height: 56,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isCompleted ? Colors.red : _kLime,
+                  color: widget.isSelected
+                      ? _kLime.withValues(alpha: 0.15)
+                      : _isStartable
+                          ? _kLime.withValues(alpha: 0.04 + 0.06 * t)
+                          : Colors.transparent,
+                  border: Border.all(color: _borderColor(t), width: _borderWidth),
+                  boxShadow: [
+                    if (_isStartable)
+                      BoxShadow(
+                        color: _kLime.withValues(alpha: 0.10 + 0.30 * t),
+                        blurRadius: 8 + 14 * t,
+                        spreadRadius: 1 * t,
+                      ),
+                    if (widget.isSelected)
+                      BoxShadow(
+                        color: _kLime.withValues(alpha: 0.12),
+                        blurRadius: 12, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(_dayLabel,
+                      style: GoogleFonts.inter(
+                        fontSize: 12, fontWeight: FontWeight.w500,
+                        color: widget.isSelected ? _kLime : Colors.white70)),
+                    const SizedBox(height: 2),
+                    Text('${widget.date.day}',
+                      style: GoogleFonts.inter(
+                        fontSize: 16, fontWeight: FontWeight.bold,
+                        color: widget.isSelected ? _kLime : Colors.white)),
+                  ],
                 ),
               ),
-            ),
-        ],
-      ),
+              if ((widget.hasWorkout || widget.isCompleted) && !widget.isSelected)
+                Positioned(
+                  top: 4, right: 4,
+                  child: Container(
+                    width: 8, height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.isCompleted ? Colors.red : _kLime,
+                      // Halo expands with the pulse so the marker reads as
+                      // "live" rather than a static status dot.
+                      boxShadow: _isStartable
+                          ? [BoxShadow(
+                              color: _kLime.withValues(alpha: 0.5 * (1 - t)),
+                              blurRadius: 2 + 4 * t,
+                              spreadRadius: 1 + 3 * t)]
+                          : null,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

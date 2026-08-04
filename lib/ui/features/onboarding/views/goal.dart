@@ -242,7 +242,9 @@ class _CustomGoalField extends StatelessWidget {
       duration: const Duration(milliseconds: 250),
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
       decoration: BoxDecoration(
-        color: isActive ? Colors.black : const Color(0xFFF5F5F5),
+        // Stays light in both states so the black input text is always
+        // legible; the lime border + glow below mark the active state.
+        color: const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
             color: isActive ? _lime : Colors.transparent, width: 2),
@@ -285,15 +287,11 @@ class _CustomGoalField extends StatelessWidget {
             maxLines: 1,
             textInputAction: TextInputAction.done,
             style: GoogleFonts.poppins(
-                fontSize: 15,
-                color: isActive ? Colors.white : Colors.black87),
+                fontSize: 15, color: Colors.black87),
             decoration: InputDecoration(
               hintText: 'Something else? Type it here…',
               hintStyle: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: isActive
-                      ? Colors.white.withValues(alpha: 0.4)
-                      : Colors.black38),
+                  fontSize: 13, color: Colors.black38),
               border: InputBorder.none,
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -309,7 +307,7 @@ class _CustomGoalField extends StatelessWidget {
             },
             child: const Padding(
               padding: EdgeInsets.only(left: 8),
-              child: Icon(Icons.close_rounded, size: 18, color: Colors.white54),
+              child: Icon(Icons.close_rounded, size: 18, color: Colors.black38),
             ),
           ),
       ]),
