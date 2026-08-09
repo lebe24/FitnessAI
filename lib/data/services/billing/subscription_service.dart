@@ -7,11 +7,13 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 
 /// RevenueCat entitlement that unlocks BeFit Pro.
 ///
-/// This must match the entitlement **identifier** in the RevenueCat dashboard
-/// (Project → Entitlements), not its display name. If the dashboard shows
-/// "Fitness application Pro" as the display name, the identifier is the short
-/// string beside it.
-const String kProEntitlement = 'pro';
+/// This is the entitlement **identifier** from the RevenueCat dashboard
+/// (Project → Entitlements) — the left-hand column, not the description.
+/// A mismatch fails silently: purchases succeed but nothing unlocks. When
+/// the expected identifier is missing, [_onCustomerInfo] logs whatever
+/// identifiers the account actually has, so the real value is visible in
+/// the debug console rather than guessed at.
+const String kProEntitlement = 'Befit AI - fitness Pro';
 
 /// Product identifiers configured in App Store Connect and mapped to the
 /// entitlement in RevenueCat.
@@ -134,6 +136,18 @@ class SubscriptionService extends ChangeNotifier {
   void _onCustomerInfo(CustomerInfo info) {
     _customerInfo = info;
     final active = info.entitlements.active.containsKey(kProEntitlement);
+
+    // A wrong identifier is invisible otherwise — the purchase succeeds and
+    // the user simply stays locked out. If the account has entitlements but
+    // not ours, name them so the mismatch is obvious.
+    if (kDebugMode && !active && info.entitlements.all.isNotEmpty) {
+      final known = info.entitlements.all.keys.toList();
+      if (!known.contains(kProEntitlement)) {
+        debugPrint('SubscriptionService: entitlement "$kProEntitlement" not '
+            'found. This account has: $known — update kProEntitlement to match.');
+      }
+    }
+
     if (active != _isPro) {
       _isPro = active;
     }

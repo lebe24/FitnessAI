@@ -6,7 +6,7 @@ void main() {
     test('entitlement id matches the RevenueCat dashboard identifier', () {
       // Changing this silently unlocks/locks Pro for everyone — it must stay
       // in sync with Project → Entitlements in RevenueCat.
-      expect(kProEntitlement, 'pro');
+      expect(kProEntitlement, 'Befit AI - fitness Pro');
     });
 
     test('product ids match App Store Connect', () {
