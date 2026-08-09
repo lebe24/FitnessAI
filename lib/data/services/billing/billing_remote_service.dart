@@ -81,6 +81,15 @@ class BillingRemoteService {
       final data = res.data;
       if (data == null || data is! Map<String, dynamic>) return null;
       return UserSubscription.fromJson(data);
+    } on DioException catch (e) {
+      // 404 just means the billing endpoints aren't deployed yet — an
+      // expected state, not worth a stack trace in the console. 401/403
+      // means the session expired, which the auth layer handles.
+      final code = e.response?.statusCode;
+      if (code != 404 && code != 401 && code != 403) {
+        debugPrint('BillingRemoteService.getSubscription failed: $e');
+      }
+      return null;
     } catch (e) {
       debugPrint('BillingRemoteService.getSubscription failed: $e');
       return null;
