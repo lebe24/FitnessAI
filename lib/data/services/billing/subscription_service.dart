@@ -179,8 +179,23 @@ class SubscriptionService extends ChangeNotifier {
     try {
       _offerings = await Purchases.getOfferings();
       if (_offerings?.current == null) {
-        debugPrint('SubscriptionService: no current offering — check that a '
-            'default Offering exists in the RevenueCat dashboard.');
+        // Distinguish "no offerings at all" from "offerings exist but none is
+        // marked Current" — they look identical from the UI but need
+        // different fixes in the dashboard.
+        final all = _offerings?.all.keys.toList() ?? const [];
+        if (all.isEmpty) {
+          debugPrint('SubscriptionService: no offerings exist. Create one in '
+              'RevenueCat → Offerings and add Monthly/Annual packages.');
+        } else {
+          debugPrint('SubscriptionService: offerings exist $all but none is '
+              'marked Current. Set one as Current in RevenueCat → Offerings.');
+        }
+      } else {
+        final pkgs = _offerings!.current!.availablePackages
+            .map((p) => p.identifier)
+            .toList();
+        debugPrint('SubscriptionService: offering '
+            '"${_offerings!.current!.identifier}" loaded with packages $pkgs');
       }
     } on PlatformException catch (e) {
       // CONFIGURATION_ERROR is the expected state before products are live in
