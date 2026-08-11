@@ -76,42 +76,18 @@ class _BillingPageState extends State<BillingPage> {
     _snack('Premium billing isn\'t live yet — check back soon!');
   }
 
-  Future<void> _purchase() async {
-    if (!_subs.isConfigured) {
-      _showComingSoon();
-      return;
-    }
-    final package = _yearly ? _subs.yearly : _subs.monthly;
-    if (package == null) {
-      // Distinguish "products aren't set up in App Store Connect yet" from
-      // "offerings simply haven't loaded", so this isn't a mystery in testing.
-      _snack(_subs.productsUnavailable
-          ? 'Plans are not available yet — check back soon.'
-          : 'Plans are still loading — try again in a moment.');
-      _subs.refresh();
-      return;
-    }
-    setState(() => _busy = true);
-    final result = await _subs.purchase(package);
-    if (!mounted) return;
-    setState(() => _busy = false);
-
-    if (result.isSuccess) {
-      _snack('Welcome to BeFit Pro! 🎉');
-      // The webhook writes the subscription row server-side; give it a
-      // moment before refreshing the details card.
-      Future.delayed(const Duration(seconds: 3), _loadSubscription);
-    } else if (result.shouldShowMessage) {
-      // Cancellation is deliberately silent — it isn't a failure.
-      _snack(result.message ?? 'Purchase failed.');
-    }
-  }
-
   /// RevenueCat's hosted paywall — pricing and copy are edited in the
   /// dashboard, so they can change without an App Store release.
   Future<void> _openPaywall() async {
     if (!_subs.isConfigured) {
       _showComingSoon();
+      return;
+    }
+    // The paywall renders from the offering, so an empty one shows a blank
+    // sheet. Say why instead, and retry the fetch.
+    if (_subs.productsUnavailable) {
+      _snack('Plans are not available yet — check back soon.');
+      _subs.refresh();
       return;
     }
     final purchased = await _paywall.present();
@@ -252,27 +228,9 @@ class _BillingPageState extends State<BillingPage> {
                 accent: _kLime,
                 isCurrent: _subs.isPro,
                 isHighlighted: true,
-                onTap: _busy ? null : _purchase,
+                onTap: _busy ? null : _openPaywall,
               );
             }).animate(delay: 160.ms).fadeIn(duration: 300.ms),
-
-            const SizedBox(height: 14),
-            // Hosted paywall — pricing and copy live in the RevenueCat
-            // dashboard, so they can change without an App Store release.
-            GestureDetector(
-              onTap: _busy ? null : _openPaywall,
-              child: Center(
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.list_alt_rounded, size: 14, color: _kLime),
-                  const SizedBox(width: 6),
-                  Text('See all plans',
-                      style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _kLime)),
-                ]),
-              ),
-            ).animate(delay: 180.ms).fadeIn(duration: 300.ms),
 
             const SizedBox(height: 28),
             _SectionLabel(label: 'Billing', icon: Icons.credit_card_outlined),
@@ -521,7 +479,7 @@ class _PlanCard extends StatelessWidget {
             if (isCurrent)
               _PillButton(label: 'Current Plan', filled: false, onTap: null)
             else
-              _PillButton(label: 'Start Free', filled: true, onTap: onTap),
+              _PillButton(label: 'Start Plan', filled: true, onTap: onTap),
           ]),
         ),
         // ── Features zone ────────────────────────────────────────────
