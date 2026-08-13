@@ -16,3 +16,9 @@ class ImagePath{
   static const String googleLogo = 'assets/logo/google_logo.png';
   static const String loginCover = 'assets/image/login-cover.jpg';
 }
+
+/// Bundled audio assets.
+class SoundPath {
+  /// Short chime played when an AI motivation message is delivered.
+  static const String messageBell = 'assets/audio/message_bell.m4a';
+}

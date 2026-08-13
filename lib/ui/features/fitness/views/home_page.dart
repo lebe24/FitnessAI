@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:fitness/ui/core/constants/assets.dart';
+import 'package:fitness/ui/core/utils/audio_player_service.dart';
+import 'package:flutter/services.dart';
 import 'package:fitness/ui/core/constants/constant.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/theme/app_pallet.dart';
@@ -890,42 +892,55 @@ class _TonePickerSheet extends StatefulWidget {
 
 class _TonePickerSheetState extends State<_TonePickerSheet> {
   String? _selected;
-  MotivationMessage? _message;
   bool _generating = false;
-  bool _failed = false;
 
-  /// Generate in the selected tone and show the result inline.
+  /// Generate in the selected tone, then present it in a dialog.
+  ///
+  /// The sheet stays put underneath while the request runs — only the button
+  /// shows progress — so the layout never reflows mid-generation.
   Future<void> _motivateNow() async {
     final tone = _selected;
     if (tone == null || _generating) return;
 
-    setState(() {
-      _generating = true;
-      _failed = false;
-      _message = null;
-    });
+    setState(() => _generating = true);
 
     final message = await widget.vm.motivateNow(
       tone.toLowerCase().replaceAll(' ', '-'),
     );
     if (!mounted) return;
+    setState(() => _generating = false);
 
-    setState(() {
-      _generating = false;
-      _message = message;
-      _failed = message == null;
-    });
+    if (message == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Couldn't reach your coach — try again shortly.",
+            style: GoogleFonts.inter(fontSize: 13)),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
+    // Chime as the message lands, the way a delivered message announces
+    // itself. Not awaited — the dialog should not wait on audio.
+    unawaited(AudioPlayerService.playAsset(SoundPath.messageBell));
+    HapticFeedback.mediumImpact();
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.72),
+      builder: (dialogCtx) => _MotivationDialog(
+        message: message,
+        tone: tone,
+        onAnother: () {
+          Navigator.of(dialogCtx).pop();
+          _motivateNow();
+        },
+      ),
+    );
   }
 
-  /// Switching tone invalidates the message shown — it was written in the
-  /// previous voice, so keeping it on screen would misrepresent the new pick.
-  void _select(String tone) {
-    setState(() {
-      _selected = tone;
-      _message = null;
-      _failed = false;
-    });
-  }
+  void _select(String tone) => setState(() => _selected = tone);
 
   /// Icon per tone, matched on keyword so the female/male lists — and any
   /// tone added later — all resolve to something sensible.
@@ -1031,12 +1046,9 @@ class _TonePickerSheetState extends State<_TonePickerSheet> {
               else
                 // Constrained so a long tone list scrolls instead of
                 // overflowing the sheet on small screens.
-                // Yields room once a message is on screen, so the result is
-                // visible without the user having to scroll the sheet.
                 ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height *
-                        (_message != null ? 0.22 : 0.45),
+                    maxHeight: MediaQuery.of(context).size.height * 0.45,
                   ),
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -1054,17 +1066,6 @@ class _TonePickerSheetState extends State<_TonePickerSheet> {
                           ),
                       ],
                     ),
-                  ),
-                ),
-              // The generated message, in place of the old route push.
-              if (_generating || _message != null || _failed)
-                Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: _MotivationResult(
-                    message: _message,
-                    isGenerating: _generating,
-                    failed: _failed,
-                    onRetry: _motivateNow,
                   ),
                 ),
               const SizedBox(height: 8),
@@ -1096,13 +1097,7 @@ class _TonePickerSheetState extends State<_TonePickerSheet> {
                                 strokeWidth: 2, color: _kLime),
                           )
                         : Text(
-                            !canMotivate
-                                ? 'Select a tone'
-                                : _message != null
-                                    // Already showing one — the button now
-                                    // asks for a fresh take in the same tone.
-                                    ? 'Write me another'
-                                    : 'Motivate me now',
+                            canMotivate ? 'Motivate me now' : 'Select a tone',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -1160,100 +1155,139 @@ class _TonePickerSheetState extends State<_TonePickerSheet> {
 ///
 /// Covers all three states the request can be in — writing, written, failed —
 /// so the sheet never shows a blank gap where the message should be.
-class _MotivationResult extends StatelessWidget {
-  final MotivationMessage? message;
-  final bool isGenerating;
-  final bool failed;
-  final VoidCallback onRetry;
+/// The generated motivation, presented as a focused dialog.
+///
+/// A dialog rather than inline copy in the sheet: the message is the payoff of
+/// the whole flow, and dropping it into the tone list made the sheet reflow
+/// around it. Here it arrives over a dimmed backdrop with nothing competing.
+class _MotivationDialog extends StatelessWidget {
+  final MotivationMessage message;
+  final String tone;
+  final VoidCallback onAnother;
 
-  const _MotivationResult({
+  const _MotivationDialog({
     required this.message,
-    required this.isGenerating,
-    required this.failed,
-    required this.onRetry,
+    required this.tone,
+    required this.onAnother,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 26),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
         decoration: BoxDecoration(
-          color: _kLime.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _kLime.withValues(alpha: 0.22)),
+          color: _kCard,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: _kLime.withValues(alpha: 0.28)),
+          boxShadow: [
+            BoxShadow(
+              color: _kLime.withValues(alpha: 0.12),
+              blurRadius: 34,
+              spreadRadius: 2,
+            ),
+          ],
         ),
-        child: _buildBody(context),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Container(
+                width: 38, height: 38,
+                decoration: BoxDecoration(
+                  color: _kLime.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(Icons.notifications_active_rounded,
+                    color: _kLime, size: 19),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(tone,
+                    style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                        color: _kLime)),
+              ),
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 28, height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white54, size: 15),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 18),
+            Text(message.title,
+                style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    height: 1.3,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white)),
+            const SizedBox(height: 10),
+            Text(message.body,
+                style: GoogleFonts.inter(
+                    fontSize: 14.5,
+                    height: 1.55,
+                    color: Colors.white.withValues(alpha: 0.82))),
+            const SizedBox(height: 22),
+            Row(children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: onAnother,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: _kLime.withValues(alpha: 0.3)),
+                    ),
+                    child: Center(
+                      child: Text('Another',
+                          style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _kLime)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      color: _kLime,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Center(
+                      child: Text("Let's go",
+                          style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black)),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+          ],
+        ),
       ),
     );
   }
-
-  Widget _buildBody(BuildContext context) {
-    if (isGenerating) {
-      return Row(
-        key: const ValueKey('writing'),
-        children: [
-          const SizedBox(
-            width: 15, height: 15,
-            child: CircularProgressIndicator(strokeWidth: 2, color: _kLime),
-          ),
-          const SizedBox(width: 12),
-          Text('Your coach is writing…',
-              style: GoogleFonts.inter(fontSize: 13, color: _kDimWhite)),
-        ],
-      );
-    }
-
-    if (failed) {
-      return Row(
-        key: const ValueKey('failed'),
-        children: [
-          const Icon(Icons.cloud_off_rounded, size: 17, color: Colors.white38),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text("Couldn't reach your coach.",
-                style: GoogleFonts.inter(fontSize: 13, color: _kDimWhite)),
-          ),
-          GestureDetector(
-            onTap: onRetry,
-            child: Text('Retry',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, fontWeight: FontWeight.w700, color: _kLime)),
-          ),
-        ],
-      );
-    }
-
-    final msg = message;
-    if (msg == null) return const SizedBox.shrink();
-
-    return Column(
-      key: const ValueKey('message'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(children: [
-          const Icon(Icons.auto_awesome_rounded, size: 15, color: _kLime),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Text(msg.title,
-                style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _kLime)),
-          ),
-        ]),
-        const SizedBox(height: 9),
-        Text(msg.body,
-            style: GoogleFonts.inter(
-                fontSize: 14, height: 1.5, color: Colors.white)),
-      ],
-    );
-  }
 }
-
 class _ToneOption extends StatelessWidget {
   final String label;
   final IconData icon;

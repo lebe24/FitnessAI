@@ -32,6 +32,9 @@ dependencies:
   youtube_player_flutter: ^9.1.3
   carousel_slider: ^5.1.1
   just_audio: ^0.10.5
+  # Declared explicitly (it also arrives via just_audio) because UI sound
+  # effects must mix with the user's music rather than interrupt it.
+  audio_session: ^0.2.2
   flutter_native_splash: ^2.3.3
   crypto: ^3.0.3
   flutter_local_notifications: ^19.4.2
@@ -67,4 +70,5 @@ flutter:
     - assets/image/
     - assets/icon/
     - assets/logo/
+    - assets/audio/
     - assets/
