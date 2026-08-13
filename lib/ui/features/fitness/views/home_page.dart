@@ -9,7 +9,6 @@ import 'package:fitness/ui/core/theme/app_pallet.dart';
 import 'package:fitness/ui/core/widgets/greeting.dart';
 import 'package:fitness/ui/features/fitness/views/saved_workouts_card.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
-import 'package:fitness/ui/features/fitness/views/motivate_page.dart';
 import 'package:fitness/ui/features/fitness/views/motivation_schedule_sheet.dart';
 import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.dart';
 import 'package:fitness/data/services/motivation/motivation_notification_service.dart';
@@ -49,7 +48,6 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
   DateTime           _selectedDate    = DateTime.now();
   final ScrollController _dateScrollCtrl = ScrollController();
 
-  String? _selectedTone;
   final _motivationVm = sl<MotivationViewModel>();
 
   @override
@@ -219,39 +217,24 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (sheetCtx, setSheet) => _TonePickerSheet(
-          tones: toneList,
-          selected: _selectedTone,
-          onSelect: (tone) => setSheet(() => setState(() => _selectedTone = tone)),
-          onMotivate: () {
-            final tone = _selectedTone;
-            if (tone == null) return;
-            Navigator.of(sheetCtx).pop();
-            Navigator.of(sheetCtx, rootNavigator: true).push(
-              MaterialPageRoute(
-                builder: (_) => MotivatePage(
-                  tone: tone.toLowerCase().replaceAll(' ', '-'),
-                ),
-              ),
-            );
-          },
-          // Step 2: pick when the daily AI notification should arrive.
-          onScheduleDaily: () {
-            final tone = _selectedTone;
-            if (tone == null) return;
-            Navigator.of(sheetCtx).pop();
-            showModalBottomSheet(
-              context: context,
-              backgroundColor: Colors.transparent,
-              isScrollControlled: true,
-              builder: (_) => MotivationScheduleSheet(
-                tone: tone,
-                vm: _motivationVm,
-              ),
-            );
-          },
-        ),
+      builder: (sheetCtx) => _TonePickerSheet(
+        tones: toneList,
+        vm: _motivationVm,
+        // Step 2: pick when the daily AI notification should arrive. Reading a
+        // message now happens inside the sheet, so this is the only path that
+        // still leaves it.
+        onScheduleDaily: (tone) {
+          Navigator.of(sheetCtx).pop();
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            builder: (_) => MotivationScheduleSheet(
+              tone: tone,
+              vm: _motivationVm,
+            ),
+          );
+        },
       ),
     );
   }
@@ -883,20 +866,66 @@ class _MotivationBanner extends StatelessWidget {
 /// Tone chooser for the motivation feature. Replaces the old stock Material
 /// dialog, which rendered on a light Card with black text and clashed with
 /// the rest of the dark app.
-class _TonePickerSheet extends StatelessWidget {
+/// Tone picker for the motivation feature.
+///
+/// "Motivate me now" writes a message in the chosen tone from the user's own
+/// profile — goal, body stats, streak and recent training, all assembled
+/// server-side — and renders it in place. It deliberately does not navigate:
+/// the message is short, and pushing a route to show one paragraph loses the
+/// tone list the user may want to try again with.
+class _TonePickerSheet extends StatefulWidget {
   final List<String> tones;
-  final String? selected;
-  final ValueChanged<String> onSelect;
-  final VoidCallback onMotivate;
-  final VoidCallback onScheduleDaily;
+  final MotivationViewModel vm;
+  final ValueChanged<String> onScheduleDaily;
 
   const _TonePickerSheet({
     required this.tones,
-    required this.selected,
-    required this.onSelect,
-    required this.onMotivate,
+    required this.vm,
     required this.onScheduleDaily,
   });
+
+  @override
+  State<_TonePickerSheet> createState() => _TonePickerSheetState();
+}
+
+class _TonePickerSheetState extends State<_TonePickerSheet> {
+  String? _selected;
+  MotivationMessage? _message;
+  bool _generating = false;
+  bool _failed = false;
+
+  /// Generate in the selected tone and show the result inline.
+  Future<void> _motivateNow() async {
+    final tone = _selected;
+    if (tone == null || _generating) return;
+
+    setState(() {
+      _generating = true;
+      _failed = false;
+      _message = null;
+    });
+
+    final message = await widget.vm.motivateNow(
+      tone.toLowerCase().replaceAll(' ', '-'),
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _generating = false;
+      _message = message;
+      _failed = message == null;
+    });
+  }
+
+  /// Switching tone invalidates the message shown — it was written in the
+  /// previous voice, so keeping it on screen would misrepresent the new pick.
+  void _select(String tone) {
+    setState(() {
+      _selected = tone;
+      _message = null;
+      _failed = false;
+    });
+  }
 
   /// Icon per tone, matched on keyword so the female/male lists — and any
   /// tone added later — all resolve to something sensible.
@@ -924,7 +953,7 @@ class _TonePickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canMotivate = selected != null;
+    final canMotivate = _selected != null;
     return Container(
       decoration: const BoxDecoration(
         color: _kCard,
@@ -990,7 +1019,7 @@ class _TonePickerSheet extends StatelessWidget {
                 ),
               ]),
               const SizedBox(height: 18),
-              if (tones.isEmpty)
+              if (widget.tones.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 28),
                   child: Center(
@@ -1002,43 +1031,57 @@ class _TonePickerSheet extends StatelessWidget {
               else
                 // Constrained so a long tone list scrolls instead of
                 // overflowing the sheet on small screens.
+                // Yields room once a message is on screen, so the result is
+                // visible without the user having to scroll the sheet.
                 ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.45,
+                    maxHeight: MediaQuery.of(context).size.height *
+                        (_message != null ? 0.22 : 0.45),
                   ),
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Column(
                       children: [
-                        for (final tone in tones)
+                        for (final tone in widget.tones)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 10),
                             child: _ToneOption(
                               label: tone,
                               icon: _iconFor(tone),
-                              isSelected: selected == tone,
-                              onTap: () => onSelect(tone),
+                              isSelected: _selected == tone,
+                              onTap: () => _select(tone),
                             ),
                           ),
                       ],
                     ),
                   ),
                 ),
+              // The generated message, in place of the old route push.
+              if (_generating || _message != null || _failed)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: _MotivationResult(
+                    message: _message,
+                    isGenerating: _generating,
+                    failed: _failed,
+                    onRetry: _motivateNow,
+                  ),
+                ),
               const SizedBox(height: 8),
               // CTA — visibly inert until a tone is chosen, rather than
               // firing a "please select" snackbar like the old dialog.
               GestureDetector(
-                onTap: canMotivate ? onMotivate : null,
+                onTap: canMotivate && !_generating ? _motivateNow : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   decoration: BoxDecoration(
-                    color: canMotivate
+                    color: canMotivate && !_generating
                         ? _kLime
                         : Colors.white.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(30),
-                    boxShadow: canMotivate
+                    boxShadow: canMotivate && !_generating
                         ? [BoxShadow(
                             color: _kLime.withValues(alpha: 0.25),
                             blurRadius: 16,
@@ -1046,14 +1089,26 @@ class _TonePickerSheet extends StatelessWidget {
                         : null,
                   ),
                   child: Center(
-                    child: Text(
-                      canMotivate ? 'Motivate me now' : 'Select a tone',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: canMotivate ? Colors.black : _kDimWhite,
-                      ),
-                    ),
+                    child: _generating
+                        ? const SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: _kLime),
+                          )
+                        : Text(
+                            !canMotivate
+                                ? 'Select a tone'
+                                : _message != null
+                                    // Already showing one — the button now
+                                    // asks for a fresh take in the same tone.
+                                    ? 'Write me another'
+                                    : 'Motivate me now',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: canMotivate ? Colors.black : _kDimWhite,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -1061,7 +1116,9 @@ class _TonePickerSheet extends StatelessWidget {
               // Secondary path: schedule a daily AI notification in this tone
               // instead of reading one right now.
               GestureDetector(
-                onTap: canMotivate ? onScheduleDaily : null,
+                onTap: canMotivate && !_generating
+                    ? () => widget.onScheduleDaily(_selected!)
+                    : null,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1095,6 +1152,104 @@ class _TonePickerSheet extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The generated motivation, rendered inside the tone sheet.
+///
+/// Covers all three states the request can be in — writing, written, failed —
+/// so the sheet never shows a blank gap where the message should be.
+class _MotivationResult extends StatelessWidget {
+  final MotivationMessage? message;
+  final bool isGenerating;
+  final bool failed;
+  final VoidCallback onRetry;
+
+  const _MotivationResult({
+    required this.message,
+    required this.isGenerating,
+    required this.failed,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        decoration: BoxDecoration(
+          color: _kLime.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kLime.withValues(alpha: 0.22)),
+        ),
+        child: _buildBody(context),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (isGenerating) {
+      return Row(
+        key: const ValueKey('writing'),
+        children: [
+          const SizedBox(
+            width: 15, height: 15,
+            child: CircularProgressIndicator(strokeWidth: 2, color: _kLime),
+          ),
+          const SizedBox(width: 12),
+          Text('Your coach is writing…',
+              style: GoogleFonts.inter(fontSize: 13, color: _kDimWhite)),
+        ],
+      );
+    }
+
+    if (failed) {
+      return Row(
+        key: const ValueKey('failed'),
+        children: [
+          const Icon(Icons.cloud_off_rounded, size: 17, color: Colors.white38),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text("Couldn't reach your coach.",
+                style: GoogleFonts.inter(fontSize: 13, color: _kDimWhite)),
+          ),
+          GestureDetector(
+            onTap: onRetry,
+            child: Text('Retry',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: _kLime)),
+          ),
+        ],
+      );
+    }
+
+    final msg = message;
+    if (msg == null) return const SizedBox.shrink();
+
+    return Column(
+      key: const ValueKey('message'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          const Icon(Icons.auto_awesome_rounded, size: 15, color: _kLime),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(msg.title,
+                style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _kLime)),
+          ),
+        ]),
+        const SizedBox(height: 9),
+        Text(msg.body,
+            style: GoogleFonts.inter(
+                fontSize: 14, height: 1.5, color: Colors.white)),
+      ],
     );
   }
 }

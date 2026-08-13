@@ -75,6 +75,22 @@ class MotivationViewModel extends ChangeNotifier {
     }
   }
 
+  /// Write one message in [tone] to show immediately, from the user's profile.
+  ///
+  /// Kept separate from [enable]: this asks for nothing, schedules nothing and
+  /// needs no notification permission — it just returns copy to render inline.
+  /// Null means the request failed and the caller should offer a retry.
+  Future<MotivationMessage?> motivateNow(String tone) async {
+    _busy = true;
+    notifyListeners();
+    try {
+      return await _remote.fetchOne(tone: tone);
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> disable() async {
     await _notifications.cancelAll();
     await MotivationScheduleStorage.clear();

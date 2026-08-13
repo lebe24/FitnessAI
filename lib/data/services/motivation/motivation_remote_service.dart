@@ -57,4 +57,16 @@ class MotivationRemoteService {
       return const [];
     }
   }
+
+  /// A single message in [tone] to read right now.
+  ///
+  /// Same endpoint as [fetchMessages] — the agent writes from the user's
+  /// server-side profile either way — asked for one message on the 'now'
+  /// schedule so the copy reads as immediate rather than a scheduled nudge.
+  /// Returns null on failure; the caller shows a retry instead of crashing.
+  Future<MotivationMessage?> fetchOne({required String tone}) async {
+    final messages =
+        await fetchMessages(tone: tone, schedule: 'now', count: 1);
+    return messages.isEmpty ? null : messages.first;
+  }
 }

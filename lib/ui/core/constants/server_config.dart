@@ -22,11 +22,11 @@ const ServerEnvironment _kDevEnvironment = ServerEnvironment.production;
 /// UI — it is a development tool, not a user-facing feature.
 class ServerConfig {
   /// Local Docker server, exposed via VS Code devtunnel.
-  static const String localUrl = 'https://2bq79ddl-8080.uks1.devtunnels.ms/';
-
-  /// Live Cloud Run service (.env BACKEND_BASE_URL can override).
   static final String productionUrl = dotenv.env['BACKEND_BASE_URL'] ??
       'https://fitness-agent-vjpfphelaa-uc.a.run.app/';
+
+  /// Live Cloud Run service (.env BACKEND_BASE_URL can override).
+  static const String localUrl =  'https://2bq79ddl-8080.uks1.devtunnels.ms/' ;
 
   /// Release builds are always pinned to production.
   static ServerEnvironment get current =>
