@@ -4,6 +4,7 @@ import 'package:fitness/data/models/workout_log/workout_log_model.dart';
 import 'package:fitness/data/services/fitness/progress_photo_service.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
 import 'package:fitness/ui/core/constants/assets.dart';
+import 'package:fitness/domain/models/workout_streak.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/domain/use_cases/fitness/get_user_data_usecase.dart';
@@ -141,14 +142,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
               s + ((e['duration'] as num?)?.toDouble() ?? 0));
 
           final now = DateTime.now();
-          final uniqueDates = <String>{};
-          for (final e in entries) {
-            try {
-              final d = DateTime.parse(e['date']);
-              uniqueDates.add('${d.year}-${d.month}-${d.day}');
-            } catch (_) {}
-          }
-          _uniqueWorkoutDays = uniqueDates.length;
+          // Shared with the home badge so the two screens cannot disagree.
+          _uniqueWorkoutDays = WorkoutStreak.fromUserData(rows).days;
           _workoutPct = now.day > 0
               ? (_uniqueWorkoutDays / now.day * 100).clamp(0, 100)
               : 0;

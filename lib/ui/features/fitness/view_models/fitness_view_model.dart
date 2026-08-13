@@ -1,19 +1,24 @@
-import 'package:fitness/data/services/storage/workout_plan_sync_service.dart';
 import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:fitness/domain/models/workout_day_mapping.dart';
+import 'package:fitness/domain/models/workout_streak.dart';
+import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
+import 'package:fitness/domain/use_cases/fitness/get_user_data_usecase.dart';
 import 'package:fitness/domain/use_cases/storage/get_all_fitness_plans_usecase.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class FitnessViewModel extends ChangeNotifier {
   final GetAllFitnessPlansUsecase _getAllFitnessPlansUsecase;
-  final WorkoutPlanSyncDataSource? _planSyncDataSource;
+  final GetUserDataUsecase? _getUserDataUsecase;
+  final GetCurrentUser? _getCurrentUser;
 
   FitnessViewModel({
     required GetAllFitnessPlansUsecase getAllFitnessPlansUsecase,
-    WorkoutPlanSyncDataSource? planSyncDataSource,
+    GetUserDataUsecase? getUserDataUsecase,
+    GetCurrentUser? getCurrentUser,
   })  : _getAllFitnessPlansUsecase = getAllFitnessPlansUsecase,
-        _planSyncDataSource = planSyncDataSource;
+        _getUserDataUsecase = getUserDataUsecase,
+        _getCurrentUser = getCurrentUser;
 
   static const String _completedDatesBoxName = 'completed_workout_dates';
   static const String _streakKey = 'workout_streak';
@@ -77,8 +82,9 @@ class FitnessViewModel extends ChangeNotifier {
       _completedDates = updated;
     }
 
-    // The backend already wrote current_streak to the active plan row when the
-    // session was patched to completed. Read it back as the authoritative value.
+    // Recompute from the session list rather than incrementing locally: the
+    // session for this date may already be counted, and the server list is
+    // what analytics shows.
     _streak = await _loadStreak();
     if (!_disposed) notifyListeners();
   }
@@ -150,18 +156,27 @@ class FitnessViewModel extends ChangeNotifier {
     }
   }
 
+  /// Derive the streak from completed sessions — the same source and the same
+  /// calculation the analytics card uses.
+  ///
+  /// This previously read `current_streak` from the active workout_plan row,
+  /// which the backend only refreshes when a session is patched to completed.
+  /// Any other path to logging a workout left that column untouched, so the
+  /// home badge drifted from analytics and stayed wrong. Computing from the
+  /// session list removes the second source of truth entirely.
   Future<int> _loadStreak() async {
-    // Primary: read current_streak from the active workout_plan row in the DB.
-    if (_planSyncDataSource != null) {
+    final userId = _getCurrentUser?.call()?.id;
+    if (userId != null && _getUserDataUsecase != null) {
       try {
-        final s = await _planSyncDataSource.getStreakFromPlan();
-        await _saveStreak(s.current);
-        return s.current;
+        final rows = await _getUserDataUsecase(userId);
+        final streak = WorkoutStreak.fromUserData(rows).days;
+        await _saveStreak(streak);
+        return streak;
       } catch (_) {
-        // Fall through to Hive cache.
+        // Offline or the sessions call failed — fall through to the cache.
       }
     }
-    // Fallback: local Hive cache (no network).
+    // Fallback: last known value, so the badge survives a cold start offline.
     try {
       final box = await Hive.openBox(_completedDatesBoxName);
       final value = box.get(_streakKey, defaultValue: 0);

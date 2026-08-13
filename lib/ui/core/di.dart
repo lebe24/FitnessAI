@@ -210,7 +210,10 @@ Future<void> initDI() async {
   sl.registerLazySingleton(() => GetUserDataUsecase(sl()));
   sl.registerFactory(() => FitnessViewModel(
         getAllFitnessPlansUsecase: sl(),
-        planSyncDataSource: sl(),
+        // Same pair the analytics page uses, so both derive the streak from
+        // the same completed-session data.
+        getUserDataUsecase: sl(),
+        getCurrentUser: sl(),
       ));
 
   // ── Chat ──────────────────────────────────────────────────────────────────
