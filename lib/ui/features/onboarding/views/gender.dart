@@ -57,7 +57,7 @@ class GenderStep extends StatelessWidget {
           onContinue: () {
             if (selected == null || selected.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Please select a gender before continuing.')),
+                const SnackBar(content: Text('Choose an option so we can tailor your plan.')),
               );
               return;
             }

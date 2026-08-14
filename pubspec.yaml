@@ -5,6 +5,7 @@ version: 1.0.0+4
 
 environment:
   sdk: ^3.9.0
+  
 dependencies:
   flutter:
     sdk: flutter
@@ -43,6 +44,7 @@ dependencies:
   flutter_markdown: ^0.7.3
   speech_to_text: ^7.4.0
   purchases_ui_flutter: ^8.11.0
+  package_info_plus: ^10.2.1
 
 
 dev_dependencies:

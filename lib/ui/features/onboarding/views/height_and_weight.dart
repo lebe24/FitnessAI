@@ -128,7 +128,7 @@ class _HeightAndWeightStepState extends State<HeightAndWeightStep> {
           onContinue: () {
             if (!_heightInteracted || !_weightInteracted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Please select both your height and weight.')),
+                const SnackBar(content: Text('We need both your height and weight to set your starting point.')),
               );
               return;
             }

@@ -2,6 +2,7 @@ import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/features/auth/view_models/auth_view_model.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
 import 'package:fitness/ui/features/onboarding/views/share_screen.dart';
+import 'package:fitness/ui/core/utils/error_presenter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,15 +29,9 @@ class _SignUpState extends State<SignUp> {
 
   void _onAuthChanged() {
     if (!mounted) return;
-    if (_authVm.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.redAccent,
-          content: Text(_authVm.error!),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+    final error = _authVm.error;
+    if (error != null) {
+      showFriendlyError(context, error);
       _authVm.clearError();
     }
   }

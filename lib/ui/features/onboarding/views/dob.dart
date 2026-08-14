@@ -105,7 +105,7 @@ class _DateOfBirthStepState extends State<DateOfBirthStep> {
       onContinue: () {
         if (!_interacted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please select your date of birth.')),
+            const SnackBar(content: Text("We need your date of birth to size your plan.")),
           );
           return;
         }

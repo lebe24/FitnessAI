@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/diagnostics/error_log_service.dart';
+import 'package:fitness/domain/models/friendly_error.dart';
 import 'package:fitness/domain/models/user.dart';
 import 'package:fitness/domain/use_cases/auth/delete_account.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
@@ -27,11 +29,15 @@ class AuthViewModel extends ChangeNotifier {
 
   UserEntity? _user;
   bool _isLoading = false;
-  String? _error;
+  FriendlyError? _error;
 
   UserEntity? get user => _user;
   bool get isLoading => _isLoading;
-  String? get error => _error;
+
+  /// The failure to show the user, already phrased for them. The technical
+  /// cause goes to `error_logs` instead of the screen.
+  FriendlyError? get error => _error;
+
   bool get isAuthenticated => _user != null;
 
   void checkSession() {
@@ -44,8 +50,10 @@ class AuthViewModel extends ChangeNotifier {
     try {
       _user = await _signInWithGoogle();
       _error = null;
-    } catch (e) {
-      _error = e.toString();
+    } catch (e, st) {
+      _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
+      ErrorLogService.report(
+          area: _area, action: 'sign_in_google', error: e, stackTrace: st);
     } finally {
       _setLoading(false);
     }
@@ -56,8 +64,10 @@ class AuthViewModel extends ChangeNotifier {
     try {
       _user = await _signInWithGmail(email);
       _error = null;
-    } catch (e) {
-      _error = e.toString();
+    } catch (e, st) {
+      _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
+      ErrorLogService.report(
+          area: _area, action: 'sign_in_gmail', error: e, stackTrace: st);
     } finally {
       _setLoading(false);
     }
@@ -69,8 +79,10 @@ class AuthViewModel extends ChangeNotifier {
       await _signOut();
       _user = null;
       _error = null;
-    } catch (e) {
-      _error = e.toString();
+    } catch (e, st) {
+      _error = FriendlyError.from(e, fallback: _signOutFailed);
+      ErrorLogService.report(
+          area: _area, action: 'sign_out', error: e, stackTrace: st);
     } finally {
       _setLoading(false);
     }
@@ -82,8 +94,10 @@ class AuthViewModel extends ChangeNotifier {
       await _deleteAccount();
       _user = null;
       _error = null;
-    } catch (e) {
-      _error = e.toString();
+    } catch (e, st) {
+      _error = FriendlyError.from(e, fallback: _deleteFailed);
+      ErrorLogService.report(
+          area: _area, action: 'delete_account', error: e, stackTrace: st);
     } finally {
       _setLoading(false);
     }
@@ -93,6 +107,20 @@ class AuthViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  static const String _area = 'onboarding.auth';
+
+  static const _signOutFailed = FriendlyError(
+    title: "Couldn't sign you out",
+    message: 'Check your connection and try again.',
+  );
+
+  static const _deleteFailed = FriendlyError(
+    title: "Couldn't delete your account",
+    message:
+        'Nothing has been removed. Try again, or email support@befit.ai and we '
+        'will do it for you.',
+  );
 
   void _setLoading(bool value) {
     _isLoading = value;

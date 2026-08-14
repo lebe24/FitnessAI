@@ -49,7 +49,7 @@ class ExperienceStep extends StatelessWidget {
           onContinue: () {
             if (selected == null || selected.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Please select your experience level before continuing.')),
+                const SnackBar(content: Text('Pick the level that sounds most like you — you can change it later.')),
               );
               return;
             }

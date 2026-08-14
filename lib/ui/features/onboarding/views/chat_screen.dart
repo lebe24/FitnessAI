@@ -7,6 +7,8 @@ import 'package:fitness/domain/use_cases/storage/save_fitness_plan_usecase.dart'
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/features/chat/view_models/chat_view_model.dart';
 import 'package:fitness/ui/features/chat/views/chat_message_bubble.dart';
+import 'package:fitness/data/services/diagnostics/error_log_service.dart';
+import 'package:fitness/domain/models/friendly_error.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -1002,7 +1004,7 @@ class _PlanGenerationSheetState extends State<_PlanGenerationSheet> {
   static const _kTextSub  = Color(0xFF9E9E9E);
 
   _PlanSheetState _state = _PlanSheetState.generating;
-  String? _errorMessage;
+  FriendlyError? _error;
   double _progress = 0.0;
   Timer? _progressTimer;
 
@@ -1067,11 +1069,20 @@ class _PlanGenerationSheetState extends State<_PlanGenerationSheet> {
           _state = _PlanSheetState.success;
         });
       }
-    } catch (e) {
+    } catch (e, st) {
       _stopProgress();
+      // The raw exception used to be shown here, mid-onboarding — a Dio
+      // timeout or a JSON parse failure rendered verbatim. It goes to
+      // error_logs now; the user gets something they can act on.
+      ErrorLogService.report(
+        area: 'onboarding.plan',
+        action: 'generate_plan',
+        error: e,
+        stackTrace: st,
+      );
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceFirst(RegExp(r'^.*Exception: '), '');
+          _error = FriendlyError.from(e, fallback: FriendlyError.planFailed);
           _state = _PlanSheetState.error;
         });
       }
@@ -1227,12 +1238,13 @@ class _PlanGenerationSheetState extends State<_PlanGenerationSheet> {
             size: 48, color: Colors.redAccent),
         const SizedBox(height: 16),
         Text(
-          'Could not generate your plan',
+          (_error ?? FriendlyError.planFailed).title,
+          textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
             color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         Text(
-          _errorMessage ?? 'Check your connection and try again.',
+          (_error ?? FriendlyError.planFailed).message,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             color: _kTextSub, fontSize: 12, height: 1.5)),

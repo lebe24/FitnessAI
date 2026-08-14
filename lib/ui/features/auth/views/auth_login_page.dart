@@ -2,6 +2,7 @@ import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/core/di.dart' as di;
 import 'package:fitness/ui/core/routes/plan_gate.dart';
 import 'package:fitness/ui/features/auth/view_models/auth_view_model.dart';
+import 'package:fitness/ui/core/utils/error_presenter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -47,29 +48,9 @@ class _AuthLoginBodyState extends State<_AuthLoginBody> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final vm = _vm;
-      if (vm.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF1A1A2E),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline_rounded,
-                    color: Colors.redAccent, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    vm.error!,
-                    style:
-                        GoogleFonts.poppins(fontSize: 13, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+      final error = vm.error;
+      if (error != null) {
+        showFriendlyError(context, error);
         vm.clearError();
       }
       if (vm.isAuthenticated) {
