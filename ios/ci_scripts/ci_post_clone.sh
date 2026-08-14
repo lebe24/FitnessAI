@@ -60,7 +60,10 @@ flutter pub get
 # Xcode project reads. --config-only skips the actual compile, which Xcode
 # Cloud performs itself.
 echo "──▶ Generating Xcode configuration"
-flutter build ios --config-only --release --no-codesign
+APP_VERSION=$(grep '^version:' "$REPO/pubspec.yaml" | awk '{print $2}')
+echo "──▶ stamping APP_VERSION=$APP_VERSION"
+flutter build ios --config-only --release --no-codesign \
+  --dart-define=APP_VERSION="$APP_VERSION"
 
 # ── CocoaPods ────────────────────────────────────────────────────────────────
 echo "──▶ pod install"

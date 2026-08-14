@@ -46,7 +46,14 @@ jobs:
             > ~/Library/MobileDevice/Provisioning\ Profiles/befit-appstore.mobileprovision
 
       - name: Build signed IPA
-        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+        run: |
+          # Stamp the real version into the binary so error_logs rows say which
+          # build produced them, rather than falling back to AppInfo's default.
+          APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "Building $APP_VERSION"
+          flutter build ipa --release \
+            --dart-define=APP_VERSION="$APP_VERSION" \
+            --export-options-plist=ios/ExportOptions.plist
 
       - name: Locate IPA
         id: ipa

@@ -1,7 +1,7 @@
 import 'dart:io' show Platform;
 
+import 'package:fitness/ui/core/constants/app_info.dart';
 import 'package:flutter/foundation.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Writes the technical half of a failure to Supabase `error_logs`.
@@ -20,9 +20,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///    caller, so nothing is captured by accident.
 class ErrorLogService {
   static const String _table = 'error_logs';
-
-  /// Cached so we do not hit the platform channel on every failure.
-  static String? _appVersion;
 
   /// Record [error] against [area]/[action].
   ///
@@ -60,7 +57,7 @@ class ErrorLogService {
         'stack_trace':
             stackTrace == null ? null : _truncate(stackTrace.toString(), 4000),
         'context': context,
-        'app_version': await _version(),
+        'app_version': AppInfo.version,
         'platform': _platform(),
       });
     } catch (e) {
@@ -68,17 +65,6 @@ class ErrorLogService {
       // near the user, and must not mask the original error.
       debugPrint('ErrorLogService: could not write log — $e');
     }
-  }
-
-  static Future<String?> _version() async {
-    if (_appVersion != null) return _appVersion;
-    try {
-      final info = await PackageInfo.fromPlatform();
-      _appVersion = '${info.version}+${info.buildNumber}';
-    } catch (_) {
-      _appVersion = null;
-    }
-    return _appVersion;
   }
 
   static String _platform() {
