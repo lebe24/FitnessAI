@@ -8,6 +8,9 @@ import 'package:fitness/domain/use_cases/exercise/search_youtube_videos_usecase.
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/features/fitness/views/yt_player.dart';
 import 'package:fitness/domain/models/workout_plan.dart';
+import 'package:fitness/data/services/billing/access_policy.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -287,10 +290,19 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                         errorMessage: _errorMessage,
                         videoContent: _videoContent,
                         onLoad: _loadVideos,
-                        onVideoTap: (videoId) => Navigator.push(
+                        // Listing the videos is free; playing one is not.
+                        // Seeing that demonstrations exist is part of the
+                        // pitch for subscribing.
+                        locked: !sl<AccessPolicy>()
+                            .canUse(PremiumFeature.videoTutorial),
+                        onVideoTap: (videoId) => requirePremium(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => YouTubePlayer(videoId: videoId),
+                          PremiumFeature.videoTutorial,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => YouTubePlayer(videoId: videoId),
+                            ),
                           ),
                         ),
                       ),
@@ -589,6 +601,10 @@ class _VideoSection extends StatelessWidget {
   final VoidCallback onLoad;
   final void Function(String videoId) onVideoTap;
 
+  /// Marks the section as paid-only. The list still renders — tapping a video
+  /// opens the paywall rather than the player.
+  final bool locked;
+
   const _VideoSection({
     required this.isViewing,
     required this.isLoading,
@@ -596,6 +612,7 @@ class _VideoSection extends StatelessWidget {
     required this.videoContent,
     required this.onLoad,
     required this.onVideoTap,
+    this.locked = false,
   });
 
   @override
@@ -619,6 +636,8 @@ class _VideoSection extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
+            const SizedBox(width: 8),
+            PremiumBadge(visible: locked),
           ],
         ),
         const SizedBox(height: 14),

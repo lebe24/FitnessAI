@@ -21,6 +21,9 @@ import 'package:fitness/data/services/fitness/body_scan_storage.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/ui/features/fitness/views/body_composition_result_page.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:fitness/data/services/billing/access_policy.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -105,6 +108,14 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
       name.length <= max ? name : '${name.substring(0, max)}…';
 
   Future<void> _scanFoodItem() async {
+    // Gate before the camera opens, not after — asking someone to photograph
+    // their lunch and then telling them to pay is a worse experience than
+    // being told up front.
+    if (!sl<AccessPolicy>().canUse(PremiumFeature.nutritionScanner)) {
+      await requirePremium(
+          context, PremiumFeature.nutritionScanner, _scanFoodItem);
+      return;
+    }
     try {
       final XFile? image = await ImagePicker().pickImage(
         source: ImageSource.camera,
@@ -126,6 +137,11 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
   String? _bodyScanImagePath;
 
   Future<void> _pickBodyScanImage(ImageSource source) async {
+    if (!sl<AccessPolicy>().canUse(PremiumFeature.bodyComposition)) {
+      await requirePremium(context, PremiumFeature.bodyComposition,
+          () => _pickBodyScanImage(source));
+      return;
+    }
     try {
       final XFile? image = await ImagePicker().pickImage(
         source: source,
@@ -204,6 +220,10 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
   }
 
   void _openTonePicker() {
+    if (!sl<AccessPolicy>().canUse(PremiumFeature.motivation)) {
+      requirePremium(context, PremiumFeature.motivation, _openTonePicker);
+      return;
+    }
     String? gender;
     try {
       gender = sl<SupabaseClient>().auth.currentUser?.userMetadata?['gender'] as String?;

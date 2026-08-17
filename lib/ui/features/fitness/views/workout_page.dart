@@ -14,6 +14,9 @@ import 'package:fitness/ui/features/fitness/views/fitness_page_method.dart';
 import 'package:provider/provider.dart';
 import 'package:fitness/ui/features/fitness/views/exercise_hero_page.dart';
 import 'package:fitness/domain/models/workout_plan.dart';
+import 'package:fitness/data/services/billing/access_policy.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -544,6 +547,11 @@ class _WorkoutPageState extends State<WorkoutPage> {
   }
 
   Future<void> _showScanEquipmentDialog(BuildContext context) async {
+    if (!sl<AccessPolicy>().canUse(PremiumFeature.equipmentScan)) {
+      await requirePremium(context, PremiumFeature.equipmentScan,
+          () => _showScanEquipmentDialog(context));
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final added = await showDialog<List<Exercise>>(
       context: context,

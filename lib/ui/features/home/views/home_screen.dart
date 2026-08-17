@@ -6,6 +6,9 @@ import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart'
 import 'package:fitness/ui/features/home/views/custom_bottom_bar.dart';
 import 'package:fitness/ui/features/profile/views/profile_page.dart';
 import 'package:fitness/ui/features/analytic/views/statistics_page.dart';
+import 'package:fitness/data/services/billing/access_policy.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -39,6 +42,21 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
+  /// The coach tab is gated. Intercepting here rather than inside
+  /// AgentChatPage keeps the tab visible and selectable — the user sees the
+  /// paywall for the thing they tapped, and the tab bar does not change shape
+  /// when a trial lapses.
+  void _onTabTapped(int index) {
+    const coachTab = 1;
+    if (index == coachTab &&
+        !di.sl<AccessPolicy>().canUse(PremiumFeature.agentChat)) {
+      requirePremium(context, PremiumFeature.agentChat,
+          () => setState(() => currentIndex = coachTab));
+      return;
+    }
+    setState(() => currentIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,7 +72,7 @@ class _HomePageState extends State<HomePage> {
               child: SizedBox(
                 width: MediaQuery.of(context).size.width,
                 child: CustomBottombar(
-                  onItemTapped: (index) => setState(() => currentIndex = index),
+                  onItemTapped: _onTabTapped,
                   currentIndex: currentIndex,
                 ),
               ),

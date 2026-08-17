@@ -9,6 +9,7 @@ import 'package:fitness/ui/features/chat/view_models/chat_view_model.dart';
 import 'package:fitness/ui/features/chat/views/chat_message_bubble.dart';
 import 'package:fitness/data/services/diagnostics/error_log_service.dart';
 import 'package:fitness/domain/models/friendly_error.dart';
+import 'package:fitness/ui/features/onboarding/views/trial_offer_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -165,14 +166,20 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _showGeneratePlanSheet(
+  Future<void> _showGeneratePlanSheet(
     BuildContext context,
     ChatViewModel vm,
     ChatPalette p,
-  ) {
+  ) async {
     final conversation = vm.messages
         .map((m) => '${m.isFromUser ? "User" : "Coach"}: ${m.message}')
         .join('\n');
+
+    // Offer the trial at the point of highest intent: everything is answered
+    // and the plan is one tap away. Skippable — generation proceeds either
+    // way, so a user who declines still sees the app work.
+    await TrialOfferSheet.show(context);
+    if (!context.mounted) return;
 
     showModalBottomSheet<void>(
       context: context,
