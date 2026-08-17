@@ -225,6 +225,30 @@ class SubscriptionService extends ChangeNotifier {
   Package? get monthly => _offerings?.current?.monthly;
   Package? get yearly => _offerings?.current?.annual;
 
+  // ── Introductory offer ─────────────────────────────────────────────────────
+
+  /// The free trial attached to [package], or to the default package, as the
+  /// store actually reports it.
+  ///
+  /// Read from StoreKit rather than hardcoded so the app can never promise a
+  /// trial that App Store Connect is not configured to honour. A sandbox
+  /// purchase that charged immediately is exactly what a hardcoded
+  /// "7-day free trial" label hides.
+  TrialOffer? trialOffer([Package? package]) {
+    final p = package ?? yearly ?? monthly;
+    final intro = p?.storeProduct.introductoryPrice;
+    // A non-zero introductory price is a *discount*, not a free trial, and
+    // must not be described as one.
+    if (intro == null || intro.price > 0) return null;
+    return TrialOffer(
+      units: intro.periodNumberOfUnits,
+      unit: intro.periodUnit,
+    );
+  }
+
+  /// Whether the store is offering any free trial at all right now.
+  bool get hasFreeTrial => trialOffer() != null;
+
   // ── Entitlement detail ─────────────────────────────────────────────────────
 
   EntitlementInfo? get _proEntitlement =>
@@ -307,5 +331,38 @@ class SubscriptionService extends ChangeNotifier {
       debugPrint('SubscriptionService: restore failed — $e');
       return false;
     }
+  }
+}
+
+
+/// A free introductory period, described the way the store reports it.
+class TrialOffer {
+  final int units;
+  final PeriodUnit unit;
+
+  const TrialOffer({required this.units, required this.unit});
+
+  /// e.g. "7-day", "1-week", "3-month" — used inline in a button label.
+  String get label {
+    final name = switch (unit) {
+      PeriodUnit.day => 'day',
+      PeriodUnit.week => 'week',
+      PeriodUnit.month => 'month',
+      PeriodUnit.year => 'year',
+      PeriodUnit.unknown => 'day',
+    };
+    return '$units-$name';
+  }
+
+  /// e.g. "7 days", "1 week" — used in sentences.
+  String get phrase {
+    final name = switch (unit) {
+      PeriodUnit.day => 'day',
+      PeriodUnit.week => 'week',
+      PeriodUnit.month => 'month',
+      PeriodUnit.year => 'year',
+      PeriodUnit.unknown => 'day',
+    };
+    return '$units $name${units == 1 ? '' : 's'}';
   }
 }

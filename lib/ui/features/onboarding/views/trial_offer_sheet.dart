@@ -1,5 +1,6 @@
 import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/data/services/billing/paywall_service.dart';
+import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -49,6 +50,13 @@ class TrialOfferSheet extends StatefulWidget {
 class _TrialOfferSheetState extends State<TrialOfferSheet> {
   bool _busy = false;
 
+  /// Read from the store, never hardcoded. If App Store Connect has no
+  /// introductory offer configured, this is null and the sheet stops
+  /// mentioning a trial entirely rather than promising one Apple will not
+  /// honour — which is what a purchase that charges immediately looks like
+  /// to a user who was told it was free.
+  TrialOffer? get _trial => sl<SubscriptionService>().trialOffer();
+
   static const _perks = [
     ('Nutrition scanner', 'Photograph a meal for instant macros'),
     ('Body composition', 'Track what is actually changing'),
@@ -71,6 +79,7 @@ class _TrialOfferSheetState extends State<TrialOfferSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final trial = _trial;
     return Container(
       decoration: const BoxDecoration(
         color: _kCard,
@@ -104,7 +113,9 @@ class _TrialOfferSheetState extends State<TrialOfferSheet> {
                       color: Colors.white)),
               const SizedBox(height: 6),
               Text(
-                'Try everything free for 7 days. Cancel any time before it ends and you will not be charged.',
+                trial != null
+                    ? 'Try everything free for ${trial.phrase}. Cancel any time before it ends and you will not be charged.'
+                    : 'Unlock everything BeFit can do. Cancel any time from your Apple Account settings.',
                 style: GoogleFonts.inter(
                     fontSize: 13, height: 1.5, color: _kDim),
               ),
@@ -159,7 +170,10 @@ class _TrialOfferSheetState extends State<TrialOfferSheet> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: _kLime),
                           )
-                        : Text('Start my 7-day free trial',
+                        : Text(
+                            trial != null
+                                ? 'Start my ${trial.label} free trial'
+                                : 'Unlock everything',
                             style: GoogleFonts.poppins(
                                 fontSize: 14.5,
                                 fontWeight: FontWeight.w700,
