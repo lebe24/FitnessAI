@@ -15,13 +15,6 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 /// the debug console rather than guessed at.
 const String kProEntitlement = 'Befit AI - fitness Pro';
 
-/// Product identifiers configured in App Store Connect and mapped to the
-/// entitlement in RevenueCat.
-class ProProducts {
-  static const String monthly = 'monthly';
-  static const String yearly = 'yearly';
-}
-
 /// What went wrong on a purchase, in terms the UI can act on.
 enum PurchaseOutcome {
   success,

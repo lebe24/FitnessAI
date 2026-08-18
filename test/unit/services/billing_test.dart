@@ -8,11 +8,6 @@ void main() {
       // in sync with Project → Entitlements in RevenueCat.
       expect(kProEntitlement, 'Befit AI - fitness Pro');
     });
-
-    test('product ids match App Store Connect', () {
-      expect(ProProducts.monthly, 'monthly');
-      expect(ProProducts.yearly, 'yearly');
-    });
   });
 
   group('PurchaseResult', () {
