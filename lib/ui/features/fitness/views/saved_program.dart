@@ -319,14 +319,31 @@ class _PlanCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── image banner ─────────────────────────────────────────────────
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              child: SizedBox(
-                height: 160,
-                width: double.infinity,
-                child: _PlanImage(imagePath: imagePath),
-              ),
+            // ── image banner, with the assignment control laid over it ──────
+            //
+            // Sits here rather than in the footer: that row already carries the
+            // date, delete and open actions and overflowed once a fourth
+            // control joined it. Over the banner the state is also visible
+            // while scanning the list, without opening anything.
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: SizedBox(
+                    height: 160,
+                    width: double.infinity,
+                    child: _PlanImage(imagePath: imagePath),
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: isActive
+                      ? const _ActiveChip()
+                      : _ReassignChip(onTap: onReassign),
+                ),
+              ],
             ),
 
             // ── body ─────────────────────────────────────────────────────────
@@ -387,61 +404,6 @@ class _PlanCard extends StatelessWidget {
                         style: GoogleFonts.inter(fontSize: 12, color: _kDim),
                       ),
                       const Spacer(),
-                      // Active programs show a state chip instead of a button:
-                      // there is nothing to reassign to, and a disabled-looking
-                      // control invites a tap that cannot do anything.
-                      if (isActive)
-                        Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: _kLime.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                            border:
-                                Border.all(color: _kLime.withValues(alpha: 0.4)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.check_circle_rounded,
-                                  size: 12, color: _kLime),
-                              const SizedBox(width: 5),
-                              Text('Active',
-                                  style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: _kLime)),
-                            ],
-                          ),
-                        )
-                      else
-                        GestureDetector(
-                          onTap: onReassign,
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: _kBorder),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.swap_horiz_rounded,
-                                    size: 13, color: Colors.white70),
-                                const SizedBox(width: 5),
-                                Text('Reassign',
-                                    style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white70)),
-                              ],
-                            ),
-                          ),
-                        ),
                       GestureDetector(
                         onTap: onDelete,
                         child: Container(
@@ -644,13 +606,93 @@ class _EmptyState extends StatelessWidget {
       );
 }
 
+// ── Assignment chips ──────────────────────────────────────────────────────────
+
+/// Marks the program the home calendar is currently following.
+class _ActiveChip extends StatelessWidget {
+  const _ActiveChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: _kLime,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.check_circle_rounded, size: 12, color: Colors.black),
+          const SizedBox(width: 5),
+          Text('Active',
+              style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Switches training onto this program.
+///
+/// Opaque rather than translucent: it sits over a photograph, and a glassy
+/// chip is unreadable against a bright one.
+class _ReassignChip extends StatelessWidget {
+  final VoidCallback? onTap;
+  const _ReassignChip({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: _kLime.withValues(alpha: 0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.swap_horiz_rounded, size: 13, color: _kLime),
+            const SizedBox(width: 5),
+            Text('Reassign',
+                style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: _kLime)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Reassign ──────────────────────────────────────────────────────────────────
 
 class _ReassignButton extends StatelessWidget {
   final VoidCallback onTap;
   final String label;
 
-  const _ReassignButton({required this.onTap, this.label = 'Reassign program'});
+  const _ReassignButton({required this.onTap, required this.label});
 
   @override
   Widget build(BuildContext context) {
