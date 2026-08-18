@@ -81,6 +81,7 @@ import 'package:fitness/data/services/motivation/motivation_remote_service.dart'
 import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.dart';
 import 'package:fitness/data/services/billing/billing_remote_service.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
+import 'package:fitness/data/services/billing/billing_bootstrap.dart';
 import 'package:fitness/data/services/billing/paywall_service.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:fitness/ui/features/home/view_models/upload_view_model.dart';
@@ -99,14 +100,18 @@ Future<void> initDI() async {
   await sl<LocaleProvider>().loadSaved();
 
   // ── Billing (RevenueCat) ──────────────────────────────────────────────────
-  // Configured lazily from the billing page with the signed-in user's id;
-  // no-ops gracefully when REVENUECAT_IOS_API_KEY is absent from .env.
+  // Configured at launch by BillingBootstrap, which also follows sign-in and
+  // sign-out. It used to be configured only from the billing page, which left
+  // every other entry point running against an unconfigured SDK.
+  // No-ops gracefully when REVENUECAT_IOS_API_KEY is absent from .env.
   sl.registerLazySingleton<SubscriptionService>(() => SubscriptionService());
   sl.registerLazySingleton<BillingRemoteService>(() => BillingRemoteService());
   sl.registerLazySingleton<PaywallService>(() => PaywallService(sl()));
   // Single source for "may this user open that feature". Wraps the
   // subscription state rather than duplicating any of it.
   sl.registerLazySingleton<AccessPolicy>(() => AccessPolicy(sl()));
+  sl.registerLazySingleton<BillingBootstrap>(
+      () => BillingBootstrap(subs: sl(), supabase: sl()));
 
   // ── Motivation reminders ──────────────────────────────────────────────────
   sl.registerLazySingleton<MotivationNotificationService>(

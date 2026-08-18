@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fitness/l10n/generated/app_localizations.dart';
 import 'package:fitness/ui/core/constants/constant.dart';
+import 'package:fitness/data/services/billing/billing_bootstrap.dart';
 import 'package:fitness/ui/core/di.dart' as di;
 import 'package:fitness/ui/core/locale/locale_provider.dart';
 import 'package:fitness/ui/core/theme/theme.dart';
@@ -35,6 +36,10 @@ Future<void> main() async {
   try {
     await dotenv.load(fileName: ".env");
     await di.initDI();
+    // Configure billing for whoever is signed in, and keep it following them.
+    // Not awaited on the critical path beyond its own guard: it never throws,
+    // and the app must open whether or not RevenueCat is reachable.
+    await di.sl<BillingBootstrap>().start();
     runApp(const MainApp());
     FlutterNativeSplash.remove();
   } catch (e, stackTrace) {
