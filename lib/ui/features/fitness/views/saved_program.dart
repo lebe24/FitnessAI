@@ -5,6 +5,7 @@ import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:fitness/domain/use_cases/storage/delete_fitness_plan_usecase.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
+import 'package:fitness/ui/core/routes/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -85,6 +86,23 @@ class _SavedProgramPageState extends State<SavedProgramPage> {
     }
   }
 
+  /// Build a fresh program from the user's stored profile.
+  ///
+  /// Routes to /analysis rather than duplicating generation here: that page
+  /// already loads the saved onboarding answers and drives the same pipeline
+  /// onboarding uses, so a reassigned program is built exactly like the first
+  /// one. Existing programs are kept — this adds, it does not replace.
+  Future<void> _reassignProgram() async {
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => const _ReassignConfirmSheet(),
+    );
+    if (confirmed != true || !mounted) return;
+    context.push(ScreenPaths.analysis);
+  }
+
   @override
   Widget build(BuildContext context) {
     final plans = context.watch<FitnessViewModel>().plans;
@@ -96,17 +114,26 @@ class _SavedProgramPageState extends State<SavedProgramPage> {
         slivers: [
           _AppBar(),
           if (plans.isEmpty)
-            SliverFillRemaining(child: _EmptyState())
+            SliverFillRemaining(
+              child: _EmptyState(onGenerate: _reassignProgram),
+            )
           else ...[
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               sliver: SliverToBoxAdapter(
-                child: Text(
-                  '${plans.length} program${plans.length == 1 ? '' : 's'} saved',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: _kDim,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${plans.length} program${plans.length == 1 ? '' : 's'} saved',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: _kDim,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _ReassignButton(onTap: _reassignProgram),
+                  ],
                 ),
               ),
             ),
@@ -480,6 +507,9 @@ class _Pill extends StatelessWidget {
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
+  final VoidCallback onGenerate;
+  const _EmptyState({required this.onGenerate});
+
   @override
   Widget build(BuildContext context) => Center(
         child: Column(
@@ -518,9 +548,177 @@ class _EmptyState extends StatelessWidget {
                 color: _kDim,
               ),
             ),
+            const SizedBox(height: 24),
+            // The copy above told the user to generate a plan without giving
+            // them any way to do it.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: _ReassignButton(onTap: onGenerate, label: 'Generate a program'),
+            ),
           ],
         ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0),
       );
+}
+
+// ── Reassign ──────────────────────────────────────────────────────────────────
+
+class _ReassignButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final String label;
+
+  const _ReassignButton({required this.onTap, this.label = 'Reassign program'});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: _kLime.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _kLime.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.autorenew_rounded, size: 16, color: _kLime),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: _kLime,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Confirms before regenerating.
+///
+/// Generating a plan is a slow AI call, and the button sits next to a delete
+/// action — a mis-tap should not silently start one. It also sets the
+/// expectation that existing programs survive, which is not obvious from the
+/// word "reassign".
+class _ReassignConfirmSheet extends StatelessWidget {
+  const _ReassignConfirmSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        border: Border(top: BorderSide(color: _kBorder)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _kLime.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(Icons.autorenew_rounded,
+                      color: _kLime, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Build a new program?',
+                      style: GoogleFonts.poppins(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                ),
+              ]),
+              const SizedBox(height: 14),
+              Text(
+                'You will add a photo, then we build a fresh program from it and '
+                'your profile — your goal, experience, equipment and training '
+                'days. It takes about a minute.',
+                style: GoogleFonts.inter(
+                    fontSize: 13, height: 1.55, color: _kDim),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Your existing programs are kept, so you can switch back at any time.',
+                style: GoogleFonts.inter(
+                    fontSize: 12.5, height: 1.5, color: _kLime),
+              ),
+              const SizedBox(height: 22),
+              Row(children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _kBorder),
+                      ),
+                      child: Center(
+                        child: Text('Cancel',
+                            style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _kDim)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: _kLime,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Center(
+                        child: Text('Rebuild',
+                            style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black)),
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Delete confirmation sheet ─────────────────────────────────────────────────
