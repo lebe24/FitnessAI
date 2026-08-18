@@ -1,7 +1,20 @@
+import 'package:fitness/data/models/storage/stored_fitness_plan_model.dart';
 import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../fixtures/fixtures.dart';
+
+/// The repository returns `List<StoredFitnessPlanModel>` typed as
+/// `List<StoredFitnessPlanEntity>`. That distinction is not cosmetic: a
+/// `reduce` here threw a TypeError in release because the runtime list demands
+/// a `(Model, Model) => Model` combiner. Building the list the way the app
+/// really does is what makes these tests able to catch that class of bug.
+StoredFitnessPlanModel _model(StoredFitnessPlanEntity e) =>
+    StoredFitnessPlanModel.fromEntity(e);
+
+List<StoredFitnessPlanEntity> asRepositoryReturnsIt(
+        List<StoredFitnessPlanEntity> plans) =>
+    plans.map(_model).toList();
 
 /// Mirrors FitnessViewModel.activePlan.
 ///
@@ -18,7 +31,11 @@ StoredFitnessPlanEntity? resolveActive(
       if (p.id == storedId) return p;
     }
   }
-  return plans.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
+  var newest = plans.first;
+  for (final p in plans) {
+    if (p.createdAt.isAfter(newest.createdAt)) newest = p;
+  }
+  return newest;
 }
 
 void main() {
@@ -31,7 +48,7 @@ void main() {
 
   // Deliberately not in date order — Hive returns box key order, which is
   // what made "first" an unreliable stand-in for "active".
-  final plans = [middle, newest, older];
+  final plans = asRepositoryReturnsIt([middle, newest, older]);
 
   group('active plan resolution', () {
     test('an explicit choice wins over recency', () {
@@ -51,15 +68,23 @@ void main() {
       expect(resolveActive(plans, 'deleted-plan')?.id, 'new');
     });
 
+    test('resolves over the subclass list the repository actually returns', () {
+      // Guards the TypeError: the runtime list is List<StoredFitnessPlanModel>,
+      // so any combiner-taking method here must tolerate that.
+      expect(plans, isA<List<StoredFitnessPlanModel>>());
+      expect(resolveActive(plans, null)?.id, 'new');
+    });
+
     test('no plans resolves to nothing', () {
       expect(resolveActive([], 'anything'), isNull);
       expect(resolveActive([], null), isNull);
     });
 
     test('a single plan is active whether or not it was chosen', () {
-      expect(resolveActive([older], null)?.id, 'old');
-      expect(resolveActive([older], 'old')?.id, 'old');
-      expect(resolveActive([older], 'stale')?.id, 'old');
+      final one = asRepositoryReturnsIt([older]);
+      expect(resolveActive(one, null)?.id, 'old');
+      expect(resolveActive(one, 'old')?.id, 'old');
+      expect(resolveActive(one, 'stale')?.id, 'old');
     });
   });
 }

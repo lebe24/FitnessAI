@@ -54,8 +54,15 @@ class FitnessViewModel extends ChangeNotifier {
         if (p.id == _activePlanId) return p;
       }
     }
-    return _plans.reduce(
-        (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
+    // A plain loop, not reduce. The repository hands back a
+    // List<StoredFitnessPlanModel> typed as List<StoredFitnessPlanEntity>, so
+    // at runtime reduce demands a (Model, Model) => Model combiner and throws
+    // a TypeError on an entity-typed closure.
+    var newest = _plans.first;
+    for (final plan in _plans) {
+      if (plan.createdAt.isAfter(newest.createdAt)) newest = plan;
+    }
+    return newest;
   }
 
   String? get activePlanId => activePlan?.id;
