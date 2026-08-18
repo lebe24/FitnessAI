@@ -1,3 +1,4 @@
+import 'package:fitness/data/services/storage/active_plan_storage.dart';
 import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:fitness/domain/models/workout_day_mapping.dart';
 import 'package:fitness/domain/models/workout_streak.dart';
@@ -27,6 +28,7 @@ class FitnessViewModel extends ChangeNotifier {
   Map<DateTime, WorkoutDayMappingEntity> _workoutMappings = {};
   DateTime? _selectedDate;
   Set<DateTime> _completedDates = {};
+  String? _activePlanId;
   int _streak = 0;
   bool _isLoading = false;
   String? _error;
@@ -37,6 +39,28 @@ class FitnessViewModel extends ChangeNotifier {
   Map<DateTime, WorkoutDayMappingEntity> get workoutMappings => _workoutMappings;
   DateTime? get selectedDate => _selectedDate;
   Set<DateTime> get completedDates => _completedDates;
+
+  /// The program currently driving the home calendar.
+  ///
+  /// Resolves the stored id, falling back to the most recently created plan
+  /// when nothing is stored or the stored plan has been deleted. The fallback
+  /// is deliberately *newest*, not `plans.first` — Hive returns box key order,
+  /// so first is arbitrary and was making the active program effectively
+  /// random.
+  StoredFitnessPlanEntity? get activePlan {
+    if (_plans.isEmpty) return null;
+    if (_activePlanId != null) {
+      for (final p in _plans) {
+        if (p.id == _activePlanId) return p;
+      }
+    }
+    return _plans.reduce(
+        (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
+  }
+
+  String? get activePlanId => activePlan?.id;
+
+  bool isActive(StoredFitnessPlanEntity plan) => plan.id == activePlanId;
   int get streak => _streak;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -54,6 +78,7 @@ class FitnessViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       _plans = await _getAllFitnessPlansUsecase();
+      _activePlanId = await ActivePlanStorage.load();
       _workoutMappings = _mapPlansToDates(_plans);
       _completedDates = await _loadCompletedDates();
       _streak = await _loadStreak();
@@ -64,6 +89,27 @@ class FitnessViewModel extends ChangeNotifier {
       _isLoading = false;
       if (!_disposed) notifyListeners();
     }
+  }
+
+  /// Switch the user onto [plan] — the "reassign" action.
+  ///
+  /// Rebuilds the calendar mapping immediately so the home page reflects the
+  /// new split without a reload. Nothing is deleted or regenerated; the other
+  /// programs stay exactly as they were, so switching back is symmetrical.
+  Future<void> setActivePlan(StoredFitnessPlanEntity plan) async {
+    if (_disposed || plan.id == _activePlanId) return;
+    _activePlanId = plan.id;
+    await ActivePlanStorage.save(plan.id);
+    _workoutMappings = _mapPlansToDates(_plans);
+    if (!_disposed) notifyListeners();
+  }
+
+  /// Drop the pointer when the plan it names is removed, so [activePlan]
+  /// falls back cleanly instead of resolving to nothing.
+  Future<void> onPlanDeleted(String planId) async {
+    if (planId != _activePlanId) return;
+    _activePlanId = null;
+    await ActivePlanStorage.clear();
   }
 
   void selectDate(DateTime date) {
@@ -94,7 +140,7 @@ class FitnessViewModel extends ChangeNotifier {
     final Map<DateTime, WorkoutDayMappingEntity> mappings = {};
     if (plans.isEmpty) return mappings;
 
-    final latestPlan = plans.first;
+    final latestPlan = activePlan ?? plans.first;
     final weeklySplit = latestPlan.workoutPlan.plan.weeklySplit;
     final today = DateTime.now();
     final startOfWeek = today.subtract(Duration(days: today.weekday - 1));

@@ -61,6 +61,9 @@ class _SavedProgramPageState extends State<SavedProgramPage> {
       await _deleteUsecase(plan.id);
       if (!mounted) return;
       final vm = context.read<FitnessViewModel>();
+      // Drop the active pointer first if it named this plan, so the reload
+      // falls back to the newest program rather than resolving to nothing.
+      await vm.onPlanDeleted(plan.id);
       await vm.loadFitnessPlans();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -86,26 +89,37 @@ class _SavedProgramPageState extends State<SavedProgramPage> {
     }
   }
 
-  /// Build a fresh program from the user's stored profile.
+  /// Switch training onto [plan].
   ///
-  /// Routes to /analysis rather than duplicating generation here: that page
-  /// already loads the saved onboarding answers and drives the same pipeline
-  /// onboarding uses, so a reassigned program is built exactly like the first
-  /// one. Existing programs are kept — this adds, it does not replace.
-  Future<void> _reassignProgram() async {
+  /// Confirms first because the home calendar changes underneath the user —
+  /// different training days, different exercises — and that is disorienting
+  /// if it happens from a stray tap.
+  Future<void> _confirmReassign(StoredFitnessPlanEntity plan) async {
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => const _ReassignConfirmSheet(),
+      builder: (_) => _ReassignConfirmSheet(plan: plan),
     );
     if (confirmed != true || !mounted) return;
-    context.push(ScreenPaths.analysis);
+
+    await context.read<FitnessViewModel>().setActivePlan(plan);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+        'Now training on ${plan.workoutPlan.plan.trainingSplit}.',
+        style: GoogleFonts.inter(fontSize: 13),
+      ),
+      backgroundColor: const Color(0xFF1A2A00),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
-    final plans = context.watch<FitnessViewModel>().plans;
+    final vm = context.watch<FitnessViewModel>();
+    final plans = vm.plans;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -115,7 +129,7 @@ class _SavedProgramPageState extends State<SavedProgramPage> {
           _AppBar(),
           if (plans.isEmpty)
             SliverFillRemaining(
-              child: _EmptyState(onGenerate: _reassignProgram),
+              child: _EmptyState(onGenerate: () => context.push(ScreenPaths.analysis)),
             )
           else ...[
             SliverPadding(
@@ -131,8 +145,6 @@ class _SavedProgramPageState extends State<SavedProgramPage> {
                         color: _kDim,
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    _ReassignButton(onTap: _reassignProgram),
                   ],
                 ),
               ),
@@ -146,7 +158,11 @@ class _SavedProgramPageState extends State<SavedProgramPage> {
                     child: _PlanCard(
                       plan: plans[i],
                       index: i,
+                      isActive: vm.isActive(plans[i]),
                       onDelete: () => _confirmDelete(plans[i]),
+                      onReassign: vm.isActive(plans[i])
+                          ? null
+                          : () => _confirmReassign(plans[i]),
                     ),
                   ),
                   childCount: plans.length,
@@ -258,7 +274,20 @@ class _PlanCard extends StatelessWidget {
   final StoredFitnessPlanEntity plan;
   final int index;
   final VoidCallback onDelete;
-  const _PlanCard({required this.plan, required this.index, required this.onDelete});
+
+  /// Whether this program is the one currently driving the home calendar.
+  final bool isActive;
+
+  /// Null when this card is already active — there is nothing to reassign to.
+  final VoidCallback? onReassign;
+
+  const _PlanCard({
+    required this.plan,
+    required this.index,
+    required this.onDelete,
+    required this.isActive,
+    required this.onReassign,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -358,6 +387,61 @@ class _PlanCard extends StatelessWidget {
                         style: GoogleFonts.inter(fontSize: 12, color: _kDim),
                       ),
                       const Spacer(),
+                      // Active programs show a state chip instead of a button:
+                      // there is nothing to reassign to, and a disabled-looking
+                      // control invites a tap that cannot do anything.
+                      if (isActive)
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: _kLime.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border:
+                                Border.all(color: _kLime.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle_rounded,
+                                  size: 12, color: _kLime),
+                              const SizedBox(width: 5),
+                              Text('Active',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: _kLime)),
+                            ],
+                          ),
+                        )
+                      else
+                        GestureDetector(
+                          onTap: onReassign,
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: _kBorder),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.swap_horiz_rounded,
+                                    size: 13, color: Colors.white70),
+                                const SizedBox(width: 5),
+                                Text('Reassign',
+                                    style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white70)),
+                              ],
+                            ),
+                          ),
+                        ),
                       GestureDetector(
                         onTap: onDelete,
                         child: Container(
@@ -607,7 +691,8 @@ class _ReassignButton extends StatelessWidget {
 /// expectation that existing programs survive, which is not obvious from the
 /// word "reassign".
 class _ReassignConfirmSheet extends StatelessWidget {
-  const _ReassignConfirmSheet();
+  final StoredFitnessPlanEntity plan;
+  const _ReassignConfirmSheet({required this.plan});
 
   @override
   Widget build(BuildContext context) {
@@ -649,7 +734,7 @@ class _ReassignConfirmSheet extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('Build a new program?',
+                  child: Text('Train on this program?',
                       style: GoogleFonts.poppins(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
@@ -658,15 +743,15 @@ class _ReassignConfirmSheet extends StatelessWidget {
               ]),
               const SizedBox(height: 14),
               Text(
-                'You will add a photo, then we build a fresh program from it and '
-                'your profile — your goal, experience, equipment and training '
-                'days. It takes about a minute.',
+                'Your home calendar will switch to ${plan.workoutPlan.plan.trainingSplit} '
+                'and show the training days from this program instead.',
                 style: GoogleFonts.inter(
                     fontSize: 13, height: 1.55, color: _kDim),
               ),
               const SizedBox(height: 10),
               Text(
-                'Your existing programs are kept, so you can switch back at any time.',
+                'Nothing is deleted or regenerated — your logged workouts stay, and '
+                'you can switch back whenever you like.',
                 style: GoogleFonts.inter(
                     fontSize: 12.5, height: 1.5, color: _kLime),
               ),
@@ -703,7 +788,7 @@ class _ReassignConfirmSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Center(
-                        child: Text('Rebuild',
+                        child: Text('Switch',
                             style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,

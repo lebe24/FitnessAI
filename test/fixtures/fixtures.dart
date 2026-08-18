@@ -115,8 +115,9 @@ class Fixtures {
   static StoredFitnessPlanEntity storedPlan({
     String id = 'plan-001',
     String? imagePath = '/images/plan.jpg',
+    DateTime? createdAt,
   }) {
-    final now = DateTime(2024, 6, 1);
+    final now = createdAt ?? DateTime(2024, 6, 1);
     return StoredFitnessPlanEntity(
       id: id,
       workoutPlan: workoutPlan(),
