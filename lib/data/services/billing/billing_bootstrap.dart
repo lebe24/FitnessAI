@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fitness/data/services/billing/complimentary_access.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,13 +24,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class BillingBootstrap {
   final SubscriptionService _subs;
   final SupabaseClient _supabase;
+  final ComplimentaryAccess _complimentary;
   StreamSubscription<AuthState>? _authSub;
 
   BillingBootstrap({
     required SubscriptionService subs,
     required SupabaseClient supabase,
+    required ComplimentaryAccess complimentary,
   })  : _subs = subs,
-        _supabase = supabase;
+        _supabase = supabase,
+        _complimentary = complimentary;
 
   /// Safe to call once at startup, before or after sign-in.
   ///
@@ -42,6 +46,12 @@ class BillingBootstrap {
       debugPrint('BillingBootstrap: initial configure failed — $e');
     }
 
+    // Not awaited: a granted account should open instantly like any other, and
+    // the backend can be slow to wake. Access flips on when the answer lands.
+    if (_supabase.auth.currentUser != null) {
+      unawaited(_complimentary.refresh());
+    }
+
     _authSub = _supabase.auth.onAuthStateChange.listen(
       (state) async {
         try {
@@ -50,9 +60,13 @@ class BillingBootstrap {
             case AuthChangeEvent.signedIn:
             case AuthChangeEvent.tokenRefreshed:
             case AuthChangeEvent.userUpdated:
-              if (userId != null) await _subs.init(userId);
+              if (userId != null) {
+                await _subs.init(userId);
+                unawaited(_complimentary.refresh());
+              }
             case AuthChangeEvent.signedOut:
               await _subs.logOut();
+              _complimentary.reset();
             default:
               break;
           }

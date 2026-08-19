@@ -47,6 +47,31 @@ class UserSubscription {
   }
 }
 
+/// The backend's view of the user's entitlement.
+class BillingStatus {
+  final bool isPremium;
+  final String accessTier;
+  final DateTime? trialEndsAt;
+
+  /// Access we granted rather than sold — App Review demo accounts, comps.
+  /// Unlocks the app on its own, with no purchase and no RevenueCat grant.
+  final bool isComplimentary;
+
+  const BillingStatus({
+    required this.isPremium,
+    required this.accessTier,
+    required this.isComplimentary,
+    this.trialEndsAt,
+  });
+
+  factory BillingStatus.fromJson(Map<String, dynamic> j) => BillingStatus(
+        isPremium: j['is_premium'] as bool? ?? false,
+        accessTier: j['access_tier'] as String? ?? 'free',
+        isComplimentary: j['is_complimentary'] as bool? ?? false,
+        trialEndsAt: DateTime.tryParse(j['trial_ends_at'] as String? ?? ''),
+      );
+}
+
 /// Reads billing data from the backend (the webhook-fed source of truth).
 class BillingRemoteService {
   late final Dio _dio;
@@ -71,6 +96,29 @@ class BillingRemoteService {
         handler.next(options);
       },
     ));
+  }
+
+  /// The backend's entitlement view, or null when it cannot be reached.
+  ///
+  /// Null is deliberately *not* "no access": callers must treat an
+  /// unreachable backend as unknown and fall back to RevenueCat, so a cold
+  /// start or a network blip never strips access from someone entitled.
+  Future<BillingStatus?> getStatus() async {
+    try {
+      final res = await _dio.get('api/v1/billing/status');
+      final data = res.data;
+      if (data is! Map) return null;
+      return BillingStatus.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      final code = e.response?.statusCode;
+      if (code != 404 && code != 401 && code != 403) {
+        debugPrint('BillingRemoteService.getStatus failed: $e');
+      }
+      return null;
+    } catch (e) {
+      debugPrint('BillingRemoteService.getStatus failed: $e');
+      return null;
+    }
   }
 
   /// Latest subscription row, or null when the user never subscribed

@@ -82,6 +82,7 @@ import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.da
 import 'package:fitness/data/services/billing/billing_remote_service.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/data/services/billing/billing_bootstrap.dart';
+import 'package:fitness/data/services/billing/complimentary_access.dart';
 import 'package:fitness/data/services/billing/paywall_service.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:fitness/ui/features/home/view_models/upload_view_model.dart';
@@ -109,9 +110,11 @@ Future<void> initDI() async {
   sl.registerLazySingleton<PaywallService>(() => PaywallService(sl()));
   // Single source for "may this user open that feature". Wraps the
   // subscription state rather than duplicating any of it.
-  sl.registerLazySingleton<AccessPolicy>(() => AccessPolicy(sl()));
+  sl.registerLazySingleton<ComplimentaryAccess>(
+      () => ComplimentaryAccess(sl()));
+  sl.registerLazySingleton<AccessPolicy>(() => AccessPolicy(sl(), sl()));
   sl.registerLazySingleton<BillingBootstrap>(
-      () => BillingBootstrap(subs: sl(), supabase: sl()));
+      () => BillingBootstrap(subs: sl(), supabase: sl(), complimentary: sl()));
 
   // ── Motivation reminders ──────────────────────────────────────────────────
   sl.registerLazySingleton<MotivationNotificationService>(

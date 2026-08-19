@@ -1,3 +1,4 @@
+import 'package:fitness/data/services/billing/complimentary_access.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:fitness/domain/models/premium_feature.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,11 @@ enum AccessTier {
 
   /// Paying.
   paid,
+
+  /// Granted by us — App Review demo accounts, comps, support goodwill.
+  /// Same access as [paid]; distinguished only so the billing screen does not
+  /// tell someone their subscription renews when they never bought one.
+  complimentary,
 }
 
 /// The single question the app asks before opening a premium feature.
@@ -31,26 +37,35 @@ enum AccessTier {
 /// never for what we let them do.
 class AccessPolicy extends ChangeNotifier {
   final SubscriptionService _subs;
+  final ComplimentaryAccess _comp;
 
-  AccessPolicy(this._subs) {
+  AccessPolicy(this._subs, this._comp) {
     // Re-emit so widgets can watch access without also knowing about billing.
     _subs.addListener(notifyListeners);
+    _comp.addListener(notifyListeners);
   }
 
   @override
   void dispose() {
     _subs.removeListener(notifyListeners);
+    _comp.removeListener(notifyListeners);
     super.dispose();
   }
 
+  /// A real subscription wins over a granted one, so someone who was comped
+  /// and then subscribed sees "Pro · active" rather than "complimentary".
   AccessTier get tier {
-    if (!_subs.isPro) return AccessTier.free;
-    return _subs.isInTrial ? AccessTier.trial : AccessTier.paid;
+    if (_subs.isPro) {
+      return _subs.isInTrial ? AccessTier.trial : AccessTier.paid;
+    }
+    if (_comp.isGranted) return AccessTier.complimentary;
+    return AccessTier.free;
   }
 
   bool get isFree => tier == AccessTier.free;
   bool get isTrialling => tier == AccessTier.trial;
   bool get isPaying => tier == AccessTier.paid;
+  bool get isComplimentary => tier == AccessTier.complimentary;
 
   /// Whether [feature] is available right now.
   ///
@@ -65,7 +80,9 @@ class AccessPolicy extends ChangeNotifier {
       case PremiumFeature.agentChat:
       case PremiumFeature.equipmentScan:
       case PremiumFeature.videoTutorial:
-        return _subs.isPro;
+        // OR, never AND: a granted account needs no purchase, and a paying
+        // user must not lose access because the backend is unreachable.
+        return _subs.isPro || _comp.isGranted;
     }
   }
 
@@ -107,6 +124,8 @@ class AccessPolicy extends ChangeNotifier {
         // Someone who has cancelled keeps access to the end of the period;
         // saying "renews" then would be wrong.
         return _subs.willRenew ? 'Pro · active' : 'Pro · ends soon';
+      case AccessTier.complimentary:
+        return 'Pro · complimentary';
     }
   }
 }

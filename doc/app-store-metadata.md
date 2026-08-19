@@ -157,17 +157,19 @@ behind a subscription — a reviewer without both will be blocked and reject.
    no credentials for.
 2. **Complete onboarding and generate a plan.** The reviewer should land on the
    home screen, not in a plan generation that may time out on a cold backend.
-3. **Grant it Pro in RevenueCat** — Customers → find the app user id → Grant
-   Entitlement → `Befit AI - fitness Pro` → an expiry well past review, e.g.
-   6 months.
+3. **Grant it access** with one update — see `doc/demo-account.md`:
 
-   This step is not optional. Six features check the entitlement, and without
-   it the reviewer meets a paywall on every one.
+   ```sql
+   update user_profiles set is_complimentary = true
+   where email = 'reviewer@YOUR-DOMAIN';
+   ```
 
-   **Setting `is_premium` in Supabase is not enough.** The app reads
-   entitlement from RevenueCat, not from our database; the database columns are
-   written *by* the RevenueCat webhook and are for reporting only. Granting in
-   the dashboard is the only thing that unlocks the app.
+   This step is not optional. Six features are gated, and without it the
+   reviewer meets a paywall on every one.
+
+   Note it is `is_complimentary`, not `is_premium`. The latter belongs to the
+   RevenueCat webhook and would be overwritten by the next subscription event,
+   taking the reviewer's access with it.
 4. **Verify on a clean device** — delete the app, reinstall, sign in as the
    reviewer, and open each of the six gated features. Any paywall you see is
    one the reviewer will see.
