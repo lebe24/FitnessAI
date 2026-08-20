@@ -32,6 +32,14 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<UserEntity?> signUpWithEmail(String email, String password) async =>
+      signInWithGmail(email);
+
+  @override
+  Future<UserEntity?> signInWithEmail(String email, String password) async =>
+      signInWithGmail(email);
+
+  @override
   Future<void> signOut() async {
     if (signOutError != null) throw signOutError!;
     signOutCalled = true;

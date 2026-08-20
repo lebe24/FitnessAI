@@ -38,7 +38,9 @@ import 'package:fitness/domain/repositories/user_data_repository.dart';
 import 'package:fitness/domain/repositories/youtube_repository.dart';
 import 'package:fitness/domain/use_cases/auth/delete_account.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
+import 'package:fitness/domain/use_cases/auth/sign_in_email.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_gmail.dart';
+import 'package:fitness/domain/use_cases/auth/sign_up_email.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_google.dart';
 import 'package:fitness/domain/use_cases/auth/sign_out.dart';
 import 'package:fitness/domain/use_cases/chat/connect_chat_usecase.dart';
@@ -160,12 +162,16 @@ Future<void> initDI() async {
   );
   sl.registerLazySingleton(() => SignInWithGoogle(sl()));
   sl.registerLazySingleton(() => SignInWithGmail(sl()));
+  sl.registerLazySingleton(() => SignUpWithEmail(sl()));
+  sl.registerLazySingleton(() => SignInWithEmail(sl()));
   sl.registerLazySingleton(() => SignOut(sl()));
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
   sl.registerLazySingleton(() => DeleteAccount(sl()));
   sl.registerFactory(() => AuthViewModel(
         signInWithGoogle: sl(),
         signInWithGmail: sl(),
+        signUpWithEmail: sl(),
+        signInWithEmail: sl(),
         signOut: sl(),
         getCurrentUser: sl(),
         deleteAccount: sl(),

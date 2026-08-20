@@ -2,6 +2,7 @@ import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/core/di.dart' as di;
 import 'package:fitness/ui/core/routes/plan_gate.dart';
 import 'package:fitness/ui/features/auth/view_models/auth_view_model.dart';
+import 'package:fitness/ui/features/auth/views/email_auth_form.dart';
 import 'package:fitness/ui/core/utils/error_presenter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -31,7 +32,6 @@ class _AuthLoginBody extends StatefulWidget {
 }
 
 class _AuthLoginBodyState extends State<_AuthLoginBody> {
-  final _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _showEmailField = false;
   late final AuthViewModel _vm;
@@ -68,7 +68,6 @@ class _AuthLoginBodyState extends State<_AuthLoginBody> {
 
   @override
   void dispose() {
-    _emailController.dispose();
     _vm.removeListener(_onAuthChanged);
     super.dispose();
   }
@@ -270,9 +269,7 @@ class _AuthLoginBodyState extends State<_AuthLoginBody> {
                             .animate(delay: 550.ms)
                             .fadeIn(duration: 500.ms)
                             .slideY(begin: 0.1, end: 0),
-                        secondChild: _GmailForm(
-                          controller: _emailController,
-                          formKey: _formKey,
+                        secondChild: EmailAuthForm(
                           vm: vm,
                           onCancel: () =>
                               setState(() => _showEmailField = false),
@@ -444,146 +441,6 @@ class _GmailOutlinedButton extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Gmail email form
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _GmailForm extends StatelessWidget {
-  final TextEditingController controller;
-  final GlobalKey<FormState> formKey;
-  final AuthViewModel vm;
-  final VoidCallback onCancel;
-
-  const _GmailForm({
-    required this.controller,
-    required this.formKey,
-    required this.vm,
-    required this.onCancel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextFormField(
-          controller: controller,
-          keyboardType: TextInputType.emailAddress,
-          style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
-          cursorColor: _lime,
-          decoration: InputDecoration(
-            hintText: 'example@gmail.com',
-            hintStyle:
-                GoogleFonts.poppins(color: Colors.white30, fontSize: 14),
-            prefixIcon: const Icon(Icons.alternate_email_rounded,
-                color: Colors.white30, size: 19),
-            filled: true,
-            fillColor: const Color(0xFF141720),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide:
-                  const BorderSide(color: Color(0xFF252A38), width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: _lime, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Colors.redAccent),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide:
-                  const BorderSide(color: Colors.redAccent, width: 1.5),
-            ),
-            errorStyle:
-                GoogleFonts.inter(fontSize: 11, color: Colors.redAccent),
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-          ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Please enter your Gmail address';
-            if (!v.toLowerCase().trim().endsWith('@gmail.com')) {
-              return 'Please enter a valid Gmail address';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: onCancel,
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white38,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: GestureDetector(
-                onTap: () {
-                  if (formKey.currentState!.validate()) {
-                    vm.signInWithGmail(controller.text.trim());
-                  }
-                },
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: _lime,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _lime.withValues(alpha: 0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'Continue',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Loading overlay
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _LoadingOverlay extends StatelessWidget {
   const _LoadingOverlay();
 

@@ -3,7 +3,9 @@ import 'package:fitness/domain/models/friendly_error.dart';
 import 'package:fitness/domain/models/user.dart';
 import 'package:fitness/domain/use_cases/auth/delete_account.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
+import 'package:fitness/domain/use_cases/auth/sign_in_email.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_gmail.dart';
+import 'package:fitness/domain/use_cases/auth/sign_up_email.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_google.dart';
 import 'package:fitness/domain/use_cases/auth/sign_out.dart';
 import 'package:flutter/foundation.dart';
@@ -11,6 +13,8 @@ import 'package:flutter/foundation.dart';
 class AuthViewModel extends ChangeNotifier {
   final SignInWithGoogle _signInWithGoogle;
   final SignInWithGmail _signInWithGmail;
+  final SignUpWithEmail? _signUpWithEmail;
+  final SignInWithEmail? _signInWithEmail;
   final SignOut _signOut;
   final GetCurrentUser _getCurrentUser;
   final DeleteAccount _deleteAccount;
@@ -18,11 +22,15 @@ class AuthViewModel extends ChangeNotifier {
   AuthViewModel({
     required SignInWithGoogle signInWithGoogle,
     required SignInWithGmail signInWithGmail,
+    SignUpWithEmail? signUpWithEmail,
+    SignInWithEmail? signInWithEmail,
     required SignOut signOut,
     required GetCurrentUser getCurrentUser,
     required DeleteAccount deleteAccount,
   })  : _signInWithGoogle = signInWithGoogle,
         _signInWithGmail = signInWithGmail,
+        _signUpWithEmail = signUpWithEmail,
+        _signInWithEmail = signInWithEmail,
         _signOut = signOut,
         _getCurrentUser = getCurrentUser,
         _deleteAccount = deleteAccount;
@@ -68,6 +76,43 @@ class AuthViewModel extends ChangeNotifier {
       _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
       ErrorLogService.report(
           area: _area, action: 'sign_in_gmail', error: e, stackTrace: st);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Create an account with an email address and password.
+  ///
+  /// The only path that does not require a Google account — which is what App
+  /// Review needs, since a reviewer cannot complete an OAuth flow for
+  /// credentials they were never given.
+  Future<void> signUpWithEmail(String email, String password) async {
+    final usecase = _signUpWithEmail;
+    if (usecase == null) return;
+    _setLoading(true);
+    try {
+      _user = await usecase(email, password);
+      _error = null;
+    } catch (e, st) {
+      _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
+      ErrorLogService.report(
+          area: _area, action: 'sign_up_email', error: e, stackTrace: st);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> signInWithEmailPassword(String email, String password) async {
+    final usecase = _signInWithEmail;
+    if (usecase == null) return;
+    _setLoading(true);
+    try {
+      _user = await usecase(email, password);
+      _error = null;
+    } catch (e, st) {
+      _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
+      ErrorLogService.report(
+          area: _area, action: 'sign_in_email', error: e, stackTrace: st);
     } finally {
       _setLoading(false);
     }

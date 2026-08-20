@@ -57,6 +57,18 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<UserEntity?> signUpWithEmail(String email, String password) async {
+    final user = await remote.signUpWithEmail(email, password);
+    return _buildAndSyncUser(user);
+  }
+
+  @override
+  Future<UserEntity?> signInWithEmail(String email, String password) async {
+    final user = await remote.signInWithEmail(email, password);
+    return _buildAndSyncUser(user);
+  }
+
+  @override
   Future<void> signOut() => remote.signOut();
 
   @override

@@ -3,6 +3,7 @@ import 'package:fitness/ui/features/auth/view_models/auth_view_model.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
 import 'package:fitness/ui/features/onboarding/views/share_screen.dart';
 import 'package:fitness/ui/core/utils/error_presenter.dart';
+import 'package:fitness/ui/features/auth/views/email_auth_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -82,6 +83,16 @@ class _SignUpState extends State<SignUp> {
                         ).animate(delay: 120.ms)
                             .fadeIn(duration: 400.ms)
                             .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
+
+                  // ── Email option ───────────────────────────────────────
+                  // Onboarding used to be Google-only, which shut out anyone
+                  // without a Google account and made App Review impossible:
+                  // a reviewer cannot complete an OAuth flow for credentials
+                  // they were handed in App Store Connect.
+                  if (!authVm.isLoading)
+                    _EmailAuthOption(vm: authVm)
+                        .animate(delay: 200.ms)
+                        .fadeIn(duration: 400.ms),
                 ],
           onContinue: () {
             if (authVm.isAuthenticated && authVm.user != null) {
@@ -91,7 +102,7 @@ class _SignUpState extends State<SignUp> {
                 SnackBar(
                   backgroundColor: Colors.orange.shade800,
                   content: Text(
-                    'Sign up with Google to continue',
+                    'Create an account to continue',
                     style: GoogleFonts.poppins(color: Colors.white),
                   ),
                   behavior: SnackBarBehavior.floating,
@@ -103,6 +114,65 @@ class _SignUpState extends State<SignUp> {
           },
         );
       },
+    );
+  }
+}
+
+// ── Email option ─────────────────────────────────────────────────────────────
+
+/// Collapsed to a single line until tapped, so the Google button stays the
+/// obvious default for the majority who have one.
+class _EmailAuthOption extends StatefulWidget {
+  final AuthViewModel vm;
+  const _EmailAuthOption({required this.vm});
+
+  @override
+  State<_EmailAuthOption> createState() => _EmailAuthOptionState();
+}
+
+class _EmailAuthOptionState extends State<_EmailAuthOption> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: AnimatedCrossFade(
+        duration: const Duration(milliseconds: 260),
+        crossFadeState:
+            _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+        firstChild: GestureDetector(
+          onTap: () => setState(() => _expanded = true),
+          child: Container(
+            height: 52,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white12),
+            ),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.mail_outline_rounded,
+                    size: 17, color: Colors.white54),
+                const SizedBox(width: 9),
+                Text(
+                  'Continue with email',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        secondChild: EmailAuthForm(
+          vm: widget.vm,
+          onCancel: () => setState(() => _expanded = false),
+        ),
+      ),
     );
   }
 }

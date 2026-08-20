@@ -13,6 +13,12 @@ abstract class AuthRemoteDataSource {
   /// Verify and sign in user by Gmail address
   Future<User> signInWithGmail(String email);
 
+  /// Email + password, for people without a Google account — and for App
+  /// Review, who cannot complete an OAuth flow for credentials they do not
+  /// have.
+  Future<User> signUpWithEmail(String email, String password);
+  Future<User> signInWithEmail(String email, String password);
+
   Future<void> signOut();
   UserEntity? getCurrentUser();
   Future<void> deleteAccount();
@@ -99,6 +105,40 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } catch (e) {
       rethrow;
     }
+  }
+
+  @override
+  Future<User> signUpWithEmail(String email, String password) async {
+    final AuthResponse response = await client.auth.signUp(
+      email: email.trim().toLowerCase(),
+      password: password,
+    );
+
+    final user = response.user;
+    if (user == null) {
+      throw Exception('Sign up succeeded but no user was returned');
+    }
+
+    // Supabase returns a user with no session when email confirmation is
+    // switched on for the project. The account exists but cannot be used yet,
+    // and silently continuing would drop the user into a signed-out app.
+    if (response.session == null) {
+      throw const AuthException('Email not confirmed');
+    }
+    return user;
+  }
+
+  @override
+  Future<User> signInWithEmail(String email, String password) async {
+    final AuthResponse response = await client.auth.signInWithPassword(
+      email: email.trim().toLowerCase(),
+      password: password,
+    );
+    final user = response.user;
+    if (user == null) {
+      throw Exception('Sign in succeeded but no user was returned');
+    }
+    return user;
   }
 
   @override
