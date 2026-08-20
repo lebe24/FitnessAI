@@ -135,41 +135,83 @@ class _EmailAuthOptionState extends State<_EmailAuthOption> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: AnimatedCrossFade(
-        duration: const Duration(milliseconds: 260),
-        crossFadeState:
-            _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-        firstChild: GestureDetector(
-          onTap: () => setState(() => _expanded = true),
-          child: Container(
-            height: 52,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white12),
-            ),
-            alignment: Alignment.center,
+    return AnimatedCrossFade(
+      duration: const Duration(milliseconds: 260),
+      crossFadeState:
+          _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+      firstChild: Column(
+        children: [
+          // Separator, so the second option reads as a real alternative
+          // rather than a caption hanging off the Google button.
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.mail_outline_rounded,
-                    size: 17, color: Colors.white54),
-                const SizedBox(width: 9),
-                Text(
-                  'Continue with email',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white70,
+                const Expanded(child: Divider(color: Color(0xFFE0E0E0))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'or',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black38,
+                    ),
                   ),
                 ),
+                const Expanded(child: Divider(color: Color(0xFFE0E0E0))),
               ],
             ),
           ),
-        ),
-        secondChild: EmailAuthForm(
+          GestureDetector(
+            onTap: () => setState(() => _expanded = true),
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                // Filled black on the white onboarding theme. The outlined
+                // white-on-white version this replaced was in the tree but
+                // effectively invisible.
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.mail_outline_rounded,
+                      size: 19, color: _lime),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Sign up with email',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No Google account needed',
+            style: GoogleFonts.inter(fontSize: 11.5, color: Colors.black38),
+          ),
+        ],
+      ),
+      secondChild: Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child: EmailAuthForm(
           vm: widget.vm,
+          onDark: false,
           onCancel: () => setState(() => _expanded = false),
         ),
       ),

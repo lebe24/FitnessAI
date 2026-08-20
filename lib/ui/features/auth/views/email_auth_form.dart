@@ -19,10 +19,18 @@ class EmailAuthForm extends StatefulWidget {
   final AuthViewModel vm;
   final VoidCallback onCancel;
 
+  /// The login page is dark; onboarding runs on the app's white theme.
+  ///
+  /// Without this the fields inherited the dark palette everywhere and
+  /// rendered white text on a white background during onboarding — present in
+  /// the widget tree, invisible to the user.
+  final bool onDark;
+
   const EmailAuthForm({
     super.key,
     required this.vm,
     required this.onCancel,
+    this.onDark = true,
   });
 
   @override
@@ -31,6 +39,17 @@ class EmailAuthForm extends StatefulWidget {
 
 class _EmailAuthFormState extends State<EmailAuthForm> {
   final _formKey = GlobalKey<FormState>();
+
+  // ── Palette ────────────────────────────────────────────────────────────────
+  bool get _dark => widget.onDark;
+  Color get _text => _dark ? Colors.white : Colors.black87;
+  Color get _hint => _dark ? Colors.white24 : Colors.black38;
+  Color get _icon => _dark ? Colors.white38 : Colors.black45;
+  Color get _fieldFill =>
+      _dark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF5F5F7);
+  Color get _outline => _dark ? Colors.white12 : const Color(0xFFE0E0E0);
+  Color get _muted => _dark ? Colors.white38 : Colors.black45;
+
   final _email = TextEditingController();
   final _password = TextEditingController();
 
@@ -92,7 +111,7 @@ class _EmailAuthFormState extends State<EmailAuthForm> {
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.email],
             autocorrect: false,
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+            style: GoogleFonts.inter(color: _text, fontSize: 14),
             decoration: _decoration('Email address', Icons.mail_outline_rounded),
             validator: _validateEmail,
           ),
@@ -104,7 +123,7 @@ class _EmailAuthFormState extends State<EmailAuthForm> {
             autofillHints: [
               _isSignUp ? AutofillHints.newPassword : AutofillHints.password,
             ],
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+            style: GoogleFonts.inter(color: _text, fontSize: 14),
             decoration: _decoration(
               'Password',
               Icons.lock_outline_rounded,
@@ -114,7 +133,7 @@ class _EmailAuthFormState extends State<EmailAuthForm> {
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
                   size: 18,
-                  color: Colors.white38,
+                  color: _icon,
                 ),
                 onPressed: () => setState(() => _obscure = !_obscure),
               ),
@@ -134,13 +153,13 @@ class _EmailAuthFormState extends State<EmailAuthForm> {
                     height: 52,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white12),
+                      border: Border.all(color: _outline),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       'Cancel',
                       style: GoogleFonts.poppins(
-                        color: Colors.white38,
+                        color: _muted,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -197,7 +216,8 @@ class _EmailAuthFormState extends State<EmailAuthForm> {
                     : 'New here? Create an account',
                 style: GoogleFonts.inter(
                   fontSize: 12.5,
-                  color: Colors.white54,
+                  fontWeight: FontWeight.w600,
+                  color: _dark ? Colors.white54 : Colors.black54,
                 ),
               ),
             ),
@@ -216,13 +236,15 @@ class _EmailAuthFormState extends State<EmailAuthForm> {
 
     return InputDecoration(
       hintText: hint,
-      hintStyle: GoogleFonts.inter(color: Colors.white24, fontSize: 14),
-      prefixIcon: Icon(icon, size: 18, color: Colors.white38),
+      hintStyle: GoogleFonts.inter(color: _hint, fontSize: 14),
+      prefixIcon: Icon(icon, size: 18, color: _icon),
       suffixIcon: suffix,
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.04),
-      enabledBorder: border(Colors.white12),
-      focusedBorder: border(_lime.withValues(alpha: 0.5), 1.5),
+      fillColor: _fieldFill,
+      enabledBorder: border(_outline),
+      // Lime on white is illegible as a hairline; darken the focus ring there.
+      focusedBorder: border(
+          _dark ? _lime.withValues(alpha: 0.5) : Colors.black87, 1.5),
       errorBorder: border(Colors.redAccent),
       focusedErrorBorder: border(Colors.redAccent, 1.5),
       errorStyle: GoogleFonts.inter(fontSize: 11, color: Colors.redAccent),
