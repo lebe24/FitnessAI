@@ -31,10 +31,28 @@ subscription event.
 
 ## Setting it up
 
-### 1. Create the account in the app
+### 1. Create the account
 
-On a clean device, sign up with **email** — not Google. A reviewer cannot
-complete an OAuth flow for an account they have no credentials to.
+**Automatically (recommended).** Supabase's Admin API can create a user with
+`email_confirm: true`, which skips the confirmation mail entirely — the point
+being that `abc.com` is not a domain we control, so a confirmation link would
+go nowhere:
+
+```bash
+export SUPABASE_SERVICE_ROLE_KEY='...'   # Dashboard → Settings → API
+./scripts/create-review-account.sh
+```
+
+The script creates the user already confirmed, then grants complimentary
+access, and prints the user id. It is idempotent: run it again and it reuses
+the existing account.
+
+The service role key bypasses row-level security. Keep it out of `.env`, out of
+git and out of the app, and `unset` it when you are done.
+
+**By hand.** On a clean device, sign up with **email** — not Google. A reviewer
+cannot complete an OAuth flow for an account they have no credentials to. If
+sign-up reports "Confirm your email first", see step 3b.
 
 The credentials going into App Store Connect:
 
@@ -113,10 +131,21 @@ non-granted account shows nothing there.
 
 The grant does not expire. Revoke it when you no longer need it:
 
+```bash
+./scripts/create-review-account.sh --revoke
+unset SUPABASE_SERVICE_ROLE_KEY
+```
+
+or in SQL:
+
 ```sql
 update user_profiles set is_complimentary = false
-where email = 'demo@abc.com';
+where id = (select id from auth.users where email = 'demo@abc.com');
 ```
+
+Revoking leaves the account in place. Delete it under
+Dashboard → Authentication → Users, and delete the script, once the app is
+approved.
 
 Keep it on while the app is live if you expect re-reviews for updates — a
 reviewer hitting a paywall on a routine update is the same rejection as on
