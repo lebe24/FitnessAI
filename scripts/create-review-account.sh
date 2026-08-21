@@ -152,6 +152,28 @@ if [[ -z "$USER_ID" ]]; then
     exit 1
   fi
   echo "  using the existing account"
+
+  # email_confirm only applies at creation, so an account made by hand may
+  # still be unconfirmed — and unable to sign in at all when confirmations are
+  # on. Setting the password too guarantees it matches what goes into App
+  # Store Connect, rather than whatever it was first created with.
+  echo "──▶ confirming the address and resetting the password"
+  FIX_BODY="$(python3 -c "
+import json
+print(json.dumps({'email_confirm': True, 'password': '${PASSWORD}'}))")"
+
+  FIX_CODE="$(curl -sS -o /tmp/fix_out.json -w '%{http_code}' \
+    -X PUT "${AUTH_HDR[@]}" \
+    "${SUPABASE_URL}/auth/v1/admin/users/${USER_ID}" -d "${FIX_BODY}")"
+
+  if [[ "$FIX_CODE" =~ ^2 ]]; then
+    echo "  ✓ confirmed, password set"
+  else
+    echo "  ✗ could not update the account (HTTP ${FIX_CODE})" >&2
+    cat /tmp/fix_out.json >&2 || true
+    exit 1
+  fi
+  rm -f /tmp/fix_out.json
 fi
 
 echo "  user id: ${USER_ID}"
@@ -201,7 +223,3 @@ cat <<DONE
     ./scripts/create-review-account.sh --revoke
     unset SUPABASE_SERVICE_ROLE_KEY
 DONE
-
-
-# export SUPABASE_SERVICE_ROLE_KEY='sb_publishable_dRrz7zeBXL70OjsGBH1YpQ_yNWvZFk2'   # Dashboard → Settings → API
-# ./scripts/create-review-account.sh

@@ -52,8 +52,13 @@ Put no trailing `#` comment on the export line — some zsh setups do not treat
 `#` as a comment interactively and will try to run the rest as a command.
 
 The script creates the user already confirmed, then grants complimentary
-access, and prints the user id. It is idempotent: run it again and it reuses
-the existing account.
+access, and prints the user id.
+
+It is idempotent, and safe to re-run against an account that already exists:
+in that case it confirms the address and resets the password, because
+`email_confirm` only applies at creation. An account made by hand can otherwise
+sit unconfirmed — and unable to sign in at all when confirmations are on —
+while the script reports success.
 
 The service role key bypasses row-level security. Keep it out of `.env`, out of
 git and out of the app, and `unset` it when you are done.
@@ -117,6 +122,28 @@ Authentication → Providers → Email while the app is in review.
 
 Takes effect on the next launch or sign-in — the app refreshes this when auth
 settles.
+
+### 3c. Check the account is really confirmed
+
+```bash
+SUPA="$(grep -E '^SUPABASE_URL=' .env | cut -d= -f2- | tr -d '"'"'"')"
+curl -sS "${SUPA%/}/auth/v1/admin/users?per_page=1000" \
+  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+| python3 -c "
+import sys, json
+users = json.load(sys.stdin).get('users', [])
+for u in users:
+    if u.get('email') == 'demo@abc.com':
+        print('confirmed:', u.get('email_confirmed_at') or 'NOT CONFIRMED')
+        break
+else:
+    print('account not found')
+"
+```
+
+A date means the reviewer can sign in. `NOT CONFIRMED` means re-run the script,
+which now fixes exactly that.
 
 ### 4. Verify on a clean device
 
