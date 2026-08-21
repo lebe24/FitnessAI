@@ -46,13 +46,41 @@ if [[ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
   cat >&2 <<'MSG'
 ✗ SUPABASE_SERVICE_ROLE_KEY is not set.
 
-  Dashboard → Project Settings → API → service_role (secret).
+  Dashboard -> Project Settings -> API Keys -> the SECRET key.
+  It looks like  sb_secret_...   or, on older projects,  eyJ... (service_role)
 
-    export SUPABASE_SERVICE_ROLE_KEY='eyJ...'
+    export SUPABASE_SERVICE_ROLE_KEY='sb_secret_...'
+
+  Note: no trailing comment on that line. Some zsh setups do not treat # as a
+  comment interactively and will try to run the rest as a command.
 
   This key bypasses row-level security. Keep it out of .env, out of git and
   out of the app, and unset it when you are done.
 MSG
+  exit 1
+fi
+
+# Fail fast on the public key. It is the one most easily to hand, and using it
+# here would otherwise surface as an opaque 401 from the Admin API.
+if [[ "${SUPABASE_SERVICE_ROLE_KEY}" == sb_publishable_* ]]; then
+  cat >&2 <<'MSG'
+✗ That is the PUBLISHABLE key, not the secret one.
+
+  Publishable keys are the public client key and cannot use the Admin API.
+  You need the key labelled "secret":
+
+    Dashboard -> Project Settings -> API Keys -> secret
+
+  It looks like  sb_secret_...   or, on older projects,  eyJ... (service_role)
+MSG
+  exit 1
+fi
+
+# Same check for the legacy anon JWT, compared against the one already in .env.
+ANON_IN_ENV="$(grep -E '^SUPABASE_ANON_KEY=' .env 2>/dev/null | cut -d= -f2- | tr -d '"'"'"' \r' || true)"
+if [[ -n "${ANON_IN_ENV:-}" && "${SUPABASE_SERVICE_ROLE_KEY}" == "${ANON_IN_ENV}" ]]; then
+  echo "✗ That is the anon key from .env, not the secret key." >&2
+  echo "  Dashboard -> Project Settings -> API Keys -> secret" >&2
   exit 1
 fi
 
@@ -173,3 +201,7 @@ cat <<DONE
     ./scripts/create-review-account.sh --revoke
     unset SUPABASE_SERVICE_ROLE_KEY
 DONE
+
+
+# export SUPABASE_SERVICE_ROLE_KEY='sb_publishable_dRrz7zeBXL70OjsGBH1YpQ_yNWvZFk2'   # Dashboard → Settings → API
+# ./scripts/create-review-account.sh

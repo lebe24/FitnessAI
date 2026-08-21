@@ -39,9 +39,17 @@ being that `abc.com` is not a domain we control, so a confirmation link would
 go nowhere:
 
 ```bash
-export SUPABASE_SERVICE_ROLE_KEY='...'   # Dashboard → Settings → API
+export SUPABASE_SERVICE_ROLE_KEY='sb_secret_...'
 ./scripts/create-review-account.sh
 ```
+
+Use the key labelled **secret** — Dashboard → Project Settings → API Keys. It
+looks like `sb_secret_...`, or `eyJ...` (service_role) on older projects. The
+**publishable** key (`sb_publishable_...`) is the public client key and cannot
+use the Admin API; the script rejects it rather than letting it fail as a 401.
+
+Put no trailing `#` comment on the export line — some zsh setups do not treat
+`#` as a comment interactively and will try to run the rest as a command.
 
 The script creates the user already confirmed, then grants complimentary
 access, and prints the user id. It is idempotent: run it again and it reuses
