@@ -11,7 +11,7 @@ enum ServerEnvironment { local, production }
 //    ServerEnvironment.local       → local Docker server via devtunnel
 //
 //  Release builds ignore this and always use production, so a stray `local`
-//  can never ship. Restart the app after changing it — Dio services capture
+//  can never ship. Restart the app after changing it — Dio services t
 //  their base URL when they are constructed.
 // ─────────────────────────────────────────────────────────────────────────────
 const ServerEnvironment _kDevEnvironment = ServerEnvironment.production;

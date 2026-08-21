@@ -147,8 +147,8 @@ behind a subscription — a reviewer without both will be blocked and reject.
 | Last name | «...» |
 | Phone | «+44 ...» |
 | Email | «...» |
-| Demo account username | «reviewer@YOUR-DOMAIN» |
-| Demo account password | «...» |
+| Demo account username | `demo@abc.com` |
+| Demo account password | `123456789` |
 
 ### Preparing the demo account — do this before submitting
 
@@ -161,7 +161,7 @@ behind a subscription — a reviewer without both will be blocked and reject.
 
    ```sql
    update user_profiles set is_complimentary = true
-   where email = 'reviewer@YOUR-DOMAIN';
+   where email = 'demo@abc.com';
    ```
 
    This step is not optional. Six features are gated, and without it the

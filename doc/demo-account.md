@@ -36,8 +36,23 @@ subscription event.
 On a clean device, sign up with **email** — not Google. A reviewer cannot
 complete an OAuth flow for an account they have no credentials to.
 
-Suggested: `reviewer@YOUR-DOMAIN`, with a password you are willing to put in
-App Store Connect in plain text.
+The credentials going into App Store Connect:
+
+| | |
+|---|---|
+| Email | `demo@abc.com` |
+| Password | `123456789` |
+
+Two things to be aware of about these:
+
+- **`abc.com` is not a domain you control.** If Supabase has "Confirm email"
+  switched on, the confirmation link goes nowhere and the account cannot sign
+  in. Either turn confirmations off, or confirm this one address by hand —
+  see step 3b.
+- **The password is weak on purpose**, because it is typed by a stranger from a
+  form field. That is fine only because the account holds no real data and the
+  grant can be revoked in one statement. Do not reuse it anywhere, and do not
+  put real training history on it.
 
 ### 2. Finish onboarding and generate a plan
 
@@ -52,20 +67,34 @@ Find the user, then set the flag:
 -- Confirm you have the right row first.
 select id, email, is_premium, access_tier, is_complimentary
 from user_profiles
-where email = 'reviewer@YOUR-DOMAIN';
+where email = 'demo@abc.com';
 
 -- Grant.
 update user_profiles
 set is_complimentary = true
-where email = 'reviewer@YOUR-DOMAIN';
+where email = 'demo@abc.com';
 ```
+
+### 3b. If sign-up said "Confirm your email first"
+
+That means confirmations are on and the link went to a domain you do not own.
+Confirm the address directly:
+
+```sql
+update auth.users
+set email_confirmed_at = now()
+where email = 'demo@abc.com';
+```
+
+Then sign in again in the app. Alternatively, switch confirmations off under
+Authentication → Providers → Email while the app is in review.
 
 Takes effect on the next launch or sign-in — the app refreshes this when auth
 settles.
 
 ### 4. Verify on a clean device
 
-Delete the app, reinstall, sign in as the reviewer and open all six:
+Delete the app, reinstall, sign in as `demo@abc.com` and open all six:
 
 - Nutrition scanner (Home → scan a meal)
 - Body composition (Home → body scan)
@@ -86,7 +115,7 @@ The grant does not expire. Revoke it when you no longer need it:
 
 ```sql
 update user_profiles set is_complimentary = false
-where email = 'reviewer@YOUR-DOMAIN';
+where email = 'demo@abc.com';
 ```
 
 Keep it on while the app is live if you expect re-reviews for updates — a
