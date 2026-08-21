@@ -242,6 +242,40 @@ class SubscriptionService extends ChangeNotifier {
   /// Whether the store is offering any free trial at all right now.
   bool get hasFreeTrial => trialOffer() != null;
 
+  /// Whether *this* Apple Account can still take the introductory offer.
+  ///
+  /// [trialOffer] only says the product has a trial attached; it says nothing
+  /// about whether the person in front of us may have it. Apple grants one
+  /// introductory offer per subscription group per Apple Account, forever.
+  /// Offering "start your free trial" to someone who used theirs last month
+  /// promises something the purchase sheet will then refuse to honour — they
+  /// tap expecting free and get charged.
+  ///
+  /// Unknown counts as eligible: the check needs the network, and refusing to
+  /// mention a trial because a request failed loses a real trial start. Apple
+  /// makes the actual decision at purchase either way.
+  Future<bool> isEligibleForTrial([Package? package]) async {
+    final p = package ?? yearly ?? monthly;
+    final productId = p?.storeProduct.identifier;
+    if (productId == null) return false;
+
+    try {
+      final result =
+          await Purchases.checkTrialOrIntroductoryPriceEligibility([productId]);
+      final status = result[productId]?.status;
+      return status != IntroEligibilityStatus.introEligibilityStatusIneligible &&
+          status !=
+              IntroEligibilityStatus.introEligibilityStatusNoIntroOfferExists;
+    } catch (e) {
+      debugPrint('SubscriptionService: eligibility check failed — $e');
+      return true;
+    }
+  }
+
+  /// The package the trial sheet should buy — annual by default, since that is
+  /// where the offer is configured and what the offering leads with.
+  Package? get defaultPackage => yearly ?? monthly;
+
   // ── Entitlement detail ─────────────────────────────────────────────────────
 
   EntitlementInfo? get _proEntitlement =>

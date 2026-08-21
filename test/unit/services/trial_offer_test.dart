@@ -28,4 +28,20 @@ void main() {
       expect(t.label, isNot(contains('unknown')));
     });
   });
+
+  group('what the sheet promises', () {
+    // The sheet derives its copy from trialOffer(), which is suppressed when
+    // the account is ineligible. These pin the three states that produces.
+
+    test('an offer with a zero price is a trial', () {
+      const t = TrialOffer(units: 7, unit: PeriodUnit.day);
+      expect(t.phrase, '7 days');
+    });
+
+    test('the label is safe to drop inline in a button', () {
+      // "Start my 1-week free trial" must not read "Start my 1-weeks ...".
+      expect(const TrialOffer(units: 1, unit: PeriodUnit.week).label, '1-week');
+      expect(const TrialOffer(units: 7, unit: PeriodUnit.day).label, '7-day');
+    });
+  });
 }

@@ -50,12 +50,32 @@ class TrialOfferSheet extends StatefulWidget {
 class _TrialOfferSheetState extends State<TrialOfferSheet> {
   bool _busy = false;
 
+  /// Null until the eligibility check answers. Until then the sheet says
+  /// nothing about a trial rather than promising one it may have to retract.
+  bool? _eligible;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkEligibility();
+  }
+
+  Future<void> _checkEligibility() async {
+    final eligible = await sl<SubscriptionService>().isEligibleForTrial();
+    if (mounted) setState(() => _eligible = eligible);
+  }
+
   /// Read from the store, never hardcoded. If App Store Connect has no
   /// introductory offer configured, this is null and the sheet stops
   /// mentioning a trial entirely rather than promising one Apple will not
   /// honour — which is what a purchase that charges immediately looks like
   /// to a user who was told it was free.
-  TrialOffer? get _trial => sl<SubscriptionService>().trialOffer();
+  ///
+  /// Suppressed once we know this Apple Account has already used its
+  /// introductory offer — that is the "trial is over, show the paywall"
+  /// case. The sheet then sells the subscription plainly.
+  TrialOffer? get _trial =>
+      _eligible == false ? null : sl<SubscriptionService>().trialOffer();
 
   static const _perks = [
     ('Nutrition scanner', 'Photograph a meal for instant macros'),
@@ -68,9 +88,39 @@ class _TrialOfferSheetState extends State<TrialOfferSheet> {
 
   Future<void> _start() async {
     setState(() => _busy = true);
-    // Apple owns the trial. The paywall presents the introductory offer
-    // attached to the product, so there is no trial state for us to start,
-    // store or expire — the entitlement simply becomes active.
+
+    final subs = sl<SubscriptionService>();
+    final package = subs.defaultPackage;
+
+    // Buy the package directly rather than opening the paywall.
+    //
+    // The paywall is a browse-and-choose screen: it reads as "pick a plan and
+    // pay", which is the wrong frame for someone who tapped "start my free
+    // trial". Purchasing straight away puts Apple's own sheet in front of
+    // them, and that sheet states the offer in Apple's words — "7 days free,
+    // then …" — which is both clearer and harder to dispute than anything we
+    // could write. The paywall is what they meet later, once the trial is
+    // spent and a gated feature is tapped.
+    if (package != null) {
+      final result = await subs.purchase(package);
+      if (!mounted) return;
+      setState(() => _busy = false);
+
+      if (result.shouldShowMessage && result.message != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(result.message!,
+              style: GoogleFonts.inter(fontSize: 13)),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+      // Cancelling is a choice, not a failure — close either way and let
+      // onboarding continue.
+      Navigator.of(context).pop(result.isSuccess);
+      return;
+    }
+
+    // No package loaded (offerings unavailable). Fall back to the paywall,
+    // which has its own handling for that state.
     final purchased = await sl<PaywallService>().present();
     if (!mounted) return;
     setState(() => _busy = false);
