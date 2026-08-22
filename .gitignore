@@ -104,3 +104,21 @@ macos/Pods/
 .fvm/
 *.iws
 coverage/
+
+# ── Signing and service credentials ───────────────────────────────────────────
+# .p8 covers both App Store Connect API keys (AuthKey_*.p8) and In-App Purchase
+# keys (SubscriptionKey_*.p8). Both are one-time downloads that unlock billing
+# and account APIs, and both tend to land in the repo root straight from the
+# browser.
+*.p8
+AuthKey_*.p8
+SubscriptionKey_*.p8
+*.cer
+*.provisionprofile
+# Google / Firebase service accounts
+*service-account*.json
+google-services.json
+GoogleService-Info.plist
+# Exported archives and signing material
+*.xcarchive/
+ExportOptions.plist.local

@@ -2,6 +2,13 @@
 
 App: **Befit AI** · Bundle ID `com.betfit.ai.app`
 
+| | |
+|---|---|
+| Subscription group | `22317248` |
+| Products | `com.betfit.ai.pro.monthly`, `com.betfit.ai.pro.yearly` |
+| Entitlement | `Befit AI - fitness Pro` |
+| Introductory offer | 1 week free trial — **verified applying in sandbox** |
+
 Fields below are ready to paste. Anything in `«guillemets»` needs a real value
 from you — those are the ones I cannot invent.
 
@@ -226,16 +233,69 @@ behind a subscription — a reviewer without both will be blocked and reject.
 
 ## Before you hit Submit
 
-- [ ] **Demo account created, Pro granted in RevenueCat, verified on a clean
-      device** — reinstall, sign in, open all six gated features
-- [ ] Review screenshot uploaded to **each** subscription (min 640×920)
-- [ ] Introductory free trial configured on **both** monthly and yearly —
-      the onboarding sheet reading "Start my 1-week free trial" is itself the
-      proof, since that text is read from the store
-- [ ] `/terms` and `/privacy` have real content — the description and the
-      support page both link to them, and reviewers follow links
-- [ ] Paywall shows Restore, auto-renewal terms, and Terms/Privacy links
-- [ ] App Privacy questionnaire matches what the app actually collects —
-      camera, photos, health/fitness data, identifiers
-- [ ] Screenshots for 6.9" and 6.5" displays
-- [ ] Age rating questionnaire — the copy deliberately makes no medical claims
+### Done
+
+- [x] **Demo account** — `demo@abc.com`, confirmed, `is_complimentary = true`
+- [x] **Email sign-in** exists, so the reviewer can actually use those
+      credentials (the app was Google-only until recently)
+- [x] **Single subscription group** — monthly and yearly now share `22317248`,
+      so a user cannot hold both or claim two trials
+- [x] **1-week free trial configured** — a sandbox purchase came back with
+      `offerType 1`, `offerDiscountType FREE_TRIAL`, `offerPeriod P7D`, `price 0`
+- [x] **No secrets in the IPA** — the bundled `.env` carries only the Supabase
+      URL and anon key and the two RevenueCat public SDK keys, all of which are
+      public by design. No `.p8`, `.p12` or service-account file is in the
+      archive, and the Dart binary contains no secret-shaped strings.
+
+### Still blocking
+
+- [ ] **RevenueCat In-App Purchase Key** — currently rejected with
+      `INVALID_APPLE_SUBSCRIPTION_KEY` (7234). Until it is accepted, Apple
+      completes purchases but RevenueCat cannot validate them, so no entitlement
+      is granted. Check the bundle ID in RevenueCat reads `com.betfit.ai.app`
+      exactly — note **betfit**, not befit — and that the file uploaded is
+      `SubscriptionKey_*.p8` from Users and Access → Integrations → In-App
+      Purchase, not `AuthKey_*.p8`.
+      *This blocks launch, not review: the demo account does not use RevenueCat.*
+- [ ] **`/terms` and `/privacy` need real content** — the description and the
+      support page both link to them and reviewers follow links
+- [ ] **Paywall must show** Restore, auto-renewal terms, and Terms/Privacy
+      links, or it is rejected under Guideline 3.1.1
+- [ ] **Review screenshot** on each subscription (min 640×920)
+- [ ] **Screenshots** for 6.9" and 6.5" displays
+- [ ] **App Privacy questionnaire** — must match what the app collects: camera,
+      photos, health and fitness data, identifiers
+- [ ] **Confirm the price tier** — the first sandbox purchase billed
+      ₦129,900/year, about US$85. Deliberate, or a tier out by 10×?
+
+### Housekeeping after approval
+
+- [ ] Revoke the demo grant: `./scripts/create-review-account.sh --revoke`
+- [ ] Delete `scripts/create-review-account.sh`
+- [ ] Rotate any credential that was exposed during setup
+
+---
+
+## Keeping secrets out of the build
+
+`.env` is declared as a Flutter asset, so **it ships inside the IPA** and can be
+read straight out of the archive:
+
+```
+Payload/Runner.app/Frameworks/App.framework/flutter_assets/.env
+```
+
+Only client identifiers belong in it. `.env.example` documents which, and why.
+Server-side secrets live in Secret Manager and are referenced from
+`services.yaml` in the backend repo.
+
+To audit any build before uploading:
+
+```bash
+cd /tmp && rm -rf ipa_check && mkdir ipa_check && cd ipa_check
+unzip -q "$(ls ~/Documents/Developer/flutter-apps/FitnessAI/build/ios/ipa/*.ipa | head -1)"
+grep -oE '^[A-Z_]+=' Payload/Runner.app/Frameworks/App.framework/flutter_assets/.env
+find Payload -type f \( -name '*.p8' -o -name '*.p12' -o -name '*.pem' \)
+```
+
+The first command should list only public keys. The second should print nothing.
