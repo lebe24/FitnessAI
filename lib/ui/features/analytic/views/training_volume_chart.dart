@@ -1,6 +1,8 @@
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
 import 'package:fitness/domain/models/session_volume.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:fitness/ui/core/routes/app_router.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -54,7 +56,13 @@ class TrainingVolumeChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = _data;
 
-    return Container(
+    return GestureDetector(
+      // Opaque so the whole card responds, not just the painted pixels.
+      // The bars keep their own touch handling for tooltips; a tap that lands
+      // between them still opens the history.
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push(ScreenPaths.workoutHistory),
+      child: Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
       decoration: BoxDecoration(
         color: _kCard,
@@ -81,7 +89,24 @@ class TrainingVolumeChart extends StatelessWidget {
                     ? const _Empty()
                     : _Bars(data: data),
           ),
+          const SizedBox(height: 10),
+          // Says the card is tappable. Without it the affordance is invisible —
+          // a chart does not look like a link.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('View all sessions',
+                  style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: _kLime.withValues(alpha: 0.85))),
+              const SizedBox(width: 3),
+              Icon(Icons.chevron_right_rounded,
+                  size: 16, color: _kLime.withValues(alpha: 0.85)),
+            ],
+          ),
         ],
+        ),
       ),
     );
   }

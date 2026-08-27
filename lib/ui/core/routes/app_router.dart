@@ -18,6 +18,7 @@ import 'package:fitness/domain/models/nutrition_analysis.dart';
 import 'package:fitness/data/models/onboarding/onboarding_data.dart';
 import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:fitness/domain/models/workout_plan.dart';
+import 'package:fitness/ui/features/analytic/views/workout_history_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -33,6 +34,7 @@ class ScreenPaths {
   static const String nutrition = '/nutrition';
   static const String nutritionAnalysis = '/nutrition-analysis';
   static const String workoutPlanDetail = '/workout-plan-detail';
+  static const String workoutHistory = '/workout-history';
   static const String login = '/login';
   static const String chat = '/chat';
   static const String onboardingAnalysis = '/onboarding-analysis';
@@ -112,6 +114,10 @@ class ScreenPaths {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: workoutHistory,
+        builder: (context, state) => const WorkoutHistoryPage(),
       ),
       GoRoute(
         path: workoutPlanDetail,

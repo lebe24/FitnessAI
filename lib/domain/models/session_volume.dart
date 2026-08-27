@@ -29,6 +29,34 @@ class LoggedSet {
   bool get wasPerformed => (reps ?? 0) > 0 || (durationSec ?? 0) > 0;
 }
 
+/// One exercise within a session, with the sets actually performed.
+class ExerciseVolume {
+  final String name;
+  final List<LoggedSet> sets;
+
+  /// The coaching text the plan carried, when the blob has it.
+  final String? muscleGroup;
+
+  const ExerciseVolume({
+    required this.name,
+    required this.sets,
+    this.muscleGroup,
+  });
+
+  double get volumeKg => sets.fold(0, (t, s) => t + s.volumeKg);
+  int get performedSets => sets.where((s) => s.wasPerformed).length;
+
+  /// Heaviest set that was actually performed — the number people look for.
+  LoggedSet? get topSet {
+    LoggedSet? best;
+    for (final s in sets) {
+      if (!s.wasPerformed || s.weightKg == null) continue;
+      if (best == null || s.weightKg! > best.weightKg!) best = s;
+    }
+    return best;
+  }
+}
+
 /// A session reduced to the numbers a chart can plot.
 ///
 /// Sessions currently store everything in one JSONB blob where each set is a
@@ -103,6 +131,25 @@ class SessionVolume {
       ));
     }
     return sets;
+  }
+
+  /// Every exercise in a session that has real set data, in blob order.
+  ///
+  /// The prescription and the record share one array and the same exercise
+  /// appears in both, so entries without set data are skipped — otherwise the
+  /// history page would list each movement twice.
+  static List<ExerciseVolume> exercisesOf(WorkoutSessionModel session) {
+    final out = <ExerciseVolume>[];
+    for (final entry in session.workoutLogs) {
+      final sets = parseSets(entry['notes'] as String?);
+      if (sets.isEmpty) continue;
+      out.add(ExerciseVolume(
+        name: (entry['name'] as String?)?.trim() ?? 'Exercise',
+        sets: sets,
+        muscleGroup: entry['muscle_group'] as String?,
+      ));
+    }
+    return out;
   }
 
   /// Reduce one session to its totals.
