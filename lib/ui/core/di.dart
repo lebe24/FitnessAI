@@ -1,5 +1,6 @@
 import 'package:fitness/data/repositories/auth_repository_impl.dart';
 import 'package:fitness/data/repositories/workout_log_repository_impl.dart';
+import 'package:fitness/data/services/workout_log/session_supabase_source.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
 import 'package:fitness/domain/repositories/workout_log_repository.dart';
 import 'package:fitness/ui/features/fitness/view_models/workout_log_view_model.dart';
@@ -112,6 +113,10 @@ Future<void> initDI() async {
   sl.registerLazySingleton<PaywallService>(() => PaywallService(sl()));
   // Single source for "may this user open that feature". Wraps the
   // subscription state rather than duplicating any of it.
+  // Session reads go straight to Supabase; writes stay on the backend.
+  sl.registerLazySingleton<SessionSupabaseSource>(
+      () => SessionSupabaseSource(sl<SupabaseClient>()));
+
   sl.registerLazySingleton<ComplimentaryAccess>(
       () => ComplimentaryAccess(sl()));
   sl.registerLazySingleton<AccessPolicy>(() => AccessPolicy(sl(), sl()));

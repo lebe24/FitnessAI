@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
 import 'package:fitness/data/services/fitness/progress_photo_service.dart';
+import 'package:fitness/data/services/workout_log/session_supabase_source.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
 import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/domain/models/workout_streak.dart';
@@ -81,6 +82,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   bool _photosLoading = false;
 
   // Workout session logs (single-row schema: workout_logs + feedback)
+  final _sessionSource = sl<SessionSupabaseSource>();
   final _workoutLog = sl<WorkoutLogRemoteDataSource>();
   List<WorkoutSessionModel> _sessions = [];
   bool _sessionsLoading = true;
@@ -96,7 +98,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   Future<void> _loadSessions() async {
     try {
-      final sessions = await _workoutLog.listSessions(limit: 10);
+      // Same source as the history page, so the chart and the list can never
+      // disagree about what was logged.
+      final sessions = await _sessionSource.listSessions(limit: 100) ??
+          await _workoutLog.listSessions(limit: 10);
       // Newest first; only sessions that actually logged exercises are useful.
       sessions.sort((a, b) => b.sessionDate.compareTo(a.sessionDate));
       if (mounted) {

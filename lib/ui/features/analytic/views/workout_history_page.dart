@@ -1,4 +1,5 @@
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
+import 'package:fitness/data/services/workout_log/session_supabase_source.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
 import 'package:fitness/domain/models/session_volume.dart';
 import 'package:fitness/ui/core/di.dart';
@@ -29,6 +30,7 @@ class WorkoutHistoryPage extends StatefulWidget {
 }
 
 class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
+  final _supabase = sl<SessionSupabaseSource>();
   final _remote = sl<WorkoutLogRemoteDataSource>();
 
   List<WorkoutSessionModel> _sessions = [];
@@ -43,14 +45,18 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
 
   Future<void> _load() async {
     try {
-      // Deliberately larger than the chart's window: this is the history, and
-      // scrolling past a hundred sessions is a better problem than truncating
-      // someone's training year.
-      final sessions = await _remote.listSessions(limit: 200);
-      sessions.sort((a, b) => b.sessionDate.compareTo(a.sessionDate));
+      // Supabase first: the same rows, without waiting on a Cloud Run cold
+      // start. Falls back to the backend when the direct read fails, so a
+      // Supabase outage degrades rather than empties the page.
+      var sessions = await _supabase.listSessions(limit: 200);
+
+      // The backend caps limit at 100 — asking for more is a 422, not a
+      // larger page.
+      final resolved = sessions ?? await _remote.listSessions(limit: 100);
+      resolved.sort((a, b) => b.sessionDate.compareTo(a.sessionDate));
       if (!mounted) return;
       setState(() {
-        _sessions = sessions;
+        _sessions = resolved;
         _loading = false;
         _failed = false;
       });
