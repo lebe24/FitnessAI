@@ -51,6 +51,12 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<UserEntity?> signInWithApple() async {
+    final user = await remote.signInWithApple();
+    return _buildAndSyncUser(user);
+  }
+
+  @override
   Future<UserEntity?> signInWithGmail(String email) async {
     final user = await remote.signInWithGmail(email);
     return _buildAndSyncUser(user);

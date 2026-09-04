@@ -6,12 +6,14 @@ import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_email.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_gmail.dart';
 import 'package:fitness/domain/use_cases/auth/sign_up_email.dart';
+import 'package:fitness/domain/use_cases/auth/sign_in_apple.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_google.dart';
 import 'package:fitness/domain/use_cases/auth/sign_out.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final SignInWithGoogle _signInWithGoogle;
+  final SignInWithApple _signInWithApple;
   final SignInWithGmail _signInWithGmail;
   final SignUpWithEmail? _signUpWithEmail;
   final SignInWithEmail? _signInWithEmail;
@@ -21,6 +23,7 @@ class AuthViewModel extends ChangeNotifier {
 
   AuthViewModel({
     required SignInWithGoogle signInWithGoogle,
+    required SignInWithApple signInWithApple,
     required SignInWithGmail signInWithGmail,
     SignUpWithEmail? signUpWithEmail,
     SignInWithEmail? signInWithEmail,
@@ -28,6 +31,7 @@ class AuthViewModel extends ChangeNotifier {
     required GetCurrentUser getCurrentUser,
     required DeleteAccount deleteAccount,
   })  : _signInWithGoogle = signInWithGoogle,
+        _signInWithApple = signInWithApple,
         _signInWithGmail = signInWithGmail,
         _signUpWithEmail = signUpWithEmail,
         _signInWithEmail = signInWithEmail,
@@ -62,6 +66,24 @@ class AuthViewModel extends ChangeNotifier {
       _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
       ErrorLogService.report(
           area: _area, action: 'sign_in_google', error: e, stackTrace: st);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> signInWithApple() async {
+    _setLoading(true);
+    try {
+      _user = await _signInWithApple();
+      _error = null;
+    } catch (e, st) {
+      _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
+      // A cancellation is the user changing their mind, not a defect — it is
+      // already silent on screen, and it does not belong in the error log.
+      if (_error?.silent != true) {
+        ErrorLogService.report(
+            area: _area, action: 'sign_in_apple', error: e, stackTrace: st);
+      }
     } finally {
       _setLoading(false);
     }

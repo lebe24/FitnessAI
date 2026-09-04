@@ -44,6 +44,7 @@ dependencies:
   flutter_markdown: ^0.7.3
   speech_to_text: ^7.4.0
   purchases_ui_flutter: ^8.11.0
+  sign_in_with_apple: ^8.1.0
 
 
 dev_dependencies:

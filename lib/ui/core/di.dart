@@ -42,6 +42,7 @@ import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_email.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_gmail.dart';
 import 'package:fitness/domain/use_cases/auth/sign_up_email.dart';
+import 'package:fitness/domain/use_cases/auth/sign_in_apple.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_google.dart';
 import 'package:fitness/domain/use_cases/auth/sign_out.dart';
 import 'package:fitness/domain/use_cases/chat/connect_chat_usecase.dart';
@@ -166,6 +167,7 @@ Future<void> initDI() async {
     () => AuthRepositoryImpl(sl(), sl(), sl()),
   );
   sl.registerLazySingleton(() => SignInWithGoogle(sl()));
+  sl.registerLazySingleton(() => SignInWithApple(sl()));
   sl.registerLazySingleton(() => SignInWithGmail(sl()));
   sl.registerLazySingleton(() => SignUpWithEmail(sl()));
   sl.registerLazySingleton(() => SignInWithEmail(sl()));
@@ -174,6 +176,7 @@ Future<void> initDI() async {
   sl.registerLazySingleton(() => DeleteAccount(sl()));
   sl.registerFactory(() => AuthViewModel(
         signInWithGoogle: sl(),
+        signInWithApple: sl(),
         signInWithGmail: sl(),
         signUpWithEmail: sl(),
         signInWithEmail: sl(),
