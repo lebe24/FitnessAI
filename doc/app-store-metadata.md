@@ -274,8 +274,12 @@ behind a subscription — a reviewer without both will be blocked and reject.
 - [ ] **Screenshots** for 6.9" and 6.5" displays
 - [ ] **App Privacy questionnaire** — must match what the app collects: camera,
       photos, health and fitness data, identifiers
-- [ ] **Confirm the price tier** — the first sandbox purchase billed
-      ₦129,900/year, about US$85. Deliberate, or a tier out by 10×?
+- [x] **Price tier confirmed** — the yearly product is **US$79.99**, so the
+      ₦129,900 (~US$85) sandbox charge was the right tier converted, not a
+      figure out by 10×. The marketing site now advertises the same number.
+- [ ] **Confirm the monthly tier** — the app's offline fallback in
+      `billing_page.dart` says $8.99, the marketing site says $9.99. Both are
+      guesses until someone reads the product in App Store Connect.
 
 ### Housekeeping after approval
 
