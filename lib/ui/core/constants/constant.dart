@@ -11,9 +11,14 @@ class Constant {
   // reviewers, so a value that differs between the app and the website is a
   // finding waiting to happen — change them in both places or in neither.
 
-  /// The support inbox. Matches the address on the website and the one given
-  /// as the App Store support contact.
-  static const String supportEmail = "support@befit.ai";
+  /// The support inbox. Matches CONTACT in befit_web/lib/legal.ts and the
+  /// address given as the App Store support contact.
+  ///
+  /// TEMPORARY — a personal address standing in until support@befit.ai is
+  /// live. It is published in the App Store listing and on both legal
+  /// documents, so swap it the moment the real inbox receives mail. This
+  /// constant and the website's CONTACT are the only two places to change.
+  static const String supportEmail = "emmanuel.philipel@yahoo.com";
 
   /// The entity a user is contracting with.
   ///
