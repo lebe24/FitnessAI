@@ -22,13 +22,12 @@ class Constant {
 
   /// The entity a user is contracting with.
   ///
-  /// PLACEHOLDER — must be the registered company or the individual named on
-  /// the Apple Developer account, and must match the Copyright field in App
-  /// Store Connect and COPYRIGHT_HOLDER in the website's footer.
+  /// Must stay identical to the Copyright field in App Store Connect, which
+  /// names the developer-account holder, and to ENTITY in
+  /// befit_web/lib/legal.ts.
   static const String legalEntity = "BeFit AI";
 
-  /// Whose law governs the terms. PLACEHOLDER — normally where the entity
-  /// above is registered.
+  /// Whose law governs the terms.
   static const String legalJurisdiction = "England and Wales";
 
   /// Shown as "Last updated" on both documents. Bump when the wording changes.

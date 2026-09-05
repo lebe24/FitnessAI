@@ -142,8 +142,9 @@ class TermsAndConditionsPage extends StatelessWidget {
   static List<LegalSection> get sections => [
         LegalSection(
           heading: '1. Who you are agreeing with',
-          body: 'BeFit AI is provided by ${Constant.legalEntity}. In these terms, "we" and '
-              '"us" mean ${Constant.legalEntity}, and "you" means the person using the app.\n\n'
+          body: 'These terms are an agreement between you and ${Constant.legalEntity}, who '
+              'provides the BeFit AI app. "We" and "us" mean ${Constant.legalEntity}; "you" '
+              'means the person using the app.\n\n'
               'If anything here is unclear, email us at ${Constant.supportEmail} before you '
               'subscribe rather than after.',
         ),
@@ -296,8 +297,8 @@ class PrivacyPolicyPage extends StatelessWidget {
   static List<LegalSection> get sections => [
         LegalSection(
           heading: '1. Who handles your data',
-          body: 'BeFit AI is provided by ${Constant.legalEntity}, who decides how and why '
-              'your personal data is processed and is responsible for it.\n\n'
+          body: '${Constant.legalEntity} provides the BeFit AI app, and decides how and '
+              'why your personal data is processed. That makes us responsible for it.\n\n'
               'For anything in this policy, including a request to see or delete your data, '
               'write to ${Constant.supportEmail}.',
         ),
