@@ -277,9 +277,8 @@ behind a subscription — a reviewer without both will be blocked and reject.
 - [x] **Price tier confirmed** — the yearly product is **US$79.99**, so the
       ₦129,900 (~US$85) sandbox charge was the right tier converted, not a
       figure out by 10×. The marketing site now advertises the same number.
-- [ ] **Confirm the monthly tier** — the app's offline fallback in
-      `billing_page.dart` says $8.99, the marketing site says $9.99. Both are
-      guesses until someone reads the product in App Store Connect.
+- [x] **Monthly tier confirmed** — **US$8.99**. The app's offline fallback was
+      already right; the marketing site said $9.99 and has been corrected.
 
 ### Housekeeping after approval
 
