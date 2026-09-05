@@ -97,8 +97,8 @@ within 24 hours prior to the end of the current period. You can manage your
 subscription and turn off auto-renewal in your Apple Account settings after
 purchase.
 
-Terms of Use: https://befit.ai/terms
-Privacy Policy: https://befit.ai/privacy
+Terms of Use: https://befit-web-gamma.vercel.app/terms
+Privacy Policy: https://befit-web-gamma.vercel.app/privacy
 
 Questions or feedback? emmanuel.philipel@yahoo.com — a person reads every one.
 
@@ -118,6 +118,19 @@ Questions or feedback? emmanuel.philipel@yahoo.com — a person reads every one.
 
 ---
 
+## Where the site lives
+
+`befit.ai` is **not ours** — it is parked on Sedo and for sale. Anything
+pointed at it reaches a domain sales lander, which is what a reviewer would
+have seen following the Privacy Policy link.
+
+The site is served from `https://befit-web-gamma.vercel.app`, and every URL
+below points there. Vercel keeps that subdomain working after a custom domain
+is attached, so buying a domain later will not break links already submitted
+to Apple.
+
+---
+
 ## Support contact
 
 The address above and in the App Review table is **emmanuel.philipel@yahoo.com**, standing in until
@@ -129,7 +142,7 @@ and has to be changed in App Store Connect at the same time.
 
 ## Support URL (required)
 
-> https://befit.ai/support
+> https://befit-web-gamma.vercel.app/support
 
 Apple checks this loads and is relevant. `/support` now exists and answers the
 questions people actually write in about — cancelling, restoring a purchase,
@@ -139,7 +152,7 @@ deleting an account — with the contact address on it.
 
 ## Marketing URL (optional)
 
-> https://befit.ai
+> https://befit-web-gamma.vercel.app
 
 ---
 
