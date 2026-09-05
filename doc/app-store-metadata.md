@@ -253,6 +253,57 @@ behind a subscription — a reviewer without both will be blocked and reject.
 
 ---
 
+## Reply to App Review — submission 7e82bfa5
+
+Paste into Resolution Center with the screen recording attached. Written to be
+skimmed: a reviewer matches each heading to the finding they raised, and long
+explanations read as argument rather than evidence. Replace «build» before
+sending.
+
+> Thank you for the detailed review. All three items are addressed in build
+> «build».
+>
+> **Guideline 4.8 — Login Services**
+> The app now offers Sign in with Apple alongside Google. It appears above the
+> Google button, at the same size, on both the sign-up and sign-in screens.
+> Users may choose to hide their email address, and the app functions normally
+> with a private relay address.
+>
+> **Guideline 3.1.2(c) — Subscriptions**
+> The purchase flow now displays, for each subscription: the title, the length,
+> the price in local currency, and the per-month equivalent for the annual
+> plan. Restore Purchases, Terms of Use and Privacy Policy links appear in the
+> paywall footer and all function. A screen recording of the flow is attached.
+>
+> In App Store metadata, the Privacy Policy field is set to
+> https://befit-web-gamma.vercel.app/privacy. We use Apple's standard EULA, so
+> the Terms of Use link is included in the App Description:
+> https://befit-web-gamma.vercel.app/terms
+>
+> **Guideline 2.1(b) — App Completeness**
+> Both auto-renewable subscriptions, com.betfit.ai.pro.monthly and
+> com.betfit.ai.pro.yearly, now have App Review screenshots and are submitted
+> with this version.
+>
+> **Demo account**
+> demo@abc.com / 123456789, using email sign-in. The account has complimentary
+> access granted server-side, so every subscriber feature is open without a
+> purchase. A sandbox purchase can also be completed if you would like to test
+> the billing flow.
+>
+> Thank you for your time.
+
+Notes on the wording, for next time:
+
+- Each finding gets its own heading with the guideline number, so a reviewer
+  can match it to their own list without reading prose.
+- It states what is true and stops. No apology, no explanation of why it was
+  missed — neither changes the outcome, and length invites re-reading.
+- The demo-account paragraph pre-empts the most common follow-up: a reviewer
+  hitting a paywall and asking how to get past it.
+
+---
+
 ## Before you hit Submit
 
 ### Done
