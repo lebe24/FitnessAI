@@ -97,10 +97,10 @@ within 24 hours prior to the end of the current period. You can manage your
 subscription and turn off auto-renewal in your Apple Account settings after
 purchase.
 
-Terms of Use: «https://YOUR-DOMAIN/terms»
-Privacy Policy: «https://YOUR-DOMAIN/privacy»
+Terms of Use: https://befit-web-gamma.vercel.app/terms
+Privacy Policy: https://befit-web-gamma.vercel.app/privacy
 
-Questions or feedback? «support@YOUR-DOMAIN» — a person reads every one.
+Questions or feedback? emmanuel.philipel@yahoo.com — a person reads every one.
 
 ---
 
@@ -118,19 +118,41 @@ Questions or feedback? «support@YOUR-DOMAIN» — a person reads every one.
 
 ---
 
+## Where the site lives
+
+`befit.ai` is **not ours** — it is parked on Sedo and for sale. Anything
+pointed at it reaches a domain sales lander, which is what a reviewer would
+have seen following the Privacy Policy link.
+
+The site is served from `https://befit-web-gamma.vercel.app`, and every URL
+below points there. Vercel keeps that subdomain working after a custom domain
+is attached, so buying a domain later will not break links already submitted
+to Apple.
+
+---
+
+## Support contact
+
+The address above and in the App Review table is **emmanuel.philipel@yahoo.com**, standing in until
+`support@befit.ai` receives mail. It lives in exactly two places in code —
+`Constant.supportEmail` in the app and `CONTACT` in `befit_web/lib/legal.ts` —
+and has to be changed in App Store Connect at the same time.
+
+---
+
 ## Support URL (required)
 
-> «https://YOUR-DOMAIN/support»
+> https://befit-web-gamma.vercel.app/support
 
-Apple checks this loads and is relevant. A page with a contact address is
-enough. The site I built has no `/support` route — either add one, or point
-this at the homepage and make sure `support@` is visible on it.
+Apple checks this loads and is relevant. `/support` now exists and answers the
+questions people actually write in about — cancelling, restoring a purchase,
+deleting an account — with the contact address on it.
 
 ---
 
 ## Marketing URL (optional)
 
-> «https://YOUR-DOMAIN»
+> https://befit-web-gamma.vercel.app
 
 ---
 
@@ -153,7 +175,7 @@ behind a subscription — a reviewer without both will be blocked and reject.
 | First name | «...» |
 | Last name | «...» |
 | Phone | «+44 ...» |
-| Email | «...» |
+| Email | emmanuel.philipel@yahoo.com |
 | Demo account username | `demo@abc.com` |
 | Demo account password | `123456789` |
 
@@ -226,8 +248,59 @@ behind a subscription — a reviewer without both will be blocked and reject.
 > photos are stored on the device. Permission is requested in context, and every
 > one of these features is optional.
 >
-> Anything unclear, email «support@YOUR-DOMAIN» and we will respond same day.
+> Anything unclear, email emmanuel.philipel@yahoo.com and we will respond same day.
 
+
+---
+
+## Reply to App Review — submission 7e82bfa5
+
+Paste into Resolution Center with the screen recording attached. Written to be
+skimmed: a reviewer matches each heading to the finding they raised, and long
+explanations read as argument rather than evidence. Replace «build» before
+sending.
+
+> Thank you for the detailed review. All three items are addressed in build
+> «build».
+>
+> **Guideline 4.8 — Login Services**
+> The app now offers Sign in with Apple alongside Google. It appears above the
+> Google button, at the same size, on both the sign-up and sign-in screens.
+> Users may choose to hide their email address, and the app functions normally
+> with a private relay address.
+>
+> **Guideline 3.1.2(c) — Subscriptions**
+> The purchase flow now displays, for each subscription: the title, the length,
+> the price in local currency, and the per-month equivalent for the annual
+> plan. Restore Purchases, Terms of Use and Privacy Policy links appear in the
+> paywall footer and all function. A screen recording of the flow is attached.
+>
+> In App Store metadata, the Privacy Policy field is set to
+> https://befit-web-gamma.vercel.app/privacy. We use Apple's standard EULA, so
+> the Terms of Use link is included in the App Description:
+> https://befit-web-gamma.vercel.app/terms
+>
+> **Guideline 2.1(b) — App Completeness**
+> Both auto-renewable subscriptions, com.betfit.ai.pro.monthly and
+> com.betfit.ai.pro.yearly, now have App Review screenshots and are submitted
+> with this version.
+>
+> **Demo account**
+> demo@abc.com / 123456789, using email sign-in. The account has complimentary
+> access granted server-side, so every subscriber feature is open without a
+> purchase. A sandbox purchase can also be completed if you would like to test
+> the billing flow.
+>
+> Thank you for your time.
+
+Notes on the wording, for next time:
+
+- Each finding gets its own heading with the guideline number, so a reviewer
+  can match it to their own list without reading prose.
+- It states what is true and stops. No apology, no explanation of why it was
+  missed — neither changes the outcome, and length invites re-reading.
+- The demo-account paragraph pre-empts the most common follow-up: a reviewer
+  hitting a paywall and asking how to get past it.
 
 ---
 
@@ -265,8 +338,11 @@ behind a subscription — a reviewer without both will be blocked and reject.
 - [ ] **Screenshots** for 6.9" and 6.5" displays
 - [ ] **App Privacy questionnaire** — must match what the app collects: camera,
       photos, health and fitness data, identifiers
-- [ ] **Confirm the price tier** — the first sandbox purchase billed
-      ₦129,900/year, about US$85. Deliberate, or a tier out by 10×?
+- [x] **Price tier confirmed** — the yearly product is **US$79.99**, so the
+      ₦129,900 (~US$85) sandbox charge was the right tier converted, not a
+      figure out by 10×. The marketing site now advertises the same number.
+- [x] **Monthly tier confirmed** — **US$8.99**. The app's offline fallback was
+      already right; the marketing site said $9.99 and has been corrected.
 
 ### Housekeeping after approval
 

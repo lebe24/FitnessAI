@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:fitness/domain/models/sign_in_cancelled.dart';
 
 /// A failure, phrased for the person looking at the screen.
 ///
@@ -111,6 +112,10 @@ class FriendlyError {
   /// [planFailed] rather than the generic [unknown], because it can promise
   /// the user's answers are safe.
   static FriendlyError from(Object error, {FriendlyError? fallback}) {
+    // Checked first: a cancellation is never a fault, and every other branch
+    // below would dress it up as one.
+    if (error is SignInCancelled) return signInCancelled;
+
     // Connectivity — check before anything else, since almost any call can
     // fail this way and the advice ("check your connection") always applies.
     if (error is SocketException) return offline;
