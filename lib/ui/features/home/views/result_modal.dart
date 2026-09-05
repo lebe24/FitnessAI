@@ -28,6 +28,33 @@ enum ModalState {
 }
 
 class ResultModalPage extends StatefulWidget {
+  /// The height the sheet can actually occupy.
+  ///
+  /// The Extra Info state wants 420pt and sits at the bottom of the screen. A
+  /// software keyboard is roughly 340pt, so on every iPhone it covered the
+  /// text field the user was typing into — they could not see their own words.
+  ///
+  /// Two things are needed and only together: the sheet has to ride above the
+  /// keyboard (the caller adds viewInsets to its bottom padding), and it has to
+  /// shrink to what is left, or lifting a 420pt sheet by 340pt just pushes it
+  /// off the top instead.
+  ///
+  /// Static and injected rather than reading MediaQuery, so the arithmetic can
+  /// be checked against real device metrics without pumping a widget.
+  @visibleForTesting
+  static double visibleHeight({
+    required double preferred,
+    required double screenHeight,
+    required double topInset,
+    required double keyboardInset,
+  }) {
+    // 16pt of breathing room below the sheet, matching its own bottom padding.
+    const margin = 32.0;
+    final available = screenHeight - topInset - keyboardInset - margin;
+    // Never negative, and never taller than it asked for.
+    return preferred.clamp(0.0, available < 0 ? 0.0 : available);
+  }
+
   const ResultModalPage({
     super.key,
     required this.image,
@@ -292,6 +319,7 @@ class _ResultModalPageState extends State<ResultModalPage> {
     );
   }
 
+  /// The height this state would like, before the keyboard has a say.
   double _getHeight() {
     switch (_currentState) {
       case ModalState.init:      return 240;
@@ -687,12 +715,22 @@ class _ResultModalPageState extends State<ResultModalPage> {
 
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      // The keyboard inset lifts the sheet clear of the keyboard instead of
+      // letting it sit underneath.
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + keyboard),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        height: _getHeight(),
+        height: ResultModalPage.visibleHeight(
+          preferred: _getHeight(),
+          screenHeight: media.size.height,
+          topInset: media.padding.top,
+          keyboardInset: keyboard,
+        ),
         width: double.infinity,
         decoration: BoxDecoration(
           color: _sheetBg,
