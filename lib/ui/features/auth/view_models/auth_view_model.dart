@@ -10,6 +10,7 @@ import 'package:fitness/domain/use_cases/auth/sign_in_apple.dart';
 import 'package:fitness/domain/use_cases/auth/sign_in_google.dart';
 import 'package:fitness/domain/use_cases/auth/sign_out.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fitness/ui/core/constants/constant.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final SignInWithGoogle _signInWithGoogle;
@@ -185,7 +186,7 @@ class AuthViewModel extends ChangeNotifier {
   static const _deleteFailed = FriendlyError(
     title: "Couldn't delete your account",
     message:
-        'Nothing has been removed. Try again, or email support@befit.ai and we '
+        'Nothing has been removed. Try again, or email ${Constant.supportEmail} and we '
         'will do it for you.',
   );
 

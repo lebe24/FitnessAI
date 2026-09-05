@@ -6,8 +6,28 @@ class Constant {
   static const String welcomeMessage = "Welcome to BEFIT - AI";
   static const String onboardingMessage = "Let's get started with your fitness journey!";
 
-  // Support / legal contact — update once a real support inbox exists.
-  static const String supportEmail = "support@befitai.app";
+  // ── Legal / contact ───────────────────────────────────────────────────────
+  // These mirror befit_web/lib/legal.ts. The two documents are compared by
+  // reviewers, so a value that differs between the app and the website is a
+  // finding waiting to happen — change them in both places or in neither.
+
+  /// The support inbox. Matches the address on the website and the one given
+  /// as the App Store support contact.
+  static const String supportEmail = "support@befit.ai";
+
+  /// The entity a user is contracting with.
+  ///
+  /// PLACEHOLDER — must be the registered company or the individual named on
+  /// the Apple Developer account, and must match the Copyright field in App
+  /// Store Connect and COPYRIGHT_HOLDER in the website's footer.
+  static const String legalEntity = "BeFit AI";
+
+  /// Whose law governs the terms. PLACEHOLDER — normally where the entity
+  /// above is registered.
+  static const String legalJurisdiction = "England and Wales";
+
+  /// Shown as "Last updated" on both documents. Bump when the wording changes.
+  static const String legalLastUpdated = "5 September 2026";
 
   // Backend URLs — resolved through the dev/prod server switch
   // (ServerConfig; flip _kDevEnvironment in server_config.dart to develop
