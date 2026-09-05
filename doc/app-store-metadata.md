@@ -97,10 +97,10 @@ within 24 hours prior to the end of the current period. You can manage your
 subscription and turn off auto-renewal in your Apple Account settings after
 purchase.
 
-Terms of Use: «https://YOUR-DOMAIN/terms»
-Privacy Policy: «https://YOUR-DOMAIN/privacy»
+Terms of Use: https://befit.ai/terms
+Privacy Policy: https://befit.ai/privacy
 
-Questions or feedback? «support@YOUR-DOMAIN» — a person reads every one.
+Questions or feedback? emmanuel.philipel@yahoo.com — a person reads every one.
 
 ---
 
@@ -118,19 +118,28 @@ Questions or feedback? «support@YOUR-DOMAIN» — a person reads every one.
 
 ---
 
+## Support contact
+
+The address above and in the App Review table is **emmanuel.philipel@yahoo.com**, standing in until
+`support@befit.ai` receives mail. It lives in exactly two places in code —
+`Constant.supportEmail` in the app and `CONTACT` in `befit_web/lib/legal.ts` —
+and has to be changed in App Store Connect at the same time.
+
+---
+
 ## Support URL (required)
 
-> «https://YOUR-DOMAIN/support»
+> https://befit.ai/support
 
-Apple checks this loads and is relevant. A page with a contact address is
-enough. The site I built has no `/support` route — either add one, or point
-this at the homepage and make sure `support@` is visible on it.
+Apple checks this loads and is relevant. `/support` now exists and answers the
+questions people actually write in about — cancelling, restoring a purchase,
+deleting an account — with the contact address on it.
 
 ---
 
 ## Marketing URL (optional)
 
-> «https://YOUR-DOMAIN»
+> https://befit.ai
 
 ---
 
@@ -153,7 +162,7 @@ behind a subscription — a reviewer without both will be blocked and reject.
 | First name | «...» |
 | Last name | «...» |
 | Phone | «+44 ...» |
-| Email | «...» |
+| Email | emmanuel.philipel@yahoo.com |
 | Demo account username | `demo@abc.com` |
 | Demo account password | `123456789` |
 
@@ -226,7 +235,7 @@ behind a subscription — a reviewer without both will be blocked and reject.
 > photos are stored on the device. Permission is requested in context, and every
 > one of these features is optional.
 >
-> Anything unclear, email «support@YOUR-DOMAIN» and we will respond same day.
+> Anything unclear, email emmanuel.philipel@yahoo.com and we will respond same day.
 
 
 ---
