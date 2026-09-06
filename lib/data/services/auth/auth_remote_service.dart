@@ -1,14 +1,28 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/data/models/auth/user_model.dart';
+import 'package:fitness/domain/models/sign_in_cancelled.dart';
 import 'package:fitness/domain/models/user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract class AuthRemoteDataSource {
   /// Native Google sign-in (mobile). Exchanges tokens with Supabase.
   /// Returns the authenticated user model after successful sign-in.
   Future<User> signInWithGoogle();
+
+  /// Native Sign in with Apple. Exchanges Apple's identity token with Supabase.
+  ///
+  /// Required by App Store guideline 4.8: an app offering a third-party login
+  /// has to offer one that limits collection to name and email and lets the
+  /// user withhold their real address. Apple's private relay is what satisfies
+  /// the second half, which email/password cannot.
+  Future<User> signInWithApple();
 
   /// Verify and sign in user by Gmail address
   Future<User> signInWithGmail(String email);
@@ -64,6 +78,84 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
   
+  @override
+  Future<User> signInWithApple() async {
+    // Apple sees only the hash; Supabase needs the original to verify that the
+    // token it is handed was minted for this request. Generated per call —
+    // reusing one across sign-ins would defeat the replay protection.
+    final rawNonce = _generateNonce();
+    final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+      );
+
+      final idToken = credential.identityToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('Apple sign-in did not return an identity token.');
+      }
+
+      final AuthResponse response = await client.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+
+      final user = response.user;
+      if (user == null) {
+        throw Exception('Sign in succeeded but no user was returned');
+      }
+
+      // Apple sends the name on the FIRST authorization only, and never again
+      // — not on any later sign-in, and not in the identity token. If it is not
+      // captured here the profile has no name for the life of the account.
+      final name = _appleFullName(credential);
+      if (name != null && (user.userMetadata?['full_name'] as String?) == null) {
+        try {
+          final updated = await client.auth.updateUser(
+            UserAttributes(data: {'full_name': name}),
+          );
+          return updated.user ?? user;
+        } catch (e) {
+          // A missing display name is not worth failing a sign-in over.
+          debugPrint('Could not store the Apple display name — $e');
+        }
+      }
+      return user;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw const SignInCancelled();
+      }
+      debugPrint('SignInWithAppleAuthorizationException → ${e.code}: ${e.message}');
+      throw Exception(e.message);
+    } on AuthException catch (e) {
+      debugPrint('Supabase AuthException → message: ${e.message}, code: ${e.code}, status: ${e.statusCode}');
+      throw Exception(e.message);
+    }
+  }
+
+  /// Apple gives the name in parts, and either part can be absent.
+  static String? _appleFullName(AuthorizationCredentialAppleID c) {
+    final parts = [c.givenName, c.familyName]
+        .whereType<String>()
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty);
+    return parts.isEmpty ? null : parts.join(' ');
+  }
+
+  static String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
+  }
+
   @override
   Future<User> signInWithGmail(String email) async {
     try {

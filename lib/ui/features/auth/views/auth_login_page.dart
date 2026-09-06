@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/core/di.dart' as di;
 import 'package:fitness/ui/core/routes/plan_gate.dart';
@@ -225,6 +227,17 @@ class _AuthLoginBodyState extends State<_AuthLoginBody> {
 
                       const SizedBox(height: 28),
 
+                      // Apple sign-in — first, and the same size as Google.
+                      // Guideline 4.8 wants an equivalent option, and the
+                      // layout is where a reviewer judges equivalence.
+                      if (Platform.isIOS) ...[
+                        _AppleButton(onPressed: () => vm.signInWithApple())
+                            .animate(delay: 420.ms)
+                            .fadeIn(duration: 600.ms)
+                            .slideY(begin: 0.15, end: 0),
+                        const SizedBox(height: 12),
+                      ],
+
                       // Google sign-in
                       _GoogleButton(onPressed: () => vm.signInWithGoogle())
                           .animate(delay: 450.ms)
@@ -305,6 +318,58 @@ class _AuthLoginBodyState extends State<_AuthLoginBody> {
 // ─────────────────────────────────────────────────────────────────────────────
 // Google Sign-In Button
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Apple's button, on a dark screen.
+///
+/// White rather than the black treatment used on the signup screen: this page
+/// sits on near-black, where a black button would vanish. Apple's guidelines
+/// allow either, and matching the Google button's shape and height is what
+/// makes the two read as equivalent options rather than a primary and an
+/// afterthought.
+class _AppleButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _AppleButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        height: 58,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.10),
+              blurRadius: 24,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: 2),
+              child: Icon(Icons.apple, size: 25, color: Color(0xFF1A1A1A)),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Continue with Apple',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1A1A1A),
+                letterSpacing: 0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _GoogleButton extends StatelessWidget {
   final VoidCallback onPressed;

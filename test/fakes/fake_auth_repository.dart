@@ -5,6 +5,7 @@ import '../fixtures/fixtures.dart';
 class FakeAuthRepository implements AuthRepository {
   UserEntity? _currentUser = Fixtures.user();
   Exception? signInWithGoogleError;
+  Exception? signInWithAppleError;
   Exception? signInWithGmailError;
   Exception? signOutError;
   Exception? deleteAccountError;
@@ -21,6 +22,12 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<UserEntity?> signInWithGoogle() async {
     if (signInWithGoogleError != null) throw signInWithGoogleError!;
+    return _currentUser;
+  }
+
+  @override
+  Future<UserEntity?> signInWithApple() async {
+    if (signInWithAppleError != null) throw signInWithAppleError!;
     return _currentUser;
   }
 

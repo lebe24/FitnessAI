@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/features/auth/view_models/auth_view_model.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
@@ -74,6 +76,17 @@ class _SignUpState extends State<SignUp> {
                       .animate()
                       .fadeIn(duration: 400.ms)
                       .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
+
+                  // ── Apple button ───────────────────────────────────────
+                  // Above Google, not below it. Guideline 4.8 asks for an
+                  // "equivalent" option, and a reviewer reads equivalence off
+                  // the layout — same width, same weight, first in the stack.
+                  if (Platform.isIOS && !authVm.isLoading)
+                    _AppleSignInButton(
+                      onTap: () => authVm.signInWithApple(),
+                    ).animate(delay: 100.ms)
+                        .fadeIn(duration: 400.ms)
+                        .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
 
                   // ── Google button ──────────────────────────────────────
                   authVm.isLoading
@@ -286,6 +299,57 @@ class _PerksCard extends StatelessWidget {
 }
 
 // ── Google sign-in button ─────────────────────────────────────────────────────
+
+/// Apple's button, in the shape of this screen.
+///
+/// Black fill with the white mark is one of the three treatments Apple's
+/// guidelines permit, and it is the one that reads as primary next to the
+/// white Google button. The wording has to stay "Continue with Apple" or
+/// "Sign in with Apple" — Apple rejects paraphrases.
+class _AppleSignInButton extends StatelessWidget {
+  const _AppleSignInButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Sits a touch high against the cap height of the label.
+            const Padding(
+              padding: EdgeInsets.only(bottom: 2),
+              child: Icon(Icons.apple, size: 26, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Continue with Apple',
+              style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _GoogleSignInButton extends StatelessWidget {
   const _GoogleSignInButton({required this.onTap});
