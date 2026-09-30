@@ -1,4 +1,8 @@
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
+import 'package:fitness/data/services/billing/access_policy.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/ui/core/di.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:fitness/domain/models/session_volume.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:fitness/ui/core/routes/app_router.dart';
@@ -55,13 +59,23 @@ class TrainingVolumeChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = _data;
+    // Read at build, like every other gated surface. AccessPolicy notifies on
+    // entitlement changes, so a purchase elsewhere repaints this with the
+    // chart unlocked.
+    final locked = !sl<AccessPolicy>().canUse(PremiumFeature.trainingVolume);
 
     return GestureDetector(
       // Opaque so the whole card responds, not just the painted pixels.
       // The bars keep their own touch handling for tooltips; a tap that lands
       // between them still opens the history.
       behavior: HitTestBehavior.opaque,
-      onTap: () => context.push(ScreenPaths.workoutHistory),
+      // requirePremium runs the action straight away when the user already
+      // has access, so this is the same tap for everyone.
+      onTap: () => requirePremium(
+        context,
+        PremiumFeature.trainingVolume,
+        () => context.push(ScreenPaths.workoutHistory),
+      ),
       child: Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
       decoration: BoxDecoration(
@@ -72,22 +86,24 @@ class TrainingVolumeChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Header(data: data),
+          _Header(data: data, locked: locked),
           const SizedBox(height: 20),
           SizedBox(
             height: 180,
-            child: isLoading
-                ? const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: _kLime),
-                    ),
-                  )
-                : data.isEmpty
-                    ? const _Empty()
-                    : _Bars(data: data),
+            child: locked
+                ? const _Locked()
+                : isLoading
+                    ? const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: _kLime),
+                        ),
+                      )
+                    : data.isEmpty
+                        ? const _Empty()
+                        : _Bars(data: data),
           ),
           const SizedBox(height: 10),
           // Says the card is tappable. Without it the affordance is invisible —
@@ -95,7 +111,7 @@ class TrainingVolumeChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('View all sessions',
+              Text(locked ? 'Unlock volume trends' : 'View all sessions',
                   style: GoogleFonts.inter(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
@@ -114,7 +130,8 @@ class TrainingVolumeChart extends StatelessWidget {
 
 class _Header extends StatelessWidget {
   final List<SessionVolume> data;
-  const _Header({required this.data});
+  final bool locked;
+  const _Header({required this.data, required this.locked});
 
   @override
   Widget build(BuildContext context) {
@@ -145,15 +162,19 @@ class _Header extends StatelessWidget {
                       color: Colors.white)),
               const SizedBox(height: 2),
               Text(
-                data.isEmpty
-                    ? 'Log a session to see your load'
-                    : 'Last ${data.length} sessions · $sets sets',
+                locked
+                    ? 'See your load across sessions'
+                    : data.isEmpty
+                        ? 'Log a session to see your load'
+                        : 'Last ${data.length} sessions · $sets sets',
                 style: GoogleFonts.inter(fontSize: 11.5, color: _kSub),
               ),
             ],
           ),
         ),
-        if (data.isNotEmpty)
+        if (locked)
+          const PremiumBadge(visible: true)
+        else if (data.isNotEmpty)
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -280,6 +301,51 @@ class _Bars extends StatelessWidget {
                 ),
               ],
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What a free user sees in place of the bars.
+///
+/// The chart is the feature, so unlike the video list — where seeing the
+/// thumbnails is part of the pitch — the numbers themselves are what is being
+/// sold. Showing them dimmed would hand over the answer.
+class _Locked extends StatelessWidget {
+  const _Locked();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: _kLime.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+              border: Border.all(color: _kLime.withValues(alpha: 0.3)),
+            ),
+            child: const Icon(Icons.lock_rounded, color: _kLime, size: 20),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Track your volume over time',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Know whether the training is going anywhere',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(fontSize: 11.5, color: _kSub),
+          ),
         ],
       ),
     );

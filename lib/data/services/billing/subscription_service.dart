@@ -294,6 +294,22 @@ class SubscriptionService extends ChangeNotifier {
   /// e.g. "monthly" / "yearly" — which product granted the entitlement.
   String? get activeProductId => _proEntitlement?.productIdentifier;
 
+  /// Localised price of the product the entitlement came from.
+  ///
+  /// Null when offerings have not loaded, or when the active product is not
+  /// among them — never a guess. A renewal notice quoting the wrong figure is
+  /// worse than one that quotes none.
+  String? get activePriceString {
+    final id = activeProductId;
+    if (id == null) return null;
+    for (final package in availablePackages) {
+      if (package.storeProduct.identifier == id) {
+        return package.storeProduct.priceString;
+      }
+    }
+    return null;
+  }
+
   bool get isInTrial =>
       _proEntitlement?.periodType == PeriodType.trial;
 
