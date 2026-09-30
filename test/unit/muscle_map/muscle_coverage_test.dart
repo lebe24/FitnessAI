@@ -148,6 +148,50 @@ void main() {
     });
   });
 
+  group('what the detail page reads', () {
+    final coverage = MuscleCoverage.fromSessions([
+      _session([
+        _entry('lat pulldown', 'back, biceps'),
+        _entry('lat pulldown', 'set 1: 10 reps @ 100kg | set 2: 10 reps @ 100kg'),
+        _entry('barbell row', 'back'),
+        _entry('barbell row', 'set 1: 8 reps @ 80kg'),
+        _entry('squat', 'quads'),
+        _entry('squat', 'set 1: 5 reps @ 100kg'),
+      ]),
+    ]);
+
+    test('share is this muscle out of everything trained', () {
+      // upper-back 3 (2 + 1), biceps 1, quads 1 -> 5 total.
+      expect(coverage.totalLoad, 5.0);
+      expect(coverage.sharePercent('upper-back'), closeTo(60, 0.01));
+      expect(coverage.sharePercent('quads'), 0, reason: 'quads is not a slug');
+      expect(coverage.sharePercent('quadriceps'), closeTo(20, 0.01));
+    });
+
+    test('a muscle never trained is 0%, not a crash', () {
+      expect(coverage.sharePercent('calves'), 0);
+      expect(MuscleCoverage.empty.sharePercent('chest'), 0,
+          reason: 'nothing logged must not divide by zero');
+    });
+
+    test('exercises are listed per muscle, heaviest first', () {
+      final back = coverage.exercisesFor('upper-back');
+      expect(back.map((e) => e.key), ['lat pulldown', 'barbell row']);
+      expect(back.first.value, 2.0);
+      expect(back.last.value, 1.0);
+    });
+
+    test('an assisting muscle keeps the exercise that assisted it', () {
+      final biceps = coverage.exercisesFor('biceps');
+      expect(biceps.single.key, 'lat pulldown');
+      expect(biceps.single.value, 1.0, reason: 'half of two sets');
+    });
+
+    test('a muscle with no exercises returns an empty list', () {
+      expect(coverage.exercisesFor('calves'), isEmpty);
+    });
+  });
+
   group('shading', () {
     test('the hardest-worked muscle is the top bucket, untrained is zero', () {
       const c = MuscleCoverage(

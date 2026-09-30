@@ -27,10 +27,15 @@ class MuscleCoverage {
   /// Exercises that did resolve, for the "out of" in that sentence.
   final int resolvedExercises;
 
+  /// Sets per exercise, per muscle: which movements built each muscle's total.
+  /// The body map answers "where"; this answers "from what".
+  final Map<String, Map<String, double>> byExercise;
+
   const MuscleCoverage({
     required this.load,
     required this.unresolvedExercises,
     required this.resolvedExercises,
+    this.byExercise = const {},
   });
 
   static const empty = MuscleCoverage(
@@ -38,6 +43,24 @@ class MuscleCoverage {
     unresolvedExercises: 0,
     resolvedExercises: 0,
   );
+
+  /// Every weighted set that landed on a muscle the map can draw.
+  double get totalLoad => load.values.fold(0, (sum, v) => sum + v);
+
+  /// This muscle's share of that total, 0-100. Zero when nothing is logged,
+  /// rather than a division by zero.
+  double sharePercent(String slug) {
+    final total = totalLoad;
+    if (total <= 0) return 0;
+    return ((load[slug] ?? 0) / total) * 100;
+  }
+
+  /// Exercises that trained [slug], heaviest first.
+  List<MapEntry<String, double>> exercisesFor(String slug) {
+    final entries = (byExercise[slug] ?? const {}).entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return entries;
+  }
 
   bool get isEmpty => load.isEmpty;
 
@@ -71,6 +94,7 @@ class MuscleCoverage {
   /// dark on a session that trained both equally hard.
   factory MuscleCoverage.fromSessions(List<WorkoutSessionModel> sessions) {
     final load = <String, double>{};
+    final byExercise = <String, Map<String, double>>{};
     var resolved = 0;
     var unresolved = 0;
 
@@ -94,8 +118,11 @@ class MuscleCoverage {
 
         // The first muscle named is the one being trained; the rest assist.
         for (var i = 0; i < muscles.length; i++) {
+          final slug = muscles[i];
           final weight = i == 0 ? sets.toDouble() : sets * 0.5;
-          load[muscles[i]] = (load[muscles[i]] ?? 0) + weight;
+          load[slug] = (load[slug] ?? 0) + weight;
+          final perExercise = byExercise.putIfAbsent(slug, () => {});
+          perExercise[exercise.name] = (perExercise[exercise.name] ?? 0) + weight;
         }
       }
     }
@@ -104,6 +131,7 @@ class MuscleCoverage {
       load: load,
       unresolvedExercises: unresolved,
       resolvedExercises: resolved,
+      byExercise: byExercise,
     );
   }
 
