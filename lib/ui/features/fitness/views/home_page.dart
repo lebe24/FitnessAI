@@ -31,6 +31,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fitness/data/services/billing/paywall_service.dart';
+import 'package:fitness/data/services/billing/subscription_service.dart';
+import 'package:fitness/data/services/billing/trial_reminder_storage.dart';
+import 'package:fitness/ui/features/fitness/views/trial_ending_dialog.dart';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const _kLime     = Color(0xFFCCFF00);
@@ -64,6 +68,7 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
       context.read<FitnessViewModel>().loadFitnessPlans();
       _scrollToToday();
       _motivationVm.load();
+      _maybeRemindTrialEnding();
     });
     _greetingTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) {
@@ -107,6 +112,43 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
 
   String _shortName(String name, {int max = 15}) =>
       name.length <= max ? name : '${name.substring(0, max)}…';
+
+  /// Warn once, two days out, that the free trial is about to be charged.
+  ///
+  /// On the home screen rather than as a notification: it needs no permission
+  /// the user may have refused, and this is the screen they open anyway. The
+  /// decision of whether to show lives in TrialReminderStorage so it can be
+  /// tested without a widget.
+  Future<void> _maybeRemindTrialEnding() async {
+    final access = sl<AccessPolicy>();
+    final subs = sl<SubscriptionService>();
+    final endsAt = access.periodEndsAt;
+
+    final last = await TrialReminderStorage.lastRemindedFor();
+    if (!TrialReminderStorage.shouldRemind(
+      trialEndingSoon: access.trialEndingSoon,
+      willRenew: subs.willRenew,
+      endsAt: endsAt,
+      lastRemindedFor: last,
+    )) {
+      return;
+    }
+    if (!mounted) return;
+
+    // Recorded before showing: a reminder that reappears because the dialog
+    // was dismissed the wrong way is more annoying than one that is missed,
+    // and Profile → Billing says the same thing at any time.
+    await TrialReminderStorage.markShown(endsAt!);
+    if (!mounted) return;
+
+    await TrialEndingDialog.show(
+      context,
+      daysLeft: access.daysRemaining ?? 0,
+      endsAt: endsAt,
+      price: subs.activePriceString,
+      onManage: () => sl<PaywallService>().presentCustomerCenter(),
+    );
+  }
 
   Future<void> _scanFoodItem() async {
     // Gate before the camera opens, not after — asking someone to photograph
