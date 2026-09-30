@@ -7,6 +7,7 @@ import 'package:fitness/domain/models/premium_feature.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:fitness/ui/features/muscle_map/views/body_figure.dart';
+import 'package:fitness/ui/features/muscle_map/views/muscle_detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -53,6 +54,21 @@ class _MuscleCoverageCardState extends State<MuscleCoverageCard> {
     });
   }
 
+  void _open(String slug, MuscleCoverage coverage) {
+    final muscle = Muscle.bySlug(slug);
+    if (muscle == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MuscleDetailPage(
+          muscle: muscle,
+          coverage: coverage,
+          sessionCount: widget.sessions.length,
+        ),
+      ),
+    );
+  }
+
   /// A lime ramp: barely lit for a muscle that got one set, full for the one
   /// that got the most.
   Color? _fillFor(String slug, Map<String, int> levels) {
@@ -95,11 +111,15 @@ class _MuscleCoverageCardState extends State<MuscleCoverageCard> {
               map: _map,
               levels: coverage.levels,
               fillFor: _fillFor,
+              onSelect: (slug) => _open(slug, coverage),
             ),
             const SizedBox(height: 14),
             const _Legend(),
             const SizedBox(height: 14),
-            _TopMuscles(coverage: coverage),
+            _TopMuscles(
+              coverage: coverage,
+              onSelect: (slug) => _open(slug, coverage),
+            ),
             if (coverage.unresolvedExercises > 0) ...[
               const SizedBox(height: 12),
               _Unresolved(count: coverage.unresolvedExercises),
@@ -147,7 +167,7 @@ class _Header extends StatelessWidget {
                     ? 'See where your training lands'
                     : sessions == 0
                         ? 'Log a session to see where it lands'
-                        : 'Across your last $sessions sessions',
+                        : 'Last $sessions sessions · tap a muscle',
                 style: GoogleFonts.inter(fontSize: 11.5, color: _kSub),
               ),
             ],
@@ -163,11 +183,13 @@ class _Figures extends StatelessWidget {
   final BodyMap? map;
   final Map<String, int> levels;
   final Color? Function(String slug, Map<String, int> levels) fillFor;
+  final ValueChanged<String> onSelect;
 
   const _Figures({
     required this.map,
     required this.levels,
     required this.fillFor,
+    required this.onSelect,
   });
 
   @override
@@ -181,20 +203,28 @@ class _Figures extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: BodyFigure(
-              view: map.front,
-              fillFor: (slug) => fillFor(slug, levels),
-              silhouetteColor: const Color(0xFF14171F),
-              outlineColor: _kCard,
+            child: Semantics(
+              label: 'Front of body. Tap a muscle to see how you trained it.',
+              child: BodyFigure(
+                view: map.front,
+                fillFor: (slug) => fillFor(slug, levels),
+                onSelect: onSelect,
+                silhouetteColor: const Color(0xFF14171F),
+                outlineColor: _kCard,
+              ),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: BodyFigure(
-              view: map.back,
-              fillFor: (slug) => fillFor(slug, levels),
-              silhouetteColor: const Color(0xFF14171F),
-              outlineColor: _kCard,
+            child: Semantics(
+              label: 'Back of body. Tap a muscle to see how you trained it.',
+              child: BodyFigure(
+                view: map.back,
+                fillFor: (slug) => fillFor(slug, levels),
+                onSelect: onSelect,
+                silhouetteColor: const Color(0xFF14171F),
+                outlineColor: _kCard,
+              ),
             ),
           ),
         ],
@@ -239,7 +269,8 @@ class _Legend extends StatelessWidget {
 /// judge it from a colour.
 class _TopMuscles extends StatelessWidget {
   final MuscleCoverage coverage;
-  const _TopMuscles({required this.coverage});
+  final ValueChanged<String> onSelect;
+  const _TopMuscles({required this.coverage, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +280,10 @@ class _TopMuscles extends StatelessWidget {
     return Column(
       children: [
         for (final slug in top)
-          Padding(
+          GestureDetector(
+            onTap: () => onSelect(slug),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               children: [
@@ -284,7 +318,10 @@ class _TopMuscles extends StatelessWidget {
                     style: GoogleFonts.inter(fontSize: 11, color: _kSub),
                   ),
                 ),
+                Icon(Icons.chevron_right_rounded,
+                    size: 16, color: Colors.white.withValues(alpha: 0.3)),
               ],
+            ),
             ),
           ),
       ],
