@@ -18,6 +18,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fitness/ui/features/analytic/views/muscle_coverage_card.dart';
 
 // ── Design tokens (BeFit dark brand) ─────────────────────────────────────────
 const _kBg      = Color(0xFF0A0C12);
@@ -690,6 +691,22 @@ class _StatisticsPageState extends State<StatisticsPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TrainingVolumeChart(
+                  sessions: _sessions,
+                  isLoading: _sessionsLoading,
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+
+            // ── Muscles trained ───────────────────────────────────────────────
+            // Directly under the volume chart, and from the same sessions: the
+            // chart says whether the training is growing, this says what it is
+            // growing. Reading them apart would invite them to disagree.
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: MuscleCoverageCard(
                   sessions: _sessions,
                   isLoading: _sessionsLoading,
                 ),
