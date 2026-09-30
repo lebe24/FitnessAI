@@ -45,6 +45,7 @@ dependencies:
   speech_to_text: ^7.4.0
   purchases_ui_flutter: ^8.11.0
   sign_in_with_apple: ^8.1.0
+  path_drawing: ^1.0.1
 
 
 dev_dependencies:
@@ -73,4 +74,6 @@ flutter:
     - assets/icon/
     - assets/logo/
     - assets/audio/
+    # Body outlines for the muscle map (MIT, MuscleMap by Melih Colpan).
+    - assets/data/
     - assets/

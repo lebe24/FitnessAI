@@ -10,6 +10,7 @@ import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/theme/app_pallet.dart';
 import 'package:fitness/ui/core/widgets/greeting.dart';
 import 'package:fitness/ui/features/fitness/views/saved_workouts_card.dart';
+import 'package:fitness/ui/features/muscle_map/views/muscle_map_card.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
 import 'package:fitness/ui/features/fitness/views/motivation_schedule_sheet.dart';
 import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.dart';
@@ -371,6 +372,13 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                       onLongPress: kDebugMode ? _sendTestNotification : null,
                       child: _MotivationBanner(),
                     ),
+
+                    const SizedBox(height: 28),
+
+                    // ── Muscle map ───────────────────────────────────────────
+                    _SectionLabel(label: 'Muscle Map'),
+                    const SizedBox(height: 12),
+                    const MuscleMapCard(),
 
                     const SizedBox(height: 28),
 
