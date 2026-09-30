@@ -1,4 +1,8 @@
+import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/data/services/muscle_map/body_map_source.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/ui/core/di.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:fitness/ui/features/muscle_map/views/body_figure.dart';
 import 'package:fitness/ui/features/muscle_map/views/muscle_map_page.dart';
 import 'package:flutter/material.dart';
@@ -16,10 +20,16 @@ class MuscleMapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locked = !sl<AccessPolicy>().canUse(PremiumFeature.muscleMap);
+
     return GestureDetector(
-      onTap: () => Navigator.push(
+      onTap: () => requirePremium(
         context,
-        MaterialPageRoute(builder: (_) => const MuscleMapPage()),
+        PremiumFeature.muscleMap,
+        () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MuscleMapPage()),
+        ),
       ),
       child: Container(
         height: 130,
@@ -35,10 +45,10 @@ class MuscleMapCard extends StatelessWidget {
             ),
           ],
         ),
-        child: const Row(
+        child: Row(
           children: [
-            SizedBox(width: 110, child: _BodyPreview()),
-            Expanded(child: _CardText()),
+            const SizedBox(width: 110, child: _BodyPreview()),
+            Expanded(child: _CardText(locked: locked)),
           ],
         ),
       ),
@@ -103,7 +113,8 @@ class _BodyPreviewState extends State<_BodyPreview> {
 }
 
 class _CardText extends StatelessWidget {
-  const _CardText();
+  final bool locked;
+  const _CardText({required this.locked});
 
   @override
   Widget build(BuildContext context) {
@@ -113,14 +124,23 @@ class _CardText extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'Train by muscle',
-            style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              height: 1.2,
-            ),
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  'Train by muscle',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              PremiumBadge(visible: locked),
+            ],
           ),
           const SizedBox(height: 4),
           Text(

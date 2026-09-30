@@ -80,6 +80,10 @@ class AccessPolicy extends ChangeNotifier {
       case PremiumFeature.agentChat:
       case PremiumFeature.equipmentScan:
       case PremiumFeature.videoTutorial:
+      case PremiumFeature.muscleMap:
+      case PremiumFeature.addExercise:
+      case PremiumFeature.trainingVolume:
+      case PremiumFeature.adjustPlan:
         // OR, never AND: a granted account needs no purchase, and a paying
         // user must not lose access because the backend is unreachable.
         return _subs.isPro || _comp.isGranted;

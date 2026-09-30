@@ -13,6 +13,8 @@ import 'package:fitness/ui/features/profile/views/support_contact_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0A0C12);
@@ -499,8 +501,12 @@ List<_Item> _generalItems(AppLocalizations t) => [
   _Item(
     icon: Icons.fitness_center_rounded,
     title: t.menuAdjustWorkoutPlan,
-    onTap: (ctx) => Navigator.of(ctx).push(
-      MaterialPageRoute(builder: (_) => const AdjustWorkoutPlanPage()),
+    onTap: (ctx) => requirePremium(
+      ctx,
+      PremiumFeature.adjustPlan,
+      () => Navigator.of(ctx).push(
+        MaterialPageRoute(builder: (_) => const AdjustWorkoutPlanPage()),
+      ),
     ),
   ),
   _Item(

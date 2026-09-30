@@ -63,6 +63,21 @@ void main() {
     });
   });
 
+  group('paywall copy', () {
+    // The switches in PremiumFeatureCopy are exhaustive, so a new feature
+    // cannot compile without copy — but it can compile with empty strings,
+    // which shows the user a blank paywall headline for the thing they just
+    // tapped. That is the whole point of naming features individually.
+    test('every feature has a title and a pitch', () {
+      for (final f in PremiumFeature.values) {
+        expect(f.title.trim(), isNotEmpty, reason: f.name);
+        expect(f.pitch.trim(), isNotEmpty, reason: f.name);
+        expect(f.title.length, lessThan(40),
+            reason: '${f.name}: a headline this long wraps badly');
+      }
+    });
+  });
+
   group('canUse', () {
     test('every premium feature is locked without an entitlement', () {
       final p = _policy(_FakeSubs());

@@ -27,6 +27,18 @@ enum PremiumFeature {
 
   /// Demonstration videos attached to an exercise.
   videoTutorial,
+
+  /// The body map, and the tutorials found by tapping a muscle.
+  muscleMap,
+
+  /// Adding a movement of your own to a day in the plan.
+  addExercise,
+
+  /// The volume trend across logged sessions.
+  trainingVolume,
+
+  /// Rewriting the plan around a changed goal or new stats.
+  adjustPlan,
 }
 
 extension PremiumFeatureCopy on PremiumFeature {
@@ -40,6 +52,10 @@ extension PremiumFeatureCopy on PremiumFeature {
         PremiumFeature.agentChat => 'Ask your coach',
         PremiumFeature.equipmentScan => 'Scan any machine',
         PremiumFeature.videoTutorial => 'Watch the movement',
+        PremiumFeature.muscleMap => 'Train by muscle',
+        PremiumFeature.addExercise => 'Make the day yours',
+        PremiumFeature.trainingVolume => 'See if it is working',
+        PremiumFeature.adjustPlan => 'Rebuild your plan',
       };
 
   String get pitch => switch (this) {
@@ -55,5 +71,13 @@ extension PremiumFeatureCopy on PremiumFeature {
           'Point your camera at a machine and get exercises you can do on it right now.',
         PremiumFeature.videoTutorial =>
           'Watch how every movement should look before you load the bar.',
+        PremiumFeature.muscleMap =>
+          'Tap any muscle on the body and get tutorials that train it.',
+        PremiumFeature.addExercise =>
+          'Add your own movements to any training day and keep them in the plan.',
+        PremiumFeature.trainingVolume =>
+          'Watch your total load move across sessions, so you know the training is going somewhere.',
+        PremiumFeature.adjustPlan =>
+          'Change your goal, your days or your stats and have the whole plan rewritten around them.',
       };
 }

@@ -516,6 +516,14 @@ class _WorkoutPageState extends State<WorkoutPage> {
   }
 
   Future<void> _showAddExerciseSheet(BuildContext context) async {
+    // Same shape as _showScanEquipmentDialog: check, send them to the paywall,
+    // and re-enter on the way back so a purchase lands them in the sheet they
+    // asked for rather than back at the button.
+    if (!sl<AccessPolicy>().canUse(PremiumFeature.addExercise)) {
+      await requirePremium(context, PremiumFeature.addExercise,
+          () => _showAddExerciseSheet(context));
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final added = await showModalBottomSheet<Exercise>(
       context: context,
