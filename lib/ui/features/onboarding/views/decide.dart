@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -85,7 +87,11 @@ class DecideStep extends StatelessWidget {
                           description:
                               'Scan your physique and let the AI craft a visual-based workout plan',
                           delay: 70,
-                          onTap: () => context.push('/onboarding-analysis'),
+                          onTap: () {
+                            Analytics.track(AnalyticsEvents.onboardingPathChosen,
+                                {'path': 'photo'});
+                            context.push('/onboarding-analysis');
+                          },
                         ),
                       ),
                     ],

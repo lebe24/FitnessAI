@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
 import 'package:fitness/ui/features/onboarding/views/share_screen.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +27,7 @@ class GoalStep extends StatefulWidget {
 
 class _GoalStepState extends State<GoalStep> {
   late final TextEditingController _controller;
+  bool _customTracked = false;
   bool _fieldActive = false;
 
   @override
@@ -46,12 +49,21 @@ class _GoalStepState extends State<GoalStep> {
     // Clear custom field when a preset is chosen
     _controller.clear();
     setState(() => _fieldActive = false);
+    Analytics.track(AnalyticsEvents.onboardingAnswered,
+        {'step': 'goal', 'value': preset});
     vm.selectGoal(preset);
   }
 
   void _onCustomChanged(OnboardingViewModel vm, String value) {
     setState(() => _fieldActive = value.trim().isNotEmpty);
     if (value.trim().isNotEmpty) {
+      // A typed goal is free text, so only the fact that one was typed is
+      // recorded — and only once, not on every keystroke.
+      if (!_customTracked) {
+        _customTracked = true;
+        Analytics.track(AnalyticsEvents.onboardingAnswered,
+            {'step': 'goal', 'value': 'custom'});
+      }
       vm.selectGoal(value.trim());
     }
   }

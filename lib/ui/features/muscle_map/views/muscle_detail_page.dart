@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/models/youtube/video_summary.dart';
 import 'package:fitness/data/services/api/youtube_video_cache.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
@@ -58,6 +60,8 @@ class _MuscleDetailPageState extends State<MuscleDetailPage> {
   @override
   void initState() {
     super.initState();
+    Analytics.track(
+        AnalyticsEvents.muscleDetailOpened, {'muscle': widget.muscle.slug});
     final cached = _videoCache.getCachedVideos(_cacheKey);
     if (cached != null) {
       _videosRequested = true;
@@ -68,6 +72,8 @@ class _MuscleDetailPageState extends State<MuscleDetailPage> {
   String get _cacheKey => 'muscle:${widget.muscle.slug}';
 
   Future<void> _askAdvisor() async {
+    Analytics.track(
+        AnalyticsEvents.muscleAdvisorAsked, {'muscle': widget.muscle.slug});
     setState(() => _advisorState = _AdvisorState.loading);
     final c = widget.coverage;
     final slug = widget.muscle.slug;

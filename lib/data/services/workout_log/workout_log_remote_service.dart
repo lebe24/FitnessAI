@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:dio/dio.dart';
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
 import 'package:fitness/domain/models/workout_plan.dart';
@@ -222,6 +224,10 @@ class WorkoutLogRemoteDataSourceImpl implements WorkoutLogRemoteDataSource {
       if (notes != null) 'notes': notes,
     };
     final res = await _dio.post('/api/v1/logs/sessions/complete', data: body);
+    Analytics.track(AnalyticsEvents.workoutSaved, {
+      'exercise_count': exercises.length,
+      'duration_mins': durationMins,
+    });
     return WorkoutSessionModel.fromJson(res.data as Map<String, dynamic>);
   }
 

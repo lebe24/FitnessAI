@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/services/diagnostics/error_log_service.dart';
 import 'package:fitness/domain/models/friendly_error.dart';
 import 'package:fitness/domain/models/user.dart';
@@ -62,6 +64,7 @@ class AuthViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       _user = await _signInWithGoogle();
+      Analytics.track(AnalyticsEvents.signedIn, {'method': 'google'});
       _error = null;
     } catch (e, st) {
       _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
@@ -76,6 +79,7 @@ class AuthViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       _user = await _signInWithApple();
+      Analytics.track(AnalyticsEvents.signedIn, {'method': 'apple'});
       _error = null;
     } catch (e, st) {
       _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
@@ -94,6 +98,7 @@ class AuthViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       _user = await _signInWithGmail(email);
+      Analytics.track(AnalyticsEvents.signedIn, {'method': 'gmail'});
       _error = null;
     } catch (e, st) {
       _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
@@ -115,6 +120,7 @@ class AuthViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       _user = await usecase(email, password);
+      Analytics.track(AnalyticsEvents.signedUp, {'method': 'email'});
       _error = null;
     } catch (e, st) {
       _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
@@ -131,6 +137,7 @@ class AuthViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       _user = await usecase(email, password);
+      Analytics.track(AnalyticsEvents.signedIn, {'method': 'email'});
       _error = null;
     } catch (e, st) {
       _error = FriendlyError.from(e, fallback: FriendlyError.signInFailed);
@@ -144,6 +151,7 @@ class AuthViewModel extends ChangeNotifier {
   Future<void> signOut() async {
     _setLoading(true);
     try {
+      Analytics.track(AnalyticsEvents.signedOut);
       await _signOut();
       _user = null;
       _error = null;
@@ -160,6 +168,7 @@ class AuthViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       await _deleteAccount();
+      Analytics.track(AnalyticsEvents.accountDeleted);
       _user = null;
       _error = null;
     } catch (e, st) {

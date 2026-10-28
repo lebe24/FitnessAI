@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/models/youtube/video_summary.dart';
 import 'package:fitness/data/services/api/youtube_video_cache.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
@@ -47,6 +49,7 @@ class _MuscleMapPageState extends State<MuscleMapPage> {
   @override
   void initState() {
     super.initState();
+    Analytics.track(AnalyticsEvents.muscleMapOpened);
     _loadMap();
   }
 

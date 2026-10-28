@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -150,6 +152,16 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
     );
   }
 
+  /// One event for every card on the home screen, so "which cards do people
+  /// reach for, and how many hit the paywall" is a single breakdown. [feature]
+  /// is the premium feature the card opens, if any.
+  void _trackCard(String card, {PremiumFeature? feature}) {
+    Analytics.track(AnalyticsEvents.homeCardTapped, {
+      'card': card,
+      'locked': feature != null && !sl<AccessPolicy>().canUse(feature),
+    });
+  }
+
   Future<void> _scanFoodItem() async {
     // Gate before the camera opens, not after — asking someone to photograph
     // their lunch and then telling them to pay is a worse experience than
@@ -165,6 +177,8 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
         imageQuality: 85,
       );
       if (image != null && mounted) {
+        Analytics.track(AnalyticsEvents.scanPhotoSelected,
+            {'kind': 'meal', 'source': 'camera'});
         context.push('/nutrition', extra: {'imagePath': image.path});
       }
     } catch (e) {
@@ -192,6 +206,8 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
         maxWidth: 1280,
       );
       if (image == null || !mounted) return;
+      Analytics.track(AnalyticsEvents.scanPhotoSelected,
+          {'kind': 'body', 'source': source.name});
       setState(() => _bodyScanImagePath = image.path);
       _runBodyComposition(image.path);
     } catch (e) {
@@ -236,6 +252,7 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
   }
 
   void _openStreakSheet(int streak) {
+    _trackCard('streak');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -388,7 +405,11 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                     // ── Food Scan ────────────────────────────────────────────
                     _SectionLabel(label: 'Nutrition Scanner'),
                     const SizedBox(height: 12),
-                    _FoodScanCard(onTap: _scanFoodItem),
+                    _FoodScanCard(onTap: () {
+                      _trackCard('nutrition_scanner',
+                          feature: PremiumFeature.nutritionScanner);
+                      _scanFoodItem();
+                    }),
 
                     const SizedBox(height: 28),
 
@@ -397,8 +418,16 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                     const SizedBox(height: 12),
                     _BodyScanCard(
                       imagePath: _bodyScanImagePath,
-                      onCamera:  () => _pickBodyScanImage(ImageSource.camera),
-                      onGallery: () => _pickBodyScanImage(ImageSource.gallery),
+                      onCamera: () {
+                        _trackCard('body_composition',
+                            feature: PremiumFeature.bodyComposition);
+                        _pickBodyScanImage(ImageSource.camera);
+                      },
+                      onGallery: () {
+                        _trackCard('body_composition',
+                            feature: PremiumFeature.bodyComposition);
+                        _pickBodyScanImage(ImageSource.gallery);
+                      },
                       onClear:   () => setState(() => _bodyScanImagePath = null),
                     ),
 
@@ -408,7 +437,11 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                     _SectionLabel(label: 'Your Motivation'),
                     const SizedBox(height: 12),
                     GestureDetector(
-                      onTap: _openTonePicker,
+                      onTap: () {
+                        _trackCard('motivation',
+                            feature: PremiumFeature.motivation);
+                        _openTonePicker();
+                      },
                       // Debug builds: long-press to fire a test notification
                       // 10s out and confirm OS delivery on a real device.
                       onLongPress: kDebugMode ? _sendTestNotification : null,
@@ -979,6 +1012,8 @@ class _TonePickerSheetState extends State<_TonePickerSheet> {
     );
     if (!mounted) return;
     setState(() => _generating = false);
+    Analytics.track(AnalyticsEvents.motivationGenerated,
+        {'tone': tone, 'success': message != null});
 
     if (message == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

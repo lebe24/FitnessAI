@@ -37,7 +37,8 @@ Future<void> requirePremium(
     return;
   }
 
-  final purchased = await sl<PaywallService>().present();
+  final purchased =
+      await sl<PaywallService>().present(source: feature.name);
   if (purchased && context.mounted) {
     await onGranted();
   }

@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/data/services/muscle_map/body_map_source.dart';
 import 'package:fitness/domain/models/premium_feature.dart';
@@ -8,10 +10,10 @@ import 'package:fitness/ui/features/muscle_map/views/muscle_map_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-const _kCard   = Color(0xFF111318);
+const _kCard = Color(0xFF111318);
 const _kBorder = Color(0xFF1E2330);
-const _kLime   = Color(0xFFCCFF00);
-const _kDim    = Color(0x80FFFFFF);
+const _kLime = Color(0xFFCCFF00);
+const _kDim = Color(0x80FFFFFF);
 
 /// Home-screen entry to [MuscleMapPage]. Previews the body so the card says
 /// what it opens before anyone reads it.
@@ -23,14 +25,20 @@ class MuscleMapCard extends StatelessWidget {
     final locked = !sl<AccessPolicy>().canUse(PremiumFeature.muscleMap);
 
     return GestureDetector(
-      onTap: () => requirePremium(
-        context,
-        PremiumFeature.muscleMap,
-        () => Navigator.push(
+      onTap: () {
+        Analytics.track(AnalyticsEvents.homeCardTapped, {
+          'card': 'muscle_map',
+          'locked': locked,
+        });
+        requirePremium(
           context,
-          MaterialPageRoute(builder: (_) => const MuscleMapPage()),
-        ),
-      ),
+          PremiumFeature.muscleMap,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MuscleMapPage()),
+          ),
+        );
+      },
       child: Container(
         height: 130,
         decoration: BoxDecoration(
@@ -71,12 +79,14 @@ class _BodyPreviewState extends State<_BodyPreview> {
   @override
   void initState() {
     super.initState();
-    BodyMapSource.load().then((map) {
-      if (mounted) setState(() => _map = map);
-    }).catchError((_) {
-      // The preview is decoration. If the asset cannot load, the card still
-      // reads and still opens the page, which shows the real error.
-    });
+    BodyMapSource.load()
+        .then((map) {
+          if (mounted) setState(() => _map = map);
+        })
+        .catchError((_) {
+          // The preview is decoration. If the asset cannot load, the card still
+          // reads and still opens the page, which shows the real error.
+        });
   }
 
   @override
@@ -158,8 +168,11 @@ class _CardText extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.accessibility_new_rounded,
-                    color: Colors.white.withValues(alpha: 0.6), size: 13),
+                Icon(
+                  Icons.accessibility_new_rounded,
+                  color: Colors.white.withValues(alpha: 0.6),
+                  size: 13,
+                ),
                 const SizedBox(width: 5),
                 Text(
                   'Open map',

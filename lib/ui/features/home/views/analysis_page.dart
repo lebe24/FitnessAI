@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/features/home/view_models/upload_view_model.dart';
 import 'package:fitness/ui/features/home/views/result_modal.dart';
@@ -64,13 +66,24 @@ class _AnalysisPageState extends State<AnalysisPage> {
       context: ctx,
       backgroundColor: Colors.transparent,
       builder: (_) => _SourcePickerSheet(
-        onCamera: () { Navigator.pop(ctx); vm.pickFromCamera(); },
-        onGallery: () { Navigator.pop(ctx); vm.pickFromGallery(); },
+        onCamera: () {
+          Navigator.pop(ctx);
+          Analytics.track(AnalyticsEvents.scanPhotoSelected,
+              {'kind': 'physique', 'source': 'camera'});
+          vm.pickFromCamera();
+        },
+        onGallery: () {
+          Navigator.pop(ctx);
+          Analytics.track(AnalyticsEvents.scanPhotoSelected,
+              {'kind': 'physique', 'source': 'gallery'});
+          vm.pickFromGallery();
+        },
       ),
     );
   }
 
   void _openResultModal(BuildContext ctx, UploadViewModel vm) {
+    Analytics.track(AnalyticsEvents.planGenerateTapped);
     final onboardingData =
         ctx.read<OnboardingViewModel>().data;
     showModalBottomSheet<void>(

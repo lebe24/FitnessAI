@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
 import 'package:fitness/ui/features/onboarding/views/share_screen.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +45,11 @@ class WorkoutDaysStep extends StatelessWidget {
               description: 'Stay active and build healthy habits',
               activeDots: 2,
               isSelected: selected == 2,
-              onTap: () => vm.selectWorkoutDays(2),
+              onTap: () {
+                Analytics.track(AnalyticsEvents.onboardingAnswered,
+                    {'step': 'workoutDays', 'value': 2});
+                vm.selectWorkoutDays(2);
+              },
               delay: 0,
             ),
             _DayCard(
@@ -53,7 +59,11 @@ class WorkoutDaysStep extends StatelessWidget {
               description: 'Build serious gains with balanced recovery',
               activeDots: 4,
               isSelected: selected == 4,
-              onTap: () => vm.selectWorkoutDays(4),
+              onTap: () {
+                Analytics.track(AnalyticsEvents.onboardingAnswered,
+                    {'step': 'workoutDays', 'value': 4});
+                vm.selectWorkoutDays(4);
+              },
               delay: 80,
             ),
             _DayCard(
@@ -63,7 +73,11 @@ class WorkoutDaysStep extends StatelessWidget {
               description: 'Elite training for maximum performance',
               activeDots: 6,
               isSelected: selected == 6,
-              onTap: () => vm.selectWorkoutDays(6),
+              onTap: () {
+                Analytics.track(AnalyticsEvents.onboardingAnswered,
+                    {'step': 'workoutDays', 'value': 6});
+                vm.selectWorkoutDays(6);
+              },
               delay: 160,
             ),
           ],

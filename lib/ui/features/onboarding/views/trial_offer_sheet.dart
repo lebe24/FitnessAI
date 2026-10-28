@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/data/services/billing/paywall_service.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
@@ -33,6 +35,7 @@ class TrialOfferSheet extends StatefulWidget {
     // returning after a lapse they have already fixed, must not be pitched.
     if (!sl<AccessPolicy>().isFree) return true;
 
+    Analytics.track(AnalyticsEvents.trialOfferShown);
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -40,6 +43,8 @@ class TrialOfferSheet extends StatefulWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => const TrialOfferSheet(),
     );
+    Analytics.track(
+        AnalyticsEvents.trialOfferClosed, {'entitled': result ?? false});
     return result ?? false;
   }
 

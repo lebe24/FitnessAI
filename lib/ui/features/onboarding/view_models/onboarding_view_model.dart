@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/models/onboarding/onboarding_data.dart';
 import 'package:fitness/ui/features/onboarding/views/onboarding_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -111,13 +113,33 @@ class OnboardingViewModel extends ChangeNotifier {
   }
 
   void nextStep() {
+    final leaving = _step;
     _step = _nextStep(_step);
+    // Completing a step and viewing the next are separate facts: the gap
+    // between them is where people stall, and the funnel needs both.
+    Analytics.track(AnalyticsEvents.onboardingStepCompleted, {
+      'step': leaving.name,
+      'index': leaving.index,
+    });
+    _trackStepViewed('forward');
     notifyListeners();
   }
 
   void previousStep() {
     _step = _prevStep(_step);
+    _trackStepViewed('back');
     notifyListeners();
+  }
+
+  /// Call once when the onboarding screen opens, so the first step counts.
+  void trackInitialStep() => _trackStepViewed('start');
+
+  void _trackStepViewed(String direction) {
+    Analytics.track(AnalyticsEvents.onboardingStepViewed, {
+      'step': _step.name,
+      'index': _step.index,
+      'direction': direction,
+    });
   }
 
   // ── Private ───────────────────────────────────────────────────────────────
