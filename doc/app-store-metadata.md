@@ -338,6 +338,17 @@ Notes on the wording, for next time:
 - [ ] **Screenshots** for 6.9" and 6.5" displays
 - [ ] **App Privacy questionnaire** — must match what the app collects: camera,
       photos, health and fitness data, identifiers
+- [ ] **App Privacy: add analytics (PostHog) before shipping the build that
+      contains it.** In App Store Connect → App Privacy, add:
+      - **Usage Data → Product Interaction** — collected; **linked to the
+        user** (events carry the account ID); purpose **Analytics**; **not**
+        used for tracking.
+      - **Identifiers → User ID** — already declared for the account; add
+        **Analytics** to its purposes.
+      - Everything else stays as is. The app never sends name, email, photos,
+        message text or body measurements in an event, and does not use the
+        advertising identifier, so no tracking prompt (ATT) is needed.
+      The privacy policy (in-app and website) already describes this.
 - [x] **Price tier confirmed** — the yearly product is **US$79.99**, so the
       ₦129,900 (~US$85) sandbox charge was the right tier converted, not a
       figure out by 10×. The marketing site now advertises the same number.
