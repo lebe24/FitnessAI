@@ -31,7 +31,7 @@ class Constant {
   static const String legalJurisdiction = "England and Wales";
 
   /// Shown as "Last updated" on both documents. Bump when the wording changes.
-  static const String legalLastUpdated = "5 September 2026";
+  static const String legalLastUpdated = "23 October 2026";
 
   // Backend URLs — resolved through the dev/prod server switch
   // (ServerConfig; flip _kDevEnvironment in server_config.dart to develop
@@ -57,6 +57,17 @@ class Constant {
   
   // Android OAuth client ID
   static final oauthAndroidClient = dotenv.env['OAUTH_ANDROID_CLIENT'];
+
+  // PostHog (product analytics) — the project API key is write-only and public
+  // by design (it ships in every client), like the RevenueCat SDK key. Leave it
+  // unset to run with analytics off; the app behaves the same without it.
+  static final posthogApiKey = dotenv.env['POSTHOG_API_KEY'] ?? '';
+
+  /// Must match the region the PostHog project was created in (Settings →
+  /// Project → Region). A key from a US project sent to the EU host is dropped.
+  /// Use https://eu.i.posthog.com for an EU project.
+  static final posthogHost =
+      dotenv.env['POSTHOG_HOST'] ?? 'https://us.i.posthog.com';
 
   // API Keys
   static final youtubeApiKey = dotenv.env['YOUTUBE_API_KEY'];

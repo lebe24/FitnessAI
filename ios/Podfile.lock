@@ -64,6 +64,11 @@ PODS:
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - PostHog (3.92.3)
+  - posthog_flutter (0.0.1):
+    - Flutter
+    - FlutterMacOS
+    - PostHog (< 4.0.0, >= 3.84.0)
   - PromisesObjC (2.4.0)
   - purchases_flutter (8.11.0):
     - Flutter
@@ -103,6 +108,7 @@ DEPENDENCIES:
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - just_audio (from `.symlinks/plugins/just_audio/darwin`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - posthog_flutter (from `.symlinks/plugins/posthog_flutter/darwin`)
   - purchases_flutter (from `.symlinks/plugins/purchases_flutter/ios`)
   - purchases_ui_flutter (from `.symlinks/plugins/purchases_ui_flutter/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -121,6 +127,7 @@ SPEC REPOS:
     - GTMAppAuth
     - GTMSessionFetcher
     - OrderedSet
+    - PostHog
     - PromisesObjC
     - PurchasesHybridCommon
     - PurchasesHybridCommonUI
@@ -148,6 +155,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/just_audio/darwin"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  posthog_flutter:
+    :path: ".symlinks/plugins/posthog_flutter/darwin"
   purchases_flutter:
     :path: ".symlinks/plugins/purchases_flutter/ios"
   purchases_ui_flutter:
@@ -181,6 +190,8 @@ SPEC CHECKSUMS:
   just_audio: a42c63806f16995daf5b219ae1d679deb76e6a79
   OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   path_provider_foundation: 0b743cbb62d8e47eab856f09262bb8c1ddcfe6ba
+  PostHog: 6825bdf09735b360dae58712f89a09470b22fd20
+  posthog_flutter: c56f360cc190893311cb7c832e0de11b11722b34
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   purchases_flutter: c1245d908efb42739b626d03905302c003d26811
   purchases_ui_flutter: 6d910d07f4bcadbfd7bf3ff356278943d76cd34f

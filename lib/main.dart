@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:fitness/l10n/generated/app_localizations.dart';
 import 'package:fitness/ui/core/constants/constant.dart';
+import 'package:fitness/data/services/analytics/analytics_bootstrap.dart';
+import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/data/services/billing/billing_bootstrap.dart';
 import 'package:fitness/ui/core/di.dart' as di;
 import 'package:fitness/ui/core/locale/locale_provider.dart';
@@ -13,6 +15,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
 Future<void> main() async {
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -47,6 +50,14 @@ Future<void> main() async {
     // Not awaited on the critical path beyond its own guard: it never throws,
     // and the app must open whether or not RevenueCat is reachable.
     await di.sl<BillingBootstrap>().start();
+    // Analytics after billing, so the subscription tier is known when the first
+    // events go out. Like billing it never throws and never blocks the launch.
+    unawaited(AnalyticsBootstrap(
+      analytics: di.sl(),
+      supabase: di.sl<SupabaseClient>(),
+      access: di.sl<AccessPolicy>(),
+      router: ScreenPaths.appRouter,
+    ).start());
     runApp(const MainApp());
     FlutterNativeSplash.remove();
   } catch (e, stackTrace) {
