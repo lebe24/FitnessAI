@@ -1,7 +1,7 @@
 name: fitness
 description: "Befit AI - Your Personal Fitness Assistant tailored for you."
 publish_to: 'Emmanuel'
-version: 1.0.0+13
+version: 1.0.1+14
 
 environment:
   sdk: ^3.9.0
