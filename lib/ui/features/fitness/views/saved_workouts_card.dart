@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'dart:io';
 
 import 'package:fitness/l10n/generated/app_localizations.dart';
@@ -28,15 +30,19 @@ class SavedWorkoutsCard extends StatelessWidget {
         fitnessVm.plans.isNotEmpty ? fitnessVm.plans.first.imagePath : null;
 
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider.value(
-            value: fitnessVm,
-            child: const SavedProgramPage(),
+      onTap: () {
+        Analytics.track(AnalyticsEvents.homeCardTapped,
+            {'card': 'workout_program', 'locked': false});
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChangeNotifierProvider.value(
+              value: fitnessVm,
+              child: const SavedProgramPage(),
+            ),
           ),
-        ),
-      ),
+        );
+      },
       child: Container(
         height: 130,
         decoration: BoxDecoration(

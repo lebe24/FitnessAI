@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -324,12 +326,16 @@ class SubscriptionService extends ChangeNotifier {
     try {
       final info = await Purchases.purchasePackage(package);
       _onCustomerInfo(info);
-      return _isPro
+      final result = _isPro
           ? const PurchaseResult(PurchaseOutcome.success)
           : const PurchaseResult(PurchaseOutcome.pending,
               'Purchase is processing — Pro unlocks once it completes.');
+      _trackPurchase(package, result.outcome);
+      return result;
     } on PlatformException catch (e) {
-      return _mapError(e);
+      final result = _mapError(e);
+      _trackPurchase(package, result.outcome);
+      return result;
     } catch (e) {
       debugPrint('SubscriptionService: purchase failed — $e');
       return const PurchaseResult(
@@ -364,11 +370,19 @@ class SubscriptionService extends ChangeNotifier {
     }
   }
 
+  void _trackPurchase(Package package, PurchaseOutcome outcome) {
+    Analytics.track(AnalyticsEvents.purchaseResult, {
+      'outcome': outcome.name,
+      'product': package.storeProduct.identifier,
+    });
+  }
+
   /// Restore previous purchases. **Apple requires this on any paywall.**
   Future<bool> restore() async {
     if (!_configured) return false;
     try {
       _onCustomerInfo(await Purchases.restorePurchases());
+      Analytics.track(AnalyticsEvents.restoreResult, {'restored': _isPro});
       return _isPro;
     } catch (e) {
       debugPrint('SubscriptionService: restore failed — $e');

@@ -90,7 +90,7 @@ class _BillingPageState extends State<BillingPage> {
       _subs.refresh();
       return;
     }
-    final purchased = await _paywall.present();
+    final purchased = await _paywall.present(source: 'billing_page');
     if (!mounted) return;
     if (purchased) {
       _snack('Welcome to BeFit Pro! 🎉');

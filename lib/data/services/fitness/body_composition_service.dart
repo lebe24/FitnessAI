@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -251,7 +253,16 @@ class BodyCompositionService {
       'extra_info':    extraInfo,
     });
 
-    final res = await _dio.post('/api/v1/analysis/body-composition', data: formData);
-    return BodyCompositionResult.fromJson(res.data as Map<String, dynamic>);
+    try {
+      final res =
+          await _dio.post('/api/v1/analysis/body-composition', data: formData);
+      final result =
+          BodyCompositionResult.fromJson(res.data as Map<String, dynamic>);
+      Analytics.track(AnalyticsEvents.bodyScanned, {'success': true});
+      return result;
+    } catch (_) {
+      Analytics.track(AnalyticsEvents.bodyScanned, {'success': false});
+      rethrow;
+    }
   }
 }

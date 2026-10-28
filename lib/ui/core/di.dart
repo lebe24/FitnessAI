@@ -85,6 +85,7 @@ import 'package:fitness/data/services/motivation/motivation_remote_service.dart'
 import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.dart';
 import 'package:fitness/data/services/billing/billing_remote_service.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
+import 'package:fitness/data/services/analytics/analytics_service.dart';
 import 'package:fitness/data/services/billing/billing_bootstrap.dart';
 import 'package:fitness/data/services/billing/complimentary_access.dart';
 import 'package:fitness/data/services/billing/paywall_service.dart';
@@ -123,6 +124,17 @@ Future<void> initDI() async {
   sl.registerLazySingleton<AccessPolicy>(() => AccessPolicy(sl(), sl()));
   sl.registerLazySingleton<BillingBootstrap>(
       () => BillingBootstrap(subs: sl(), supabase: sl(), complimentary: sl()));
+
+  // ── Analytics (PostHog) ───────────────────────────────────────────────────
+  // Real analytics only when POSTHOG_API_KEY is set; otherwise a no-op, so
+  // development builds and tests send nothing. Started from main().
+  sl.registerLazySingleton<AnalyticsService>(() =>
+      Constant.posthogApiKey.isEmpty
+          ? NoopAnalyticsService()
+          : PostHogAnalyticsService(
+              apiKey: Constant.posthogApiKey,
+              host: Constant.posthogHost,
+            ));
 
   // ── Motivation reminders ──────────────────────────────────────────────────
   sl.registerLazySingleton<MotivationNotificationService>(

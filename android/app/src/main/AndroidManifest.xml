@@ -3,6 +3,9 @@
         android:label="befit"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- PostHog is started from Dart (AnalyticsBootstrap) after the user's opt-out
+             choice is read, so the native auto-start must stay off. -->
+        <meta-data android:name="com.posthog.posthog.AUTO_INIT" android:value="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

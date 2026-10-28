@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'dart:async';
 import 'package:fitness/data/models/chat/chat_message_model.dart';
 import 'package:fitness/data/services/chat/chat_history_storage.dart';
@@ -110,6 +112,12 @@ class ChatViewModel extends ChangeNotifier {
     _messages = [..._messages, userMessage];
     _isSending = true;
     notifyListeners();
+
+    // Only the length is recorded — what people tell their coach is private.
+    Analytics.track(AnalyticsEvents.chatMessageSent, {
+      'length': message.length,
+      'has_image': imagePath != null,
+    });
 
     try {
       await _sendMessageUsecase(message: message, userId: userId);

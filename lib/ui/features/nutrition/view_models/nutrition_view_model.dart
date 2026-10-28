@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'dart:io';
 import 'package:fitness/domain/models/nutrition_analysis.dart';
 import 'package:fitness/domain/models/stored_nutrition_analysis.dart';
@@ -64,8 +66,10 @@ class NutritionViewModel extends ChangeNotifier {
         experience: experience,
         extraInfo: extraInfo,
       );
+      Analytics.track(AnalyticsEvents.mealScanned, {'success': true});
     } catch (e) {
       _error = e.toString();
+      Analytics.track(AnalyticsEvents.mealScanned, {'success': false});
     } finally {
       _isLoading = false;
       notifyListeners();

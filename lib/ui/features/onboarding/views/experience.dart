@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/ui/features/onboarding/view_models/onboarding_view_model.dart';
 import 'package:fitness/ui/features/onboarding/views/share_screen.dart';
 import 'package:flutter/material.dart';
@@ -42,7 +44,11 @@ class ExperienceStep extends StatelessWidget {
                 filledBars: _levels[i].$2,
                 description: _levels[i].$3,
                 isSelected: selected == _levels[i].$1,
-                onTap: () => vm.selectExperience(_levels[i].$1),
+                onTap: () {
+                  Analytics.track(AnalyticsEvents.onboardingAnswered,
+                      {'step': 'experience', 'value': _levels[i].$1});
+                  vm.selectExperience(_levels[i].$1);
+                },
                 delay: i * 70,
               ),
           ],

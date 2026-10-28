@@ -20,7 +20,7 @@ class OnboardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => OnboardingViewModel(),
+      create: (_) => OnboardingViewModel()..trackInitialStep(),
       child: const _OnboardingBody(),
     );
   }

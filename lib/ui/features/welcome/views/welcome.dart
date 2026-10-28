@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/ui/core/constants/assets.dart';
 import 'package:fitness/ui/core/widgets/app_widget.dart';
 import 'package:fitness/ui/core/common_lib.dart';
@@ -104,7 +106,11 @@ class Welcome extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: AppWidgets.roundbtnText(
-                        onPressed: () => context.go('/onboarding'),
+                        onPressed: () {
+                          Analytics.track(AnalyticsEvents.welcomeCtaTapped,
+                              {'action': 'get_started'});
+                          context.go('/onboarding');
+                        },
                         text: "Get Started",
                       ).animate().fadeIn(delay: 1000.ms).slideY(begin: 0.3, end: 0),
                     ),
@@ -122,6 +128,8 @@ class Welcome extends StatelessWidget {
                           TextSpan(
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
+                                Analytics.track(AnalyticsEvents.welcomeCtaTapped,
+                                    {'action': 'login'});
                                 context.go('/login');
                               },
                             style: TextStyle(

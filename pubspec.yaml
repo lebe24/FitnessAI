@@ -1,7 +1,7 @@
 name: fitness
 description: "Befit AI - Your Personal Fitness Assistant tailored for you."
 publish_to: 'Emmanuel'
-version: 1.0.0+13
+version: 1.0.1+14
 
 environment:
   sdk: ^3.9.0
@@ -46,6 +46,7 @@ dependencies:
   purchases_ui_flutter: ^8.11.0
   sign_in_with_apple: ^8.1.0
   path_drawing: ^1.0.1
+  posthog_flutter: ^5.56.2
 
 
 dev_dependencies:

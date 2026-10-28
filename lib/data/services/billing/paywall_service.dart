@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/services/billing/subscription_service.dart';
 import 'package:flutter/material.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
@@ -16,7 +18,11 @@ class PaywallService {
   ///
   /// Returns true if the user came out of it with Pro. Safe to call when
   /// billing isn't configured — it no-ops rather than throwing.
-  Future<bool> present({String? offeringIdentifier}) async {
+  ///
+  /// [source] names what led here (a feature, or `billing_page`), so the
+  /// paywall funnel can be split by which locked feature people were reaching
+  /// for. It is analytics only and changes nothing about what is shown.
+  Future<bool> present({String? offeringIdentifier, String source = 'unknown'}) async {
     if (!_subs.isConfigured) {
       debugPrint('PaywallService: billing not configured — paywall skipped');
       return false;
@@ -26,6 +32,7 @@ class PaywallService {
           ? null
           : _subs.offerings?.all[offeringIdentifier];
 
+      Analytics.track(AnalyticsEvents.paywallShown, {'source': source});
       final result = offering != null
           ? await RevenueCatUI.presentPaywall(offering: offering)
           : await RevenueCatUI.presentPaywall();
@@ -33,7 +40,13 @@ class PaywallService {
       // The listener already updated state, but refresh so callers reading
       // isPro immediately after this returns see the settled value.
       await _subs.refresh();
-      return _isPurchased(result);
+      final purchased = _isPurchased(result);
+      Analytics.track(AnalyticsEvents.paywallClosed, {
+        'source': source,
+        'purchased': purchased,
+        'result': result.name,
+      });
+      return purchased;
     } catch (e) {
       debugPrint('PaywallService.present failed — $e');
       return false;

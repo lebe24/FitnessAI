@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/ui/core/di.dart' as di;
 import 'package:fitness/ui/core/theme/app_pallet.dart';
 import 'package:fitness/ui/features/chat/views/agent_chat_page.dart';
@@ -36,7 +38,7 @@ class _HomePageState extends State<HomePage> {
         create: (_) => di.sl<FitnessViewModel>(),
         child: const FitnessHomePage(),
       ),
-      AgentChatPage(onBack: () => setState(() => currentIndex = 0)),
+      AgentChatPage(onBack: () => _selectTab(0)),
       const StatisticsPage(),
       const ProfilePage(),
     ];
@@ -50,11 +52,23 @@ class _HomePageState extends State<HomePage> {
     const coachTab = 1;
     if (index == coachTab &&
         !di.sl<AccessPolicy>().canUse(PremiumFeature.agentChat)) {
-      requirePremium(context, PremiumFeature.agentChat,
-          () => setState(() => currentIndex = coachTab));
+      requirePremium(
+          context, PremiumFeature.agentChat, () => _selectTab(coachTab));
       return;
     }
+    _selectTab(index);
+  }
+
+  static const _tabNames = ['home', 'coach', 'stats', 'profile'];
+
+  /// All four tabs live on one route, so the router cannot see them. Record
+  /// each switch as a screen view, which also tags later events (card taps,
+  /// scans) with the tab they happened on.
+  void _selectTab(int index) {
+    if (index == currentIndex) return;
     setState(() => currentIndex = index);
+    Analytics.track(AnalyticsEvents.tabViewed, {'tab': _tabNames[index]});
+    Analytics.screen(_tabNames[index]);
   }
 
   @override

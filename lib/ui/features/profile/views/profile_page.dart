@@ -6,6 +6,7 @@ import 'package:fitness/ui/features/profile/views/adjust_workout_plan_page.dart'
 import 'package:fitness/ui/features/profile/views/billing_page.dart';
 import 'package:fitness/ui/features/profile/views/feature_request_page.dart';
 import 'package:fitness/ui/features/profile/views/language_settings_page.dart';
+import 'package:fitness/ui/features/profile/views/usage_data_page.dart';
 import 'package:fitness/ui/features/profile/views/legal_document_page.dart';
 import 'package:fitness/ui/features/profile/views/personal_details.dart';
 import 'package:fitness/ui/features/profile/views/profile_dialogs.dart';
@@ -538,6 +539,13 @@ List<_Item> _legalItems(AppLocalizations t) => [
     title: t.menuPrivacyPolicy,
     onTap: (ctx) => Navigator.of(ctx).push(
       MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
+    ),
+  ),
+  _Item(
+    icon: Icons.insights_rounded,
+    title: 'Usage data',
+    onTap: (ctx) => Navigator.of(ctx).push(
+      MaterialPageRoute(builder: (_) => const UsageDataPage()),
     ),
   ),
   _Item(

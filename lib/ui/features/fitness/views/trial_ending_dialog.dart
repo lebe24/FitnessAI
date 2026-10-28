@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -37,6 +39,7 @@ class TrialEndingDialog extends StatelessWidget {
     required VoidCallback onManage,
     String? price,
   }) {
+    Analytics.track(AnalyticsEvents.trialEndingShown, {'days_left': daysLeft});
     return showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.72),

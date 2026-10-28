@@ -17,11 +17,17 @@ class BodyFigure extends StatelessWidget {
   final Color silhouetteColor;
   final Color outlineColor;
 
+  /// Per-muscle fill, for a map that shades rather than selects. Returning
+  /// null for a slug falls back to [muscleColor], so a caller only has to
+  /// describe the muscles it cares about.
+  final Color? Function(String slug)? fillFor;
+
   const BodyFigure({
     super.key,
     required this.view,
     this.selected,
     this.onSelect,
+    this.fillFor,
     this.muscleColor = const Color(0xFF2A3040),
     this.selectedColor = const Color(0xFFCCFF00),
     this.silhouetteColor = const Color(0xFF1A1E28),
@@ -34,6 +40,7 @@ class BodyFigure extends StatelessWidget {
       painter: _BodyPainter(
         view: view,
         selected: selected,
+        fillFor: fillFor,
         muscleColor: muscleColor,
         selectedColor: selectedColor,
         silhouetteColor: silhouetteColor,
@@ -61,6 +68,7 @@ class BodyFigure extends StatelessWidget {
 class _BodyPainter extends CustomPainter {
   final BodyView view;
   final String? selected;
+  final Color? Function(String slug)? fillFor;
   final Color muscleColor;
   final Color selectedColor;
   final Color silhouetteColor;
@@ -69,6 +77,7 @@ class _BodyPainter extends CustomPainter {
   const _BodyPainter({
     required this.view,
     required this.selected,
+    required this.fillFor,
     required this.muscleColor,
     required this.selectedColor,
     required this.silhouetteColor,
@@ -102,7 +111,9 @@ class _BodyPainter extends CustomPainter {
     }
 
     for (final muscle in Muscle.all) {
-      fill.color = muscle.slug == selected ? selectedColor : muscleColor;
+      fill.color = muscle.slug == selected
+          ? selectedColor
+          : fillFor?.call(muscle.slug) ?? muscleColor;
       for (final path in view.parts[muscle.slug] ?? const <Path>[]) {
         canvas
           ..drawPath(path, fill)
@@ -117,6 +128,7 @@ class _BodyPainter extends CustomPainter {
   bool shouldRepaint(_BodyPainter old) =>
       old.view != view ||
       old.selected != selected ||
+      old.fillFor != fillFor ||
       old.muscleColor != muscleColor ||
       old.selectedColor != selectedColor ||
       old.silhouetteColor != silhouetteColor ||

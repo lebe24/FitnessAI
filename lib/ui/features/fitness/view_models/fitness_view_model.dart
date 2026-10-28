@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/services/storage/active_plan_storage.dart';
 import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:fitness/domain/models/workout_day_mapping.dart';
@@ -139,6 +141,10 @@ class FitnessViewModel extends ChangeNotifier {
     // session for this date may already be counted, and the server list is
     // what analytics shows.
     _streak = await _loadStreak();
+    Analytics.track(AnalyticsEvents.workoutCompleted, {
+      'duration_mins': durationMins,
+      'streak': _streak,
+    });
     if (!_disposed) notifyListeners();
   }
 

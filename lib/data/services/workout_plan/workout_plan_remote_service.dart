@@ -1,3 +1,5 @@
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
@@ -67,6 +69,14 @@ class WorkoutPlanRemoteDataSource {
       'extra_info': extraInfo ?? '',
     });
 
+    final startedAt = DateTime.now();
+    Analytics.track(AnalyticsEvents.planGenerationStarted, {
+      'goal': goal,
+      'training_split': trainingSplit,
+      'experience': experience,
+    });
+    int elapsedMs() => DateTime.now().difference(startedAt).inMilliseconds;
+
     try {
       final response = await _dio.post(
         '/api/v1/plans/workout',
@@ -75,10 +85,22 @@ class WorkoutPlanRemoteDataSource {
 
       if (response.statusCode == 200) {
         if (response.data is Map<String, dynamic>) {
+          Analytics.track(AnalyticsEvents.planGenerated, {
+            'duration_ms': elapsedMs(),
+            'goal': goal,
+            'training_split': trainingSplit,
+          });
           return response.data as Map<String, dynamic>;
         }
         if (response.data is String) {
-          return jsonDecode(response.data as String) as Map<String, dynamic>;
+          final decoded =
+              jsonDecode(response.data as String) as Map<String, dynamic>;
+          Analytics.track(AnalyticsEvents.planGenerated, {
+            'duration_ms': elapsedMs(),
+            'goal': goal,
+            'training_split': trainingSplit,
+          });
+          return decoded;
         }
         throw WorkoutPlanNetworkException(
           'Unexpected response type: ${response.data.runtimeType}',
@@ -94,6 +116,11 @@ class WorkoutPlanRemoteDataSource {
       final code = e.response?.statusCode;
       final body = e.response?.data;
       final detail = body is Map ? body['detail'] ?? body['error'] : null;
+      Analytics.track(AnalyticsEvents.planGenerationFailed, {
+        'duration_ms': elapsedMs(),
+        'status_code': code,
+        'kind': e.type.name,
+      });
       throw WorkoutPlanNetworkException(
         detail?.toString() ?? e.message ?? 'Network error',
         statusCode: code,

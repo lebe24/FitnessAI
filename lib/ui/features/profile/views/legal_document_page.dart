@@ -317,7 +317,12 @@ class PrivacyPolicyPage extends StatelessWidget {
               'scanner, and progress photos. Progress photos are stored on your device and '
               'are not uploaded.\n\n'
               'Technical data. Device and app version, and error reports when something fails '
-              '— these include the type of error and where it happened, so we can fix it.',
+              '— these include the type of error and where it happened, so we can fix it.\n\n'
+              'Usage data. Which screens and features you use, whether a plan or scan '
+              'succeeded and how long it took, and the goal, experience level and '
+              'training days you choose, tied to a random account ID. It never '
+              'includes your name, email, photos or the text of your messages. You can turn '
+              'it off at any time in Profile, then Usage data.',
         ),
         const LegalSection(
           heading: '3. Why we collect it',
@@ -327,9 +332,10 @@ class PrivacyPolicyPage extends StatelessWidget {
               'the motivational messages you have asked for in the tone you chose.\n\n'
               'To run the subscription: your entitlement is checked so paid features unlock '
               'for you and not for someone else.\n\n'
-              'To keep the app working. Error reports tell us what is broken. We do not use '
-              'any of this for advertising, and we do not build a profile of you for anyone '
-              "else's purposes.",
+              'To keep the app working. Error reports tell us what is broken. Usage data '
+              'shows which features are used and where people get stuck, so we know what to '
+              'fix and improve. We do not use any of this for advertising, and we do not '
+              "build a profile of you for anyone else's purposes.",
         ),
         const LegalSection(
           heading: '4. AI processing',
@@ -364,8 +370,8 @@ class PrivacyPolicyPage extends StatelessWidget {
           heading: '7. Who we share it with',
           body: 'Only the providers needed to run the service: our database and hosting '
               'providers, the AI providers described in section 4, Apple for payments and '
-              'subscription status, and RevenueCat, which tells us whether your subscription '
-              'is active.\n\n'
+              'subscription status, RevenueCat, which tells us whether your subscription '
+              'is active, and PostHog, which records usage data on servers in the United States.\n\n'
               'Each acts as our processor under a data-processing agreement. We may also '
               'disclose data where the law requires it.',
         ),
