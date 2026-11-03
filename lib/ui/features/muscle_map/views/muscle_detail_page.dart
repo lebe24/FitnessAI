@@ -12,6 +12,8 @@ import 'package:fitness/domain/use_cases/exercise/search_youtube_videos_usecase.
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:fitness/ui/features/fitness/views/yt_player.dart';
+import 'package:fitness/ui/features/video/views/muscle_videos_section.dart';
+import 'package:fitness/data/services/video/video_tools.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -187,6 +189,38 @@ class _MuscleDetailPageState extends State<MuscleDetailPage> {
                       const _NothingLogged()
                     else
                       _ExerciseList(exercises: exercises),
+                    // Your own recorded sets for this muscle. Named My Videos
+                    // so it is never mistaken for the YouTube Tutorials below.
+                    if (videoToolsSupported)
+                      ListenableBuilder(
+                        listenable: sl<AccessPolicy>(),
+                        builder: (context, _) {
+                          final locked =
+                              !sl<AccessPolicy>().canUse(PremiumFeature.exerciseVideos);
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 28),
+                              Row(
+                                children: [
+                                  _SectionTitle(
+                                    icon: Icons.videocam_outlined,
+                                    label: 'My Videos',
+                                  ),
+                                  const SizedBox(width: 8),
+                                  PremiumBadge(visible: locked),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              if (locked)
+                                const PremiumLockedCard(
+                                    feature: PremiumFeature.exerciseVideos)
+                              else
+                                MuscleVideosSection(muscle: widget.muscle),
+                            ],
+                          );
+                        },
+                      ),
                     const SizedBox(height: 28),
                     _SectionTitle(
                       icon: Icons.auto_awesome_rounded,
@@ -214,14 +248,25 @@ class _MuscleDetailPageState extends State<MuscleDetailPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _Videos(
-                      muscle: widget.muscle,
-                      requested: _videosRequested,
-                      loading: _videosLoading,
-                      error: _videoError,
-                      videos: _videos,
-                      onLoad: _loadVideos,
-                      onPlay: _playVideo,
+                    // Locked: no list and no thumbnails, not just a gated tap. A
+                    // list cached from an earlier Pro period does not show either.
+                    ListenableBuilder(
+                      listenable: sl<AccessPolicy>(),
+                      builder: (context, _) =>
+                          !sl<AccessPolicy>().canUse(PremiumFeature.videoTutorial)
+                              ? PremiumLockedCard(
+                                  feature: PremiumFeature.videoTutorial,
+                                  onUnlocked: _loadVideos,
+                                )
+                              : _Videos(
+                                  muscle: widget.muscle,
+                                  requested: _videosRequested,
+                                  loading: _videosLoading,
+                                  error: _videoError,
+                                  videos: _videos,
+                                  onLoad: _loadVideos,
+                                  onPlay: _playVideo,
+                                ),
                     ),
                   ],
                 ),

@@ -7,6 +7,7 @@ import 'package:fitness/ui/features/profile/views/billing_page.dart';
 import 'package:fitness/ui/features/profile/views/feature_request_page.dart';
 import 'package:fitness/ui/features/profile/views/language_settings_page.dart';
 import 'package:fitness/ui/features/profile/views/usage_data_page.dart';
+import 'package:fitness/ui/features/profile/views/workout_videos_page.dart';
 import 'package:fitness/ui/features/profile/views/legal_document_page.dart';
 import 'package:fitness/ui/features/profile/views/personal_details.dart';
 import 'package:fitness/ui/features/profile/views/profile_dialogs.dart';
@@ -515,6 +516,13 @@ List<_Item> _generalItems(AppLocalizations t) => [
     title: t.menuBilling,
     onTap: (ctx) => Navigator.of(ctx).push(
       MaterialPageRoute(builder: (_) => const BillingPage()),
+    ),
+  ),
+  _Item(
+    icon: Icons.videocam_outlined,
+    title: 'Workout videos',
+    onTap: (ctx) => Navigator.of(ctx).push(
+      MaterialPageRoute(builder: (_) => const WorkoutVideosPage()),
     ),
   ),
   _Item(

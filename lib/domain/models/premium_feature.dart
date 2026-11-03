@@ -39,6 +39,19 @@ enum PremiumFeature {
 
   /// Rewriting the plan around a changed goal or new stats.
   adjustPlan,
+
+  /// AI rating of stance, form and tempo from a video of a set. Saving and
+  /// watching your own videos is free; only the analysis, which costs money
+  /// each time, is behind this.
+  formAnalysis,
+
+  /// Recording, keeping and watching your own workout videos, on the exercise
+  /// page and under each muscle.
+  exerciseVideos,
+
+  /// What you lifted the last times you did an exercise, and the "same as last
+  /// time" shortcut in the log dialog.
+  exerciseHistory,
 }
 
 extension PremiumFeatureCopy on PremiumFeature {
@@ -56,6 +69,9 @@ extension PremiumFeatureCopy on PremiumFeature {
         PremiumFeature.addExercise => 'Make the day yours',
         PremiumFeature.trainingVolume => 'See if it is working',
         PremiumFeature.adjustPlan => 'Rebuild your plan',
+        PremiumFeature.formAnalysis => 'Check your form',
+        PremiumFeature.exerciseVideos => 'Film your sets',
+        PremiumFeature.exerciseHistory => 'Beat your last session',
       };
 
   String get pitch => switch (this) {
@@ -79,5 +95,11 @@ extension PremiumFeatureCopy on PremiumFeature {
           'Watch your total load move across sessions, so you know the training is going somewhere.',
         PremiumFeature.adjustPlan =>
           'Change your goal, your days or your stats and have the whole plan rewritten around them.',
+        PremiumFeature.formAnalysis =>
+          'Film a set and get your stance, form and tempo rated, with what to fix first.',
+        PremiumFeature.exerciseVideos =>
+          'Record your sets, keep them on your phone, and watch them back in slow motion.',
+        PremiumFeature.exerciseHistory =>
+          'See what you lifted last time and how it compares, so every set has a number to beat.',
       };
 }

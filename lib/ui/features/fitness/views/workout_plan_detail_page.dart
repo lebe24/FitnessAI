@@ -4,6 +4,9 @@ import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:fitness/domain/models/workout_plan.dart';
 import 'package:fitness/domain/use_cases/storage/update_fitness_plan_usecase.dart';
 import 'package:fitness/ui/core/di.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -116,6 +119,13 @@ class _WorkoutPlanDetailPageState extends State<WorkoutPlanDetailPage> {
 
   // ── Exercise CRUD ──────────────────────────────────────────────────────────────
   void _addExercise(int dayIndex) async {
+    // Adding a movement of your own is Pro, here as on the workout page. After a
+    // purchase the sheet opens, so the tap is not lost.
+    if (!sl<AccessPolicy>().canUse(PremiumFeature.addExercise)) {
+      await requirePremium(context, PremiumFeature.addExercise,
+          () => _addExercise(dayIndex));
+      return;
+    }
     final result = await showModalBottomSheet<Exercise>(
       context: context,
       backgroundColor: Colors.transparent,

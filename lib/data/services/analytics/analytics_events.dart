@@ -29,6 +29,36 @@ abstract final class AnalyticsEvents {
   // ── Training ───────────────────────────────────────────────────────────────
   static const workoutSaved = 'workout_saved'; //     exercise_count, duration_mins
   static const workoutCompleted = 'workout_completed'; // duration_mins, streak
+  static const exerciseHistoryOpened = 'exercise_history_opened'; // sessions
+
+  // ── Exercise page ──────────────────────────────────────────────────────────
+  // All carry exercise_index, sets and muscle — never the exercise name.
+  static const exerciseViewed = 'exercise_viewed';
+  static const exerciseHistoryLoaded = 'exercise_history_loaded'; //  status, entries
+  static const exerciseLogOpened = 'exercise_log_opened'; //          had_previous
+  static const exerciseLogVoice = 'exercise_log_voice'; //            result, sets_filled
+  static const exerciseLogSameAsLast = 'exercise_log_same_as_last';
+  static const exerciseLogIncomplete = 'exercise_log_incomplete'; //  missing_sets
+  static const exerciseLogSaved = 'exercise_log_saved'; //            used_voice, used_last_time
+  static const exerciseLogSaveFailed = 'exercise_log_save_failed';
+  static const exerciseLogDismissed = 'exercise_log_dismissed';
+  static const exerciseCompleted = 'exercise_completed'; //          logged, seconds_on_page
+  static const exerciseLeft = 'exercise_left'; //                    logged, seconds_on_page
+  static const exerciseLeavePrompt = 'exercise_leave_prompt'; //     choice
+  static const exerciseTutorialsLoaded = 'exercise_tutorials_loaded'; // success, cached, count
+  static const exerciseTutorialOpened = 'exercise_tutorial_opened';
+
+  // ── Workout videos ─────────────────────────────────────────────────────────
+  // Counts, scores and fixed labels only — never the exercise name or anything
+  // the AI wrote about the clip.
+  static const exerciseVideoAdded = 'exercise_video_added'; //       source: record | library, duration_s
+  static const exerciseVideoPlayed = 'exercise_video_played';
+  static const exerciseVideoDeleted = 'exercise_video_deleted'; //   analysed
+  static const formAnalysisStarted = 'form_analysis_started'; //     frame_count
+  static const formAnalysisCompleted = 'form_analysis_completed'; // overall_score, confidence, camera_view, duration_ms
+  static const formAnalysisFailed = 'form_analysis_failed'; //       reason
+  static const formAnalysisResultViewed = 'form_analysis_result_viewed'; // overall_score
+  static const muscleVideosOpened = 'muscle_videos_opened'; //       muscle
 
   // ── Home screen ────────────────────────────────────────────────────────────
   static const tabViewed = 'tab_viewed'; //                 tab: home | coach | stats | profile

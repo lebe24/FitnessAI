@@ -2,6 +2,7 @@ import 'package:fitness/data/services/chat/chat_history_storage.dart';
 import 'package:fitness/data/services/fitness/body_scan_storage.dart';
 import 'package:fitness/data/services/nutrition/nutrition_local_service.dart';
 import 'package:fitness/data/services/storage/local_storage_service.dart';
+import 'package:fitness/data/services/video/exercise_video_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// Initialize storage system (Hive)
@@ -20,5 +21,7 @@ Future<void> initializeStorage() async {
   await Hive.openBox<Map>('nutrition_analyses');
   // Initialize body scan results box
   await BodyScanStorage.init();
+  // Workout video index (the files themselves live in the documents folder)
+  await ExerciseVideoStorage.init();
 }
 

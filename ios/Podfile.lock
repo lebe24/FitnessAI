@@ -96,6 +96,9 @@ PODS:
     - FlutterMacOS
   - url_launcher_ios (0.0.1):
     - Flutter
+  - video_player_avfoundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
 
 DEPENDENCIES:
   - app_links (from `.symlinks/plugins/app_links/ios`)
@@ -115,6 +118,7 @@ DEPENDENCIES:
   - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/darwin`)
   - speech_to_text (from `.symlinks/plugins/speech_to_text/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+  - video_player_avfoundation (from `.symlinks/plugins/video_player_avfoundation/darwin`)
 
 SPEC REPOS:
   trunk:
@@ -169,6 +173,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/speech_to_text/darwin"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
+  video_player_avfoundation:
+    :path: ".symlinks/plugins/video_player_avfoundation/darwin"
 
 SPEC CHECKSUMS:
   app_links: 585674be3c6661708e6cd794ab4f39fb9d8356f9
@@ -203,6 +209,7 @@ SPEC CHECKSUMS:
   sign_in_with_apple: fb98447f3dfb81e2926945ea43a8c9c7205eaca9
   speech_to_text: 87bf9298952e8d9073be1b6aade6d5758db5170c
   url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
+  video_player_avfoundation: e54d03b3b19f64f2c557354f72ce538387541ba6
 
 PODFILE CHECKSUM: b019c0091c444b1014990c2df9d2cd11b62a0a86
 

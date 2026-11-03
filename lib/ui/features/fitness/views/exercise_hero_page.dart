@@ -2,7 +2,16 @@ import 'dart:math' as math;
 
 import 'package:fitness/data/services/api/youtube_video_cache.dart';
 import 'package:fitness/data/services/fitness/log_parser_service.dart';
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/exercise_analytics.dart';
+import 'package:fitness/data/services/workout_log/exercise_history_service.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
+import 'package:fitness/domain/models/exercise_history.dart';
+import 'package:fitness/domain/models/session_volume.dart';
+import 'package:fitness/ui/features/fitness/views/exercise_history_section.dart';
+import 'package:fitness/ui/features/video/views/exercise_videos_section.dart';
+import 'package:fitness/data/services/video/video_tools.dart';
+import 'package:fitness/domain/models/muscle_coverage.dart';
 import 'package:fitness/data/services/workout_log/workout_draft_storage.dart';
 import 'package:fitness/domain/use_cases/exercise/search_youtube_videos_usecase.dart';
 import 'package:fitness/ui/core/di.dart';
@@ -33,6 +42,10 @@ class ExerciseHeroPage extends StatefulWidget {
   /// Fired whenever the user edits a set, so the parent can persist it.
   final void Function(List<DraftSet>)? onSetsChanged;
 
+  /// Which workout this is, saved with any video recorded here.
+  final DateTime? workoutDate;
+  final String? dayLabel;
+
   const ExerciseHeroPage({
     super.key,
     required this.exercise,
@@ -40,6 +53,8 @@ class ExerciseHeroPage extends StatefulWidget {
     required this.onComplete,
     this.initialSets,
     this.onSetsChanged,
+    this.workoutDate,
+    this.dayLabel,
   });
 
   @override
@@ -48,6 +63,14 @@ class ExerciseHeroPage extends StatefulWidget {
 
 class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   bool _isViewing = false;
+
+  // Pro features on this page. Watched, so a purchase made from a locked card
+  // opens them straight away.
+  late final AccessPolicy _access = sl<AccessPolicy>();
+  bool get _historyLocked => !_access.canUse(PremiumFeature.exerciseHistory);
+  bool get _videosLocked => !_access.canUse(PremiumFeature.exerciseVideos);
+  bool get _tutorialsLocked => !_access.canUse(PremiumFeature.videoTutorial);
+  bool _historyWasLocked = false;
   dynamic _videoContent;
   bool _isLoadingVideos = false;
   String? _errorMessage;
@@ -57,6 +80,15 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   late final List<TextEditingController> _weightCtls;
   late final List<TextEditingController> _repsCtls;
   bool _logSaved = false;
+
+  // What was logged for this exercise before. Started as the page opens so it
+  // is usually ready by the time the user taps Log, and reused to pre-fill it.
+  late Future<ExerciseHistory?> _history;
+  bool _historyReported = false;
+
+  // Records how this visit to the exercise is used (never the exercise name).
+  late final ExerciseAnalytics _analytics =
+      ExerciseAnalytics(widget.exercise, widget.exerciseIndex);
 
   bool get _hasUnsavedData =>
       _weightCtls.any((c) => c.text.trim().isNotEmpty) && !_logSaved;
@@ -81,11 +113,56 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
     for (final c in [..._weightCtls, ..._repsCtls]) {
       c.addListener(_publishSets);
     }
+    _historyWasLocked = _historyLocked;
+    _history = _loadHistory();
     _loadCachedVideos();
+    _access.addListener(_onAccessChanged);
+    _analytics.viewed();
+    // This page is opened with a plain route, so the router does not see it.
+    // Name the screen so events fired here are tagged with it.
+    Analytics.screen('exercise');
+  }
+
+  /// Access changed (a purchase, a restore, a lapse). Read what just opened.
+  void _onAccessChanged() {
+    if (!mounted) return;
+    if (_historyWasLocked && !_historyLocked) {
+      _historyWasLocked = false;
+      _reloadHistory();
+    } else {
+      _historyWasLocked = _historyLocked;
+      setState(() {});
+    }
+    if (!_tutorialsLocked) _loadCachedVideos();
+  }
+
+  Future<ExerciseHistory?> _loadHistory() async {
+    // Not read at all for a free user: nothing is fetched or counted for
+    // something they cannot see.
+    if (_historyLocked) return null;
+    final history = await sl<ExerciseHistoryService>().load(widget.exercise.name);
+    // Once per visit: a refresh after saving should not count as a second look.
+    if (!_historyReported) {
+      _historyReported = true;
+      _analytics.historyLoaded(history);
+    }
+    return history;
+  }
+
+  /// [fresh] drops the cached sessions first — used after a save, so the log
+  /// just made appears, and by "Try again" after a failed read.
+  void _reloadHistory({bool fresh = false}) {
+    if (fresh) sl<ExerciseHistoryService>().invalidate();
+    setState(() => _history = _loadHistory());
   }
 
   @override
   void dispose() {
+    _access.removeListener(_onAccessChanged);
+    // Leaving without Mark Complete (the back button, a swipe, a discard).
+    _analytics.left(logged: _logSaved);
+    // The workout list is the screen underneath.
+    Analytics.screen('workout');
     for (final c in _weightCtls) { c.dispose(); }
     for (final c in _repsCtls) { c.dispose(); }
     super.dispose();
@@ -100,6 +177,19 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   }
 
   Future<void> _openLogDialog() async {
+    // Wait briefly for the history so the dialog can show last time's numbers,
+    // but never hold the dialog up for it: no history is a fine answer.
+    List<LoggedSet> previous = const [];
+    try {
+      final history = await _history.timeout(
+        const Duration(milliseconds: 800),
+        onTimeout: () => null,
+      );
+      previous = history?.last?.sets ?? const [];
+    } catch (_) {}
+    if (!mounted) return;
+
+    _analytics.logOpened(hadPrevious: previous.isNotEmpty);
     final saved = await showDialog<bool>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.7),
@@ -109,10 +199,14 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         targetReps: widget.exercise.reps,
         weightCtls: _weightCtls,
         repsCtls: _repsCtls,
+        previousSets: previous,
+        analytics: _analytics,
       ),
     );
     if (saved == true && mounted) {
       await _saveToDatabase();
+    } else {
+      _analytics.logDismissed();
     }
   }
 
@@ -140,10 +234,13 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         exercises: [logged],
         durationMins: 0,
       );
+      _analytics.logSaved();
       if (mounted) {
         setState(() => _logSaved = true);
+        _reloadHistory(fresh: true);
       }
     } catch (e) {
+      _analytics.logSaveFailed();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -177,6 +274,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         ],
       ),
     );
+    _analytics.leavePrompt(result ?? 'dismissed');
     if (result == 'save') {
       await _saveToDatabase();
       return true;
@@ -185,6 +283,8 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   }
 
   void _loadCachedVideos() {
+    // A list left in the cache from when the user had Pro must not show.
+    if (_tutorialsLocked) return;
     final cached = _videoCache.getCachedVideos(widget.exercise.name);
     if (cached == null) return;
     final contents = cached['contents'];
@@ -197,7 +297,9 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   }
 
   Future<void> _loadVideos() async {
+    if (_tutorialsLocked) return;
     if (_videoCache.hasCachedVideos(widget.exercise.name)) {
+      _analytics.tutorialsLoaded(success: true, cached: true);
       setState(() {
         _videoContent = _videoCache.getCachedVideos(widget.exercise.name);
         _isViewing = true;
@@ -217,12 +319,16 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         maxResults: 10,
       );
       _videoCache.cacheVideos(widget.exercise.name, result);
+      final contents = result is Map ? result['contents'] : null;
+      _analytics.tutorialsLoaded(
+          success: true, count: contents is List ? contents.length : null);
       setState(() {
         _videoContent = result;
         _isViewing = true;
         _isLoadingVideos = false;
       });
     } catch (e) {
+      _analytics.tutorialsLoaded(success: false);
       setState(() {
         _errorMessage = e.toString();
         _isLoadingVideos = false;
@@ -277,6 +383,34 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                         reps: widget.exercise.reps,
                         onTapLog: _openLogDialog,
                       ),
+                      const SizedBox(height: 24),
+                      ExerciseHistorySection(
+                        exerciseName: widget.exercise.name,
+                        history: _history,
+                        onRetry: () => _reloadHistory(fresh: true),
+                        locked: _historyLocked,
+                      ),
+                      // Recording and rating your own sets: iOS only for now.
+                      if (videoToolsSupported) ...[
+                        const SizedBox(height: 24),
+                        if (_videosLocked) ...[
+                          const _LockedTitle(
+                            icon: Icons.videocam_outlined,
+                            label: 'My Videos',
+                          ),
+                          const SizedBox(height: 12),
+                          const PremiumLockedCard(feature: PremiumFeature.exerciseVideos),
+                        ] else
+                          ExerciseVideosSection(
+                            exerciseName: widget.exercise.name,
+                            muscles: MuscleCoverage.musclesFor(
+                              name: widget.exercise.name,
+                              notes: widget.exercise.notes ?? '',
+                            ),
+                            workoutDate: widget.workoutDate,
+                            dayLabel: widget.dayLabel,
+                          ),
+                      ],
                       if (widget.exercise.notes != null) ...[
                         const SizedBox(height: 20),
                         _InstructionsCard(notes: widget.exercise.notes!),
@@ -285,25 +419,24 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                       const _SafetyTip(),
                       const SizedBox(height: 28),
                       _VideoSection(
+                        locked: _tutorialsLocked,
                         isViewing: _isViewing,
                         isLoading: _isLoadingVideos,
                         errorMessage: _errorMessage,
                         videoContent: _videoContent,
                         onLoad: _loadVideos,
-                        // Listing the videos is free; playing one is not.
-                        // Seeing that demonstrations exist is part of the
-                        // pitch for subscribing.
-                        locked: !sl<AccessPolicy>()
-                            .canUse(PremiumFeature.videoTutorial),
                         onVideoTap: (videoId) => requirePremium(
                           context,
                           PremiumFeature.videoTutorial,
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => YouTubePlayer(videoId: videoId),
-                            ),
-                          ),
+                          () async {
+                            _analytics.tutorialOpened();
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => YouTubePlayer(videoId: videoId),
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -311,7 +444,10 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                   ),
                 ),
               ),
-              _CompleteButton(onComplete: widget.onComplete),
+              _CompleteButton(onComplete: () {
+                _analytics.completed(logged: _logSaved);
+                widget.onComplete();
+              }),
             ],
           ),
         ),
@@ -593,6 +729,26 @@ class _SafetyTip extends StatelessWidget {
 
 // ── Video section ─────────────────────────────────────────────────────────────
 
+/// A section heading with a PRO badge, for a section that is locked.
+class _LockedTitle extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _LockedTitle({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Icon(icon, size: 18, color: _kLime),
+          const SizedBox(width: 8),
+          Text(label,
+              style: GoogleFonts.poppins(
+                  fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white)),
+          const SizedBox(width: 8),
+          const PremiumBadge(visible: true),
+        ],
+      );
+}
+
 class _VideoSection extends StatelessWidget {
   final bool isViewing;
   final bool isLoading;
@@ -601,8 +757,7 @@ class _VideoSection extends StatelessWidget {
   final VoidCallback onLoad;
   final void Function(String videoId) onVideoTap;
 
-  /// Marks the section as paid-only. The list still renders — tapping a video
-  /// opens the paywall rather than the player.
+  /// Paid-only: the section shows a locked card in place of the videos.
   final bool locked;
 
   const _VideoSection({
@@ -641,7 +796,14 @@ class _VideoSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        if (!isViewing)
+        // Locked: no list, no thumbnails, nothing fetched. Showing the videos
+        // and gating only the tap gave the feature away.
+        if (locked)
+          PremiumLockedCard(
+            feature: PremiumFeature.videoTutorial,
+            onUnlocked: onLoad,
+          )
+        else if (!isViewing)
           _VideoPlaceholder(onLoad: onLoad)
         else if (isLoading)
           const _VideoLoading()
@@ -1039,12 +1201,20 @@ class _WorkoutLogDialog extends StatefulWidget {
   final List<TextEditingController> weightCtls;
   final List<TextEditingController> repsCtls;
 
+  /// The sets from the last time this exercise was logged, if any.
+  final List<LoggedSet> previousSets;
+
+  /// Records what is done inside the dialog.
+  final ExerciseAnalytics? analytics;
+
   const _WorkoutLogDialog({
     required this.exerciseName,
     required this.sets,
     required this.targetReps,
     required this.weightCtls,
     required this.repsCtls,
+    this.previousSets = const [],
+    this.analytics,
   });
 
   @override
@@ -1054,6 +1224,27 @@ class _WorkoutLogDialog extends StatefulWidget {
 class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
   List<TextEditingController> get _weightCtls => widget.weightCtls;
   List<TextEditingController> get _repsCtls => widget.repsCtls;
+
+  /// Last time's set for row [i]. A longer workout reuses the final set rather
+  /// than leaving the extra rows without a hint.
+  LoggedSet? _previousFor(int i) {
+    final prev = widget.previousSets;
+    if (prev.isEmpty) return null;
+    return prev[i < prev.length ? i : prev.length - 1];
+  }
+
+  /// Copy last time's weights and reps into the fields. It only fills what the
+  /// last session recorded, so a bodyweight set leaves the weight box alone.
+  void _fillFromLast() {
+    widget.analytics?.sameAsLast();
+    for (var i = 0; i < widget.sets; i++) {
+      final p = _previousFor(i);
+      if (p == null) continue;
+      if (p.weightText != null) _weightCtls[i].text = p.weightText!;
+      if (p.repsText != null) _repsCtls[i].text = p.repsText!;
+    }
+    setState(() {});
+  }
 
   final stt.SpeechToText _speech = stt.SpeechToText();
   final _logParser = LogParserService();
@@ -1136,6 +1327,7 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
       return;
     }
     _userStopped = false;
+    widget.analytics?.voice('started');
     setState(() { _isListening = true; _liveText = ''; _soundLevel = 0; _statusText = ''; });
     await _startSession();
   }
@@ -1160,8 +1352,10 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
           _repsCtls[i].text = s.reps!.toString();
         }
       }
+      widget.analytics?.voice('parsed', sets: sets.length);
       setState(() { _isParsing = false; _liveText = ''; });
     } catch (_) {
+      widget.analytics?.voice('failed');
       if (!mounted) return;
       // AI failed — keep the transcript visible so the user can enter manually
       setState(() { _isParsing = false; _statusText = 'Could not parse — please fill in manually'; });
@@ -1178,6 +1372,7 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
     }
 
     if (emptySets.isNotEmpty) {
+      widget.analytics?.logIncomplete(emptySets.length);
       showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -1427,17 +1622,36 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   physics: const BouncingScrollPhysics(),
                   child: Column(
-                    children: List.generate(
-                      widget.sets,
-                      (i) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _SetRow(
-                          setNumber: i + 1,
-                          weightCtl: _weightCtls[i],
-                          repsCtl: _repsCtls[i],
+                    children: [
+                      if (widget.previousSets.isNotEmpty)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: _fillFromLast,
+                            icon: const Icon(Icons.history_rounded,
+                                size: 16, color: _kLime),
+                            label: Text(
+                              'Same as last time',
+                              style: GoogleFonts.inter(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kLime),
+                            ),
+                          ),
+                        ),
+                      ...List.generate(
+                        widget.sets,
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _SetRow(
+                            setNumber: i + 1,
+                            weightCtl: _weightCtls[i],
+                            repsCtl: _repsCtls[i],
+                            previous: _previousFor(i),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -1587,10 +1801,14 @@ class _SetRow extends StatelessWidget {
   final TextEditingController weightCtl;
   final TextEditingController repsCtl;
 
+  /// What this set was last time; shown as the empty-field hint.
+  final LoggedSet? previous;
+
   const _SetRow({
     required this.setNumber,
     required this.weightCtl,
     required this.repsCtl,
+    this.previous,
   });
 
   @override
@@ -1624,10 +1842,18 @@ class _SetRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // Weight field
-          Expanded(child: _LogField(controller: weightCtl, hint: '0', suffix: 'kg')),
+          Expanded(
+              child: _LogField(
+                  controller: weightCtl,
+                  hint: previous?.weightText ?? '0',
+                  suffix: 'kg')),
           const SizedBox(width: 12),
           // Reps field
-          Expanded(child: _LogField(controller: repsCtl, hint: '0', suffix: 'reps')),
+          Expanded(
+              child: _LogField(
+                  controller: repsCtl,
+                  hint: previous?.repsText ?? '0',
+                  suffix: 'reps')),
         ],
       ),
     );

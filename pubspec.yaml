@@ -47,6 +47,7 @@ dependencies:
   sign_in_with_apple: ^8.1.0
   path_drawing: ^1.0.1
   posthog_flutter: ^5.56.2
+  video_player: ^2.11.1
 
 
 dev_dependencies:

@@ -1,3 +1,4 @@
+import 'package:fitness/data/services/workout_log/exercise_history_service.dart';
 import 'dart:io';
 import 'package:fitness/data/models/equipment_scan_model.dart';
 import 'package:fitness/data/services/fitness/equipment_scan_service.dart';
@@ -48,6 +49,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   // Rest-time tracking: timestamps when each exercise is marked complete.
   final List<DateTime> _completionTimestamps = [];
+
+  /// Set once the session is uploaded; "Undo" is not offered after that.
+  bool _saved = false;
 
   final TextEditingController _messageController    = TextEditingController();
   final TextEditingController _durationController   = TextEditingController();
@@ -277,7 +281,24 @@ class _WorkoutPageState extends State<WorkoutPage> {
     return totalSecs ~/ (_completionTimestamps.length - 1);
   }
 
+  /// Take back "Done" on [index]. Not offered once the workout is saved: the
+  /// session is already on the server by then.
+  void _uncompleteExercise(int index) {
+    if (_saved || !_completedExercises.contains(index)) return;
+    final name = _exercises[index].name;
+    setState(() {
+      _completedExercises.remove(index);
+      _currentExerciseIndex = _firstIncompleteIndex();
+      if (_completionTimestamps.isNotEmpty) _completionTimestamps.removeLast();
+    });
+    _saveDraft();
+    _showSnack('"$name" marked as not done');
+  }
+
   void _openHeroPage(int index) {
+    // A completed exercise has nothing to open; "Complete the previous
+    // exercise first" would be the wrong thing to say about it.
+    if (_isDone(index)) return;
     if (!_isActive(index)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -297,6 +318,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
       builder: (_) => ExerciseHeroPage(
         exercise: _exercises[index],
         exerciseIndex: index,
+        workoutDate: widget.date ?? DateTime.now(),
+        dayLabel: widget.workoutDay?.day,
         // Seed the log dialog with anything already typed for this exercise,
         // and keep every edit in the draft so it survives an app restart.
         initialSets: _setLogs[name],
@@ -350,6 +373,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
       // Uploaded — the local draft has served its purpose. Cleared here and
       // nowhere else, so a failed upload keeps the user's progress.
       await WorkoutDraftStorage.clear(workoutDate);
+      _saved = true;
+      // A new session changes every exercise's history.
+      sl<ExerciseHistoryService>().invalidate();
       if (mounted) {
         _showSnack('Workout saved!');
         _showRestTimeDialog(duration, workoutDate, sessionId: session.id);
@@ -493,6 +519,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                               isActive: _isActive(i),
                               isDone: _isDone(i),
                               onComplete: () => _completeExercise(i),
+                              onUndo: _saved ? null : () => _uncompleteExercise(i),
                               onOpen: () => _openHeroPage(i),
                             ),
                           ),
@@ -788,6 +815,9 @@ class _ExerciseItem extends StatelessWidget {
   final VoidCallback onComplete;
   final VoidCallback onOpen;
 
+  /// Takes back "Done". Null once the workout is saved, which hides the button.
+  final VoidCallback? onUndo;
+
   const _ExerciseItem({
     super.key,
     required this.exercise,
@@ -797,6 +827,7 @@ class _ExerciseItem extends StatelessWidget {
     required this.isDone,
     required this.onComplete,
     required this.onOpen,
+    this.onUndo,
   });
 
   bool get _isLast => index == total - 1;
@@ -909,7 +940,7 @@ class _ExerciseItem extends StatelessWidget {
                         : null,
                   ),
                   child: isDone
-                      ? _DoneCard(exercise: exercise, index: index)
+                      ? _DoneCard(exercise: exercise, index: index, onUndo: onUndo)
                       : isActive
                           ? _ActiveCard(
                               exercise: exercise,
@@ -1128,7 +1159,12 @@ class _PendingCard extends StatelessWidget {
 class _DoneCard extends StatelessWidget {
   final Exercise exercise;
   final int index;
-  const _DoneCard({required this.exercise, required this.index});
+  final VoidCallback? onUndo;
+  const _DoneCard({
+    required this.exercise,
+    required this.index,
+    this.onUndo,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1170,6 +1206,35 @@ class _DoneCard extends StatelessWidget {
               ],
             ),
           ),
+          if (onUndo != null) ...[
+            const SizedBox(width: 6),
+            Semantics(
+              button: true,
+              label: 'Mark ${exercise.name} as not done',
+              excludeSemantics: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onUndo,
+                child: Padding(
+                  // Wide enough to tap without hitting the card behind it.
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.undo_rounded,
+                          size: 14, color: Colors.white.withValues(alpha: 0.6)),
+                      const SizedBox(width: 3),
+                      Text('Undo',
+                          style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withValues(alpha: 0.6))),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
