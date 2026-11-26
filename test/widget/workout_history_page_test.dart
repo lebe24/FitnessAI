@@ -185,11 +185,11 @@ void main() {
   testWidgets('does not overflow on a narrow phone, in pounds with big numbers', (t) async {
     await _pump(t, () async => [
           HistorySamples.session(DateTime(2025, 11, 20), 'A very long workout name that keeps going and going',
-              minutes: 125, exercises: 12, totalKg: 123450),
+              minutes: 125, exercises: 7, totalKg: 123450),
         ], width: 320, imperial: true);
     expect(t.takeException(), isNull);
     expect(find.text('125 min'), findsOneWidget);
-    expect(find.text('12 exercises'), findsOneWidget);
+    expect(find.text('7 exercises'), findsOneWidget);
   });
 
   group('analytics', () {

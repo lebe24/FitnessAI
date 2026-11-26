@@ -114,6 +114,11 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   late final List<TextEditingController> _repsCtls;
   bool _logSaved = false;
 
+  /// What was typed at the last successful save. Anything different since is
+  /// unsaved again.
+  String? _savedSets;
+  Future<bool>? _saving;
+
   // What was logged for this exercise before. Started as the page opens so it
   // is usually ready by the time the user taps Log, and reused to pre-fill it.
   late Future<ExerciseHistory?> _history;
@@ -140,8 +145,13 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   int _tab = videoToolsSupported ? 0 : 1;
   final _sessionCard = GlobalKey();
 
+  String get _typedSets => [
+        for (var i = 0; i < _weightCtls.length; i++)
+          '${_weightCtls[i].text.trim()}x${_repsCtls[i].text.trim()}'
+      ].join(';');
+
   bool get _hasUnsavedData =>
-      _weightCtls.any((c) => c.text.trim().isNotEmpty) && !_logSaved;
+      _weightCtls.any((c) => c.text.trim().isNotEmpty) && _typedSets != _savedSets;
 
   @override
   void initState() {
@@ -207,7 +217,12 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   /// just made appears, and by "Try again" after a failed read.
   void _reloadHistory({bool fresh = false}) {
     if (fresh) sl<ExerciseHistoryService>().invalidate();
-    setState(() => _history = _loadHistory());
+    // A block, not an arrow: an arrow would hand setState the future, which it
+    // rejects. That threw after every successful save in debug builds and was
+    // reported as "Failed to save log", inviting a second save.
+    setState(() {
+      _history = _loadHistory();
+    });
   }
 
   @override
@@ -265,16 +280,24 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
     }
   }
 
-  Future<void> _saveToDatabase() async {
+  /// Saves what is typed. A call made while one is running waits for it, so a
+  /// double tap cannot save twice. Returns whether it was saved.
+  Future<bool> _saveToDatabase() =>
+      _saving ??= _save().whenComplete(() => _saving = null);
+
+  Future<bool> _save() async {
+    final typed = _typedSets;
     try {
       final remote = sl<WorkoutLogRemoteDataSource>();
       // Build a plain Exercise with the actual reps/weight captured in the log
-      // dialog, embedded in the sets notes field for record-keeping.
+      // dialog, embedded in the sets notes field for record-keeping. A set
+      // without both numbers was not done: it is recorded as 0 reps, never
+      // filled in from the plan's target.
       final setsNotes = List.generate(widget.exercise.sets, (i) {
         final weight = _weightCtls[i].text.trim();
         final reps   = _repsCtls[i].text.trim();
-        return 'set ${i + 1}: ${reps.isNotEmpty ? reps : '?'} reps'
-               '${weight.isNotEmpty ? ' @ ${weight}kg' : ''}';
+        if (weight.isEmpty || reps.isEmpty) return 'set ${i + 1}: 0 reps';
+        return 'set ${i + 1}: $reps reps @ ${weight}kg';
       }).join(' | ');
 
       final logged = Exercise(
@@ -284,16 +307,21 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         notes: setsNotes.isNotEmpty ? setsNotes : widget.exercise.notes,
       );
 
+      // Filed under the workout's own day and name, the same row the finished
+      // workout is saved to.
       await remote.saveCompleteSession(
-        sessionDate: DateTime.now(),
+        sessionDate: widget.workoutDate ?? DateTime.now(),
+        dayLabel: widget.dayLabel,
         exercises: [logged],
         durationMins: 0,
       );
+      _savedSets = typed;
       _analytics.logSaved();
       if (mounted) {
         setState(() => _logSaved = true);
         _reloadHistory(fresh: true);
       }
+      return true;
     } catch (e) {
       _analytics.logSaveFailed();
       if (mounted) {
@@ -304,7 +332,42 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
           ),
         );
       }
+      return false;
     }
+  }
+
+  /// "Complete exercise". Sets typed but not saved would be lost with the
+  /// page, so it asks first.
+  Future<void> _complete() async {
+    if (_hasUnsavedData) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF0D0F14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Save your sets first?',
+              style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700)),
+          content: Text('You typed sets that have not been saved.',
+              style: GoogleFonts.inter(color: const Color(0x80FFFFFF))),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('skip'),
+              child: Text('Complete without saving', style: GoogleFonts.inter(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('save'),
+              child: Text('Save and complete', style: GoogleFonts.inter(color: const Color(0xFFCCFF00))),
+            ),
+          ],
+        ),
+      );
+      if (choice == null || !mounted) return;
+      // A failed save keeps the page open with everything still typed.
+      if (choice == 'save' && !await _saveToDatabase()) return;
+      if (!mounted) return;
+    }
+    _analytics.completed(logged: _logSaved);
+    widget.onComplete();
   }
 
   Future<bool> _confirmLeave() async {
@@ -330,10 +393,8 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
       ),
     );
     _analytics.leavePrompt(result ?? 'dismissed');
-    if (result == 'save') {
-      await _saveToDatabase();
-      return true;
-    }
+    // Stay on the page if the save failed, so nothing typed is lost.
+    if (result == 'save') return _saveToDatabase();
     return result == 'discard';
   }
 
@@ -637,10 +698,7 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
                   ),
                 ),
               ),
-              CompleteExerciseButton(onComplete: () {
-                _analytics.completed(logged: _logSaved);
-                widget.onComplete();
-              }),
+              CompleteExerciseButton(onComplete: _complete),
             ],
           ),
         ),

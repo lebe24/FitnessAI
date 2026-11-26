@@ -1,3 +1,4 @@
+import 'package:fitness/data/models/workout_log/workout_log_model.dart';
 import 'package:fitness/domain/models/session_volume.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -99,6 +100,61 @@ void main() {
       // 2026-08-19 in the export has six prescribed exercises and no sets;
       // charting it as a zero bar would read as "you did nothing".
       expect(empty.hasVolume, isFalse);
+    });
+  });
+
+  group('an exercise saved more than once in a day', () {
+    WorkoutSessionModel session(List<(String, String)> entries) => WorkoutSessionModel(
+          sessionDate: DateTime(2026, 11, 24),
+          workoutLogs: [
+            for (final (name, notes) in entries) {'name': name, 'notes': notes}
+          ],
+        );
+
+    // Copied from the session that showed the squat twice.
+    const full = 'set 1: 20 reps @ 50kg | set 2: 7 reps @ 100kg | set 3: 5 reps @ 100kg | set 4: 5 reps @ 100kg';
+    const partial = 'set 1: 20 reps @ 50kg | set 2: 7 reps @ 100kg | set 3: 5 reps @ 100kg | set 4: 0 reps @ 100kg';
+
+    test('is listed and counted once', () {
+      final s = session([('Barbell Squat', full), ('Barbell Squat', partial)]);
+      final v = SessionVolume.fromSession(s);
+      expect(v.exerciseCount, 1);
+      expect(v.setCount, 4);
+      expect(v.totalVolumeKg, 2700);
+      expect(SessionVolume.exercisesOf(s).single.sets, hasLength(4));
+    });
+
+    test('keeps a set one save recorded and the other left out, in either order', () {
+      for (final order in [[full, partial], [partial, full]]) {
+        final v = SessionVolume.fromSession(session([for (final n in order) ('Barbell Squat', n)]));
+        expect((v.setCount, v.totalVolumeKg), (4, 2700), reason: order.first);
+      }
+    });
+
+    test('takes the later numbers when a set was corrected', () {
+      final s = session([
+        ('Bench Press', 'set 1: 8 reps @ 60kg'),
+        ('Bench Press', 'set 1: 10 reps @ 62.5kg'),
+      ]);
+      final set = SessionVolume.exercisesOf(s).single.sets.single;
+      expect((set.reps, set.weightKg), (10, 62.5));
+    });
+
+    test('adds sets saved later', () {
+      final v = SessionVolume.fromSession(session([
+        ('Bench Press', 'set 1: 8 reps @ 60kg'),
+        ('Bench Press', 'set 1: 8 reps @ 60kg | set 2: 8 reps @ 60kg'),
+      ]));
+      expect((v.exerciseCount, v.setCount), (1, 2));
+    });
+
+    test('matches spelling variants but not different movements', () {
+      final names = SessionVolume.exercisesOf(session([
+        ('Standing Calf Raises', 'set 1: 10 reps @ 100kg'),
+        ('standing calf raise', 'set 1: 10 reps @ 100kg'),
+        ('Seated Calf Raise', 'set 1: 10 reps @ 40kg'),
+      ])).map((e) => e.name).toList();
+      expect(names, ['Standing Calf Raises', 'Seated Calf Raise']);
     });
   });
 }

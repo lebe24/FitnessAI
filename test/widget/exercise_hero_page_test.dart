@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fitness/data/models/onboarding/onboarding_data.dart';
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
@@ -50,6 +52,9 @@ class _Paywall extends PaywallService {
 
 class _Remote implements WorkoutLogRemoteDataSource {
   final saved = <List<Exercise>>[];
+  final days = <(DateTime, String?)>[];
+  bool fail = false;
+  Completer<void>? gate;
 
   @override
   Future<WorkoutSessionModel> saveCompleteSession({
@@ -60,7 +65,10 @@ class _Remote implements WorkoutLogRemoteDataSource {
     int durationMins = 0,
     String? notes,
   }) async {
+    if (gate != null) await gate!.future;
+    if (fail) throw Exception('offline');
     saved.add(exercises);
+    days.add((sessionDate, dayLabel));
     return WorkoutSessionModel(sessionDate: sessionDate);
   }
 
@@ -129,6 +137,8 @@ Future<_Run> _open(
               exerciseIndex: 0,
               sessionExercises: const [_bench],
               coach: coach,
+              workoutDate: DateTime(2026, 11, 24),
+              dayLabel: 'Tuesday',
               onComplete: () => run.completed++,
               onAddExercises: canAdd
                   ? (list, {required toPlan}) async {
@@ -384,6 +394,143 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('Suggestions'), findsOneWidget);
       expect(find.text('Add'), findsNothing);
+    });
+  });
+
+  group('saving', () {
+    /// Types into set [i] of the open log dialog and closes it without saving.
+    Future<void> typeAndClose(WidgetTester t, {String weight = '60', String reps = '9'}) async {
+      await t.tap(find.text('Sets'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byType(TextField).at(0), weight);
+      await t.enterText(find.byType(TextField).at(1), reps);
+      await t.tapAt(const Offset(2, 2));
+      await t.pumpAndSettle();
+    }
+
+    Future<void> saveAll(WidgetTester t, String weight) async {
+      await t.tap(find.text('Sets'));
+      await t.pumpAndSettle();
+      for (var i = 0; i < 3; i++) {
+        await t.enterText(find.byType(TextField).at(i * 2), weight);
+        await t.enterText(find.byType(TextField).at(i * 2 + 1), '9');
+      }
+      await t.tap(find.text('Save log'));
+      await t.pumpAndSettle();
+    }
+
+    testWidgets('files the log under the workout\'s own day', (t) async {
+      final run = await _open(t);
+      await saveAll(t, '60');
+      expect(run.remote.days.single, (DateTime(2026, 11, 24), 'Tuesday'));
+    });
+
+    testWidgets('a successful save reports no error', (t) async {
+      final run = await _open(t);
+      await saveAll(t, '60');
+      expect(run.remote.saved, hasLength(1));
+      expect(find.textContaining('Failed to save'), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('nothing more is asked once the sets are saved', (t) async {
+      final run = await _open(t);
+      await saveAll(t, '60');
+      await t.tap(find.text('Complete exercise'));
+      await t.pumpAndSettle();
+      expect(find.text('Save your sets first?'), findsNothing);
+      expect(run.completed, 1);
+      expect(run.remote.saved, hasLength(1));
+    });
+
+    testWidgets('completing with unsaved sets asks, then saves and completes', (t) async {
+      final run = await _open(t);
+      await typeAndClose(t);
+      await t.tap(find.text('Complete exercise'));
+      await t.pumpAndSettle();
+      expect(find.text('Save your sets first?'), findsOneWidget);
+      expect(run.completed, 0);
+
+      await t.tap(find.text('Save and complete'));
+      await t.pumpAndSettle();
+      expect(run.completed, 1);
+      // Only the typed set counts; the untouched ones are not made up from the
+      // plan's target reps.
+      expect(run.remote.saved.single.single.notes, 'set 1: 9 reps @ 60kg | set 2: 0 reps | set 3: 0 reps');
+    });
+
+    testWidgets('completing without saving sends nothing', (t) async {
+      final run = await _open(t);
+      await typeAndClose(t);
+      await t.tap(find.text('Complete exercise'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Complete without saving'));
+      await t.pumpAndSettle();
+      expect(run.completed, 1);
+      expect(run.remote.saved, isEmpty);
+    });
+
+    testWidgets('dismissing the question stays on the exercise', (t) async {
+      final run = await _open(t);
+      await typeAndClose(t);
+      await t.tap(find.text('Complete exercise'));
+      await t.pumpAndSettle();
+      await t.tapAt(const Offset(2, 2));
+      await t.pumpAndSettle();
+      expect(run.completed, 0);
+      expect(find.byType(ExerciseHeroPage), findsOneWidget);
+    });
+
+    testWidgets('a failed save does not complete or lose what was typed', (t) async {
+      final run = await _open(t);
+      run.remote.fail = true;
+      await typeAndClose(t);
+      await t.tap(find.text('Complete exercise'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Save and complete'));
+      await t.pumpAndSettle();
+      expect(run.completed, 0);
+      expect(find.byType(ExerciseHeroPage), findsOneWidget);
+    });
+
+    testWidgets('a failed save from the leave question stays on the page', (t) async {
+      final run = await _open(t);
+      run.remote.fail = true;
+      await typeAndClose(t);
+      await t.tap(find.bySemanticsLabel('Back'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Save'));
+      await t.pumpAndSettle();
+      expect(find.byType(ExerciseHeroPage), findsOneWidget);
+    });
+
+    testWidgets('editing after a save counts as unsaved again', (t) async {
+      final run = await _open(t);
+      await saveAll(t, '60');
+      await typeAndClose(t, weight: '65');
+      await t.tap(find.bySemanticsLabel('Back'));
+      await t.pumpAndSettle();
+      expect(find.text('Save before leaving?'), findsOneWidget);
+      expect(run.remote.saved, hasLength(1));
+    });
+
+    testWidgets('two saves cannot run at once', (t) async {
+      final run = await _open(t);
+      run.remote.gate = Completer<void>();
+      await typeAndClose(t);
+      await t.tap(find.text('Complete exercise'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Save and complete'));
+      await t.pump();
+      // A second go while the first is still on its way.
+      await t.tap(find.text('Complete exercise'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Save and complete'));
+      await t.pump();
+      run.remote.gate!.complete();
+      await t.pumpAndSettle();
+      expect(run.remote.saved, hasLength(1));
     });
   });
 

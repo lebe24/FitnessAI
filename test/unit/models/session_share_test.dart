@@ -24,10 +24,11 @@ void main() {
     final s = SessionShare.of(_today);
     expect(s.title, 'Tuesday');
     expect(s.durationMins, 60);
-    expect(s.exercises, 4);
-    expect(s.sets, 9);
-    expect(s.volumeKg, 1000 + 700 + 500 + 1000 + 700 + 2250 + 2700);
-    expect(s.reps, 20 + 7 + 5 + 20 + 7 + 15 + 18 + 8 + 10);
+    // The squat was saved twice; it counts once.
+    expect(s.exercises, 3);
+    expect(s.sets, 7);
+    expect(s.volumeKg, 1000 + 700 + 500 + 2250 + 2700);
+    expect(s.reps, 20 + 7 + 5 + 15 + 18 + 8 + 10);
   });
 
   test('an exercise saved twice is listed once, with its best set', () {
