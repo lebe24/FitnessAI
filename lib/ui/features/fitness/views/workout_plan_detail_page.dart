@@ -1016,6 +1016,8 @@ class _EditExerciseSheetState extends State<_EditExerciseSheet> {
       sets: sets,
       reps: reps,
       notes: _notesCtl.text.trim().isEmpty ? null : _notesCtl.text.trim(),
+      // Editing the sets or reps must not wipe the weight a smart update set.
+      targetKg: widget.exercise?.targetKg,
     ));
   }
 

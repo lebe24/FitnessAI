@@ -37,6 +37,10 @@ class ExerciseHistoryService {
     return ExerciseHistory.fromSessions(sessions, exerciseName, limit: limit);
   }
 
+  /// The sessions themselves, for callers that need more than one exercise.
+  /// Null when they could not be read.
+  Future<List<WorkoutSessionModel>?> sessions() => _sessionsCached();
+
   /// Drop the cached sessions — call after saving a workout.
   void invalidate() {
     _sessions = null;

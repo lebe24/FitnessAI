@@ -5,6 +5,7 @@ import 'package:fitness/domain/models/stored_fitness_plan.dart';
 import 'package:fitness/domain/use_cases/storage/delete_fitness_plan_usecase.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
+import 'package:fitness/ui/features/progression/views/progression_entry_section.dart';
 import 'package:fitness/ui/core/routes/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -145,6 +146,8 @@ class _SavedProgramPageState extends State<SavedProgramPage> {
                         color: _kDim,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    const ProgressionEntrySection(),
                   ],
                 ),
               ),

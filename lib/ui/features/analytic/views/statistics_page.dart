@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
@@ -10,6 +11,16 @@ import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/domain/use_cases/auth/get_current_user.dart';
 import 'package:fitness/domain/use_cases/fitness/get_user_data_usecase.dart';
 import 'package:fitness/ui/features/onboarding/views/onboarding_storage.dart';
+import 'package:fitness/data/services/analytics/body_analytics.dart';
+import 'package:fitness/data/services/billing/access_policy.dart';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/ui/features/analytic/view_models/analytics_view_model.dart';
+import 'package:fitness/ui/core/widgets/premium_gate.dart';
+import 'package:fitness/ui/features/analytic/views/analytics_stat_tile.dart';
+import 'package:fitness/ui/features/analytic/views/body/body_actions.dart';
+import 'package:fitness/ui/features/analytic/views/body/body_weight_card.dart';
+import 'package:fitness/ui/features/analytic/views/body/body_weight_page.dart';
+import 'package:fitness/ui/features/analytic/views/body/muscle_development_page.dart';
 import 'package:fitness/ui/features/analytic/views/training_volume_chart.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +41,6 @@ const _kSub     = Color(0x80FFFFFF);
 const _kLime    = Color(0xFFCCFF00);
 const _kAmber   = Color(0xFFFFAA00);
 const _kBlue    = Color(0xFF4D9EFF);
-const _kPurple  = Color(0xFFB47EFF);
 
 class StatisticsPage extends StatefulWidget {
   const StatisticsPage({super.key});
@@ -48,7 +58,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   List<FlSpot> _yearlySpots  = [];
 
   double _totalDuration    = 0.0;
-  double _workoutPct       = 0.0;
   int    _uniqueWorkoutDays = 0;
   bool   _isLoading        = true;
   int    _chartIndex       = 0; // 0=D 1=M 2=Y
@@ -73,8 +82,50 @@ class _StatisticsPageState extends State<StatisticsPage> {
         : _bodyWeight! * _lbsToKg;
   }
 
-  void _toggleWeightUnit() {
-    setState(() => _displayUnit = _displayUnit == 'kg' ? 'lbs' : 'kg');
+  /// The saved weight in kilograms, whichever unit it was entered in.
+  double? get _legacyKg {
+    if (_bodyWeight == null) return null;
+    return _weightUnit == 'lbs' ? _bodyWeight! * _lbsToKg : _bodyWeight;
+  }
+
+  final _bodyVm = sl<AnalyticsViewModel>();
+
+  void _setImperial(bool imperial) {
+    setState(() => _displayUnit = imperial ? 'lbs' : 'kg');
+    BodyUnitPref.save(imperial);
+  }
+
+  /// Picks up a unit chosen on one of the pages opened from here.
+  Future<void> _syncUnit() async {
+    final imperial = await BodyUnitPref.load();
+    if (mounted && imperial != null) setState(() => _displayUnit = imperial ? 'lbs' : 'kg');
+  }
+
+  Future<void> _openBodyWeight() async {
+    BodyAnalytics.cardTapped(card: 'body_weight', locked: !_bodyVm.hasBodyTracking);
+    await requirePremium(context, PremiumFeature.bodyTracking, () async {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => BodyWeightPage(onWeightLogged: _syncWeightCard),
+      ));
+    });
+    _syncUnit();
+  }
+
+  Future<void> _openMuscleDevelopment() async {
+    BodyAnalytics.cardTapped(card: 'muscle_development', locked: !_bodyVm.hasBodyTracking);
+    await requirePremium(context, PremiumFeature.bodyTracking, () async {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => const MuscleDevelopmentPage(),
+      ));
+    });
+  }
+
+  /// 14h 20m for long totals, 45 min for short ones.
+  String _formatMinutes(double minutes) {
+    final m = minutes.round();
+    if (m < 60) return '$m min';
+    final h = m ~/ 60, r = m % 60;
+    return r == 0 ? '${h}h' : '${h}h ${r}m';
   }
 
   // Progress photos
@@ -93,7 +144,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     super.initState();
     _loadData();
     _loadPhotos();
-    _loadBodyWeight();
+    _loadBodyWeight().then((_) => _syncUnit());
+    if (_bodyVm.hasBodyTracking) _bodyVm.load();
     _loadSessions();
   }
 
@@ -151,9 +203,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           final now = DateTime.now();
           // Shared with the home badge so the two screens cannot disagree.
           _uniqueWorkoutDays = WorkoutStreak.fromUserData(rows).days;
-          _workoutPct = now.day > 0
-              ? (_uniqueWorkoutDays / now.day * 100).clamp(0, 100)
-              : 0;
+          _bodyVm.streakDays = _uniqueWorkoutDays;
 
           _generateSpots(entries, now);
         }
@@ -350,6 +400,20 @@ class _StatisticsPageState extends State<StatisticsPage> {
     ));
   }
 
+  /// A weigh-in made in the body-tracking section, in kilograms, brought across
+  /// to the single-value card so the two never disagree.
+  Future<void> _syncWeightCard(double kg) async {
+    setState(() {
+      _bodyWeight = kg;
+      _weightUnit = 'kg';
+    });
+    try {
+      final box = await Hive.openBox('onboarding_data');
+      await box.put(_kWeightKey, kg);
+      await box.put(_kWeightUnitKey, 'kg');
+    } catch (_) {}
+  }
+
   // ── Body weight input ──────────────────────────────────────────────────────
   void _showWeightInput() {
     final ctrl = TextEditingController(
@@ -358,10 +422,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
+      // The sheet's own context: the page's has had the keyboard height removed
+      // by the Scaffold around it, which left the sheet under the keyboard.
+      builder: (sheetContext) => Padding(
         padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+        child: SingleChildScrollView(
+          child: Container(
           decoration: const BoxDecoration(
             color: _kCard,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -417,14 +484,20 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       await box.put(_kWeightKey, stored);
                       await box.put(_kWeightUnitKey, _weightUnit);
                     } catch (_) {}
+                    // Pro keeps a log: this weigh-in belongs in it too.
+                    if (sl<AccessPolicy>().canUse(PremiumFeature.bodyTracking)) {
+                      final kg = _weightUnit == 'lbs' ? stored * _lbsToKg : stored;
+                      unawaited(sl<AnalyticsViewModel>().logWeight(kg, source: 'quick'));
+                    }
                   }
-                  if (mounted) Navigator.pop(context);
+                  if (sheetContext.mounted) Navigator.pop(sheetContext);
                 },
                 child: Text('Save', style: GoogleFonts.poppins(
                     fontSize: 15, fontWeight: FontWeight.w700)),
               ),
             ),
           ]),
+        ),
         ),
       ),
     );
@@ -477,195 +550,67 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
             ),
 
-            // ── 2×2 stat grid ────────────────────────────────────────────────
+            // ── Stat tiles ───────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(children: [
-                  Row(children: [
-                    Expanded(child: _StatCard(
-                      label: 'Streak',
-                      icon: _CircleBadge(
-                        color: _kLime,
-                        child: Icon(Icons.trending_up_rounded,
-                            color: _kLime, size: 20),
-                      ),
-                      child: _isLoading
-                          ? _shimmer()
-                          : Text(
-                              '$_uniqueWorkoutDays ${_uniqueWorkoutDays == 1 ? "day" : "days"}',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 24, fontWeight: FontWeight.w800,
-                                  color: _kText),
-                            ),
-                    )),
-                    const SizedBox(width: 12),
-                    Expanded(child: _StatCard(
-                      label: 'Workouts',
-                      icon: _CircleBadge(
-                        color: _kPurple,
-                        child: Icon(Icons.fitness_center_rounded,
-                            color: _kPurple, size: 18),
-                      ),
-                      child: _isLoading
-                          ? _shimmer()
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('$_uniqueWorkoutDays',
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w800,
-                                        color: _kText)),
-                                const SizedBox(height: 2),
-                                Row(children: [
-                                  Icon(Icons.warning_amber_rounded,
-                                      size: 13, color: _kAmber),
-                                  const SizedBox(width: 4),
-                                  Expanded(child: Text(
-                                    'This month so far',
-                                    style: GoogleFonts.inter(
-                                        fontSize: 11, color: _kSub),
-                                    overflow: TextOverflow.ellipsis,
-                                  )),
-                                ]),
-                              ],
-                            ),
-                    )),
-                  ]),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: _StatCard(
-                      label: 'Total Time',
-                      icon: _CircleBadge(
-                        color: _kAmber,
-                        child: Icon(Icons.local_fire_department_rounded,
-                            color: _kAmber, size: 20),
-                      ),
-                      child: _isLoading
-                          ? _shimmer()
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Mini progress bar
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(3),
-                                  child: LinearProgressIndicator(
-                                    value: (_workoutPct / 100).clamp(0, 1),
-                                    minHeight: 4,
-                                    backgroundColor:
-                                        Colors.white.withValues(alpha: 0.07),
-                                    color: _kLime,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  '${_totalDuration.toStringAsFixed(0)} min',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: _kText),
-                                ),
-                                const SizedBox(height: 2),
-                                Row(children: [
-                                  Icon(Icons.warning_amber_rounded,
-                                      size: 13, color: _kAmber),
-                                  const SizedBox(width: 4),
-                                  Expanded(child: Text(
-                                    'Tap to improve accuracy…',
-                                    style: GoogleFonts.inter(
-                                        fontSize: 11, color: _kSub),
-                                    overflow: TextOverflow.ellipsis,
-                                  )),
-                                ]),
-                              ],
-                            ),
-                    )),
-                    const SizedBox(width: 12),
-                    Expanded(child: _StatCard(
-                      label: 'Body Weight',
-                      icon: _CircleBadge(
-                        color: _kBlue,
-                        child: Icon(Icons.accessibility_new_rounded,
-                            color: _kBlue, size: 20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _displayWeight != null
-                                      ? '${_displayWeight!.toStringAsFixed(1)} $_displayUnit'
-                                      : '--',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: _kText),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _showWeightInput,
-                                child: Container(
-                                  width: 30, height: 30,
-                                  decoration: BoxDecoration(
-                                    color: _kLime.withValues(alpha: 0.12),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: _kLime.withValues(alpha: 0.3)),
-                                  ),
-                                  child: Icon(Icons.edit_rounded,
-                                      size: 15, color: _kLime),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          // kg / lbs toggle pill
-                          GestureDetector(
-                            onTap: _toggleWeightUnit,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: _kBg,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: _kBorder),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: ['kg', 'lbs'].map((u) {
-                                  final selected = _displayUnit == u;
-                                  return AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: selected ? _kBlue : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(u,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: selected
-                                              ? Colors.white
-                                              : _kSub,
-                                        )),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )),
-                  ]),
+                child: Row(children: [
+                  Expanded(child: AnalyticsStatTile(
+                    icon: Icons.local_fire_department_rounded,
+                    color: _kAmber,
+                    value: _isLoading ? null : '$_uniqueWorkoutDays',
+                    label: 'Streak',
+                    sub: _uniqueWorkoutDays == 1 ? 'day in a row' : 'days in a row',
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: AnalyticsStatTile(
+                    icon: Icons.fitness_center_rounded,
+                    color: _kLime,
+                    value: _isLoading ? null : '$_uniqueWorkoutDays',
+                    label: 'Workouts',
+                    sub: 'this month',
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: AnalyticsStatTile(
+                    icon: Icons.timer_outlined,
+                    color: _kBlue,
+                    value: _isLoading ? null : _formatMinutes(_totalDuration),
+                    label: 'Total Time',
+                    sub: 'logged',
+                  )),
                 ]),
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+            // ── Body weight ──────────────────────────────────────────────────
+            // The chart stays here. Tapping the card opens the goal, the full
+            // trend, advice and measurements on their own page.
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ListenableBuilder(
+                  listenable: _bodyVm,
+                  builder: (context, _) {
+                    final pro = _bodyVm.hasBodyTracking;
+                    return BodyWeightCard(
+                      pro: pro,
+                      kg: (pro ? _bodyVm.latestWeight?.weightKg : null) ?? _legacyKg,
+                      weights: pro ? _bodyVm.weights : const [],
+                      progress: pro ? _bodyVm.progress : null,
+                      targetKg: _bodyVm.goal?.targetWeightKg,
+                      imperial: _displayUnit == 'lbs',
+                      onUnitChanged: _setImperial,
+                      onOpen: _openBodyWeight,
+                      onQuickLog: _showWeightInput,
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
             // ── Chart card ───────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -693,6 +638,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 child: TrainingVolumeChart(
                   sessions: _sessions,
                   isLoading: _sessionsLoading,
+                  imperial: _displayUnit == 'lbs',
                 ),
               ),
             ),
@@ -709,6 +655,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 child: MuscleCoverageCard(
                   sessions: _sessions,
                   isLoading: _sessionsLoading,
+                  onOpenDevelopment: _openMuscleDevelopment,
                 ),
               ),
             ),
@@ -750,61 +697,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       ),
     );
   }
-
-  Widget _shimmer() => Container(
-    height: 22, width: 80,
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.07),
-      borderRadius: BorderRadius.circular(6),
-    ),
-  );
-}
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final Widget icon;
-  final Widget child;
-  const _StatCard({required this.label, required this.icon, required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: _kCard,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: _kBorder),
-    ),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: GoogleFonts.inter(
-            fontSize: 13, fontWeight: FontWeight.w500, color: _kSub)),
-        icon,
-      ]),
-      const SizedBox(height: 16),
-      child,
-    ]),
-  );
-}
-
-// ── Circle badge ──────────────────────────────────────────────────────────────
-
-class _CircleBadge extends StatelessWidget {
-  final Color color;
-  final Widget child;
-  const _CircleBadge({required this.color, required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 36, height: 36,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: color.withValues(alpha: 0.1),
-      border: Border.all(color: color.withValues(alpha: 0.25), width: 1.5),
-    ),
-    child: Center(child: child),
-  );
 }
 
 // ── Chart card ────────────────────────────────────────────────────────────────

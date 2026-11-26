@@ -36,6 +36,10 @@ class WorkoutDraft {
   /// so reordering the list can't misattribute someone's logged weights.
   final Map<String, List<DraftSet>> setLogs;
 
+  /// Exercises were added to the day, so the stored list is worth restoring
+  /// even with nothing logged yet.
+  final bool listChanged;
+
   const WorkoutDraft({
     required this.dateKey,
     this.dayLabel,
@@ -44,10 +48,14 @@ class WorkoutDraft {
     this.currentIndex = 0,
     this.completionTimestamps = const [],
     this.setLogs = const {},
+    this.listChanged = false,
   });
 
   bool get isEmpty =>
-      completed.isEmpty && setLogs.isEmpty && completionTimestamps.isEmpty;
+      completed.isEmpty &&
+      setLogs.isEmpty &&
+      completionTimestamps.isEmpty &&
+      !listChanged;
 
   WorkoutDraft copyWith({
     List<Exercise>? exercises,
@@ -55,6 +63,7 @@ class WorkoutDraft {
     int? currentIndex,
     List<DateTime>? completionTimestamps,
     Map<String, List<DraftSet>>? setLogs,
+    bool? listChanged,
   }) =>
       WorkoutDraft(
         dateKey: dateKey,
@@ -64,6 +73,7 @@ class WorkoutDraft {
         currentIndex: currentIndex ?? this.currentIndex,
         completionTimestamps: completionTimestamps ?? this.completionTimestamps,
         setLogs: setLogs ?? this.setLogs,
+        listChanged: listChanged ?? this.listChanged,
       );
 
   Map<String, dynamic> toMap() => {
@@ -75,10 +85,12 @@ class WorkoutDraft {
                   'sets': e.sets,
                   'reps': e.reps,
                   'notes': e.notes,
+                  'target_kg': e.targetKg,
                 })
             .toList(),
         'completed': completed.toList(),
         'currentIndex': currentIndex,
+        'listChanged': listChanged,
         'timestamps':
             completionTimestamps.map((d) => d.toIso8601String()).toList(),
         'setLogs': setLogs.map(
@@ -95,12 +107,14 @@ class WorkoutDraft {
                   sets: (e['sets'] as num?)?.toInt() ?? 3,
                   reps: e['reps'] as String? ?? '',
                   notes: e['notes'] as String?,
+                  targetKg: (e['target_kg'] as num?)?.toDouble(),
                 ))
             .toList(),
         completed: ((m['completed'] as List?) ?? const [])
             .map((e) => (e as num).toInt())
             .toSet(),
         currentIndex: (m['currentIndex'] as num?)?.toInt() ?? 0,
+        listChanged: m['listChanged'] as bool? ?? false,
         completionTimestamps: ((m['timestamps'] as List?) ?? const [])
             .whereType<String>()
             .map(DateTime.tryParse)

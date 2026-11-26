@@ -1,64 +1,92 @@
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/history_analytics.dart';
 import 'package:fitness/data/services/workout_log/session_supabase_source.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
+import 'package:fitness/domain/models/history_months.dart';
+import 'package:fitness/domain/models/session_feedback.dart';
 import 'package:fitness/domain/models/session_volume.dart';
 import 'package:fitness/ui/core/di.dart';
+import 'package:fitness/ui/features/analytic/views/body/body_actions.dart';
+import 'package:fitness/ui/features/analytic/views/body/body_ui.dart';
+import 'package:fitness/ui/features/analytic/views/session_detail_page.dart';
+import 'package:fitness/ui/features/analytic/views/session_history_card.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-const _kBg = Color(0xFF0A0C12);
-const _kCard = Color(0xFF111318);
-const _kBorder = Color(0xFF1E2330);
-const _kSub = Color(0x80FFFFFF);
-const _kLime = Color(0xFFCCFF00);
+/// Loads every logged session. Supabase first: the same rows, without waiting
+/// on a Cloud Run cold start. Falls back to the backend when the direct read
+/// fails, so a Supabase outage degrades rather than empties the page.
+Future<List<WorkoutSessionModel>> loadAllSessions() async {
+  final direct = await sl<SessionSupabaseSource>().listSessions(limit: 200);
+  // The backend caps limit at 100: asking for more is a 422, not a larger page.
+  return direct ?? await sl<WorkoutLogRemoteDataSource>().listSessions(limit: 100);
+}
 
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
-/// Every logged session, newest first, expandable down to individual sets.
+/// Every logged session, newest first, filtered by month. Tapping one opens it.
 ///
 /// The analytics chart shows the last eight sessions and answers "is the load
-/// going up". This answers "what did I actually do", which the chart cannot —
+/// going up". This answers "what did I actually do", which the chart cannot:
 /// a bar has one number in it, and a session has thirty.
 class WorkoutHistoryPage extends StatefulWidget {
-  const WorkoutHistoryPage({super.key});
+  /// Where the sessions come from. Tests and the preview pass their own.
+  final Future<List<WorkoutSessionModel>> Function()? loader;
+
+  /// Forces the unit. When null the saved kg/lb choice is used.
+  final bool? imperial;
+
+  const WorkoutHistoryPage({super.key, this.loader, this.imperial});
 
   @override
   State<WorkoutHistoryPage> createState() => _WorkoutHistoryPageState();
 }
 
 class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
-  final _supabase = sl<SessionSupabaseSource>();
-  final _remote = sl<WorkoutLogRemoteDataSource>();
-
   List<WorkoutSessionModel> _sessions = [];
   bool _loading = true;
   bool _failed = false;
+  late bool _imperial = widget.imperial ?? false;
+
+  /// The month being shown, or null for every session.
+  HistoryMonth? _month;
+  bool _monthChosen = false;
+
+  /// So refreshing does not count as opening the history again.
+  bool _reported = false;
 
   @override
   void initState() {
     super.initState();
+    Analytics.screen('workout_history');
+    if (widget.imperial == null) {
+      BodyUnitPref.load().then((v) {
+        if (mounted && v != null) setState(() => _imperial = v);
+      });
+    }
     _load();
   }
 
   Future<void> _load() async {
     try {
-      // Supabase first: the same rows, without waiting on a Cloud Run cold
-      // start. Falls back to the backend when the direct read fails, so a
-      // Supabase outage degrades rather than empties the page.
-      var sessions = await _supabase.listSessions(limit: 200);
-
-      // The backend caps limit at 100 — asking for more is a 422, not a
-      // larger page.
-      final resolved = sessions ?? await _remote.listSessions(limit: 100);
-      resolved.sort((a, b) => b.sessionDate.compareTo(a.sessionDate));
+      final loaded = await (widget.loader ?? loadAllSessions)();
+      final sessions = [...loaded]..sort((a, b) => b.sessionDate.compareTo(a.sessionDate));
       if (!mounted) return;
+      final months = HistoryMonth.distinct(sessions.map((s) => s.sessionDate));
+      if (!_reported) {
+        _reported = true;
+        HistoryAnalytics.opened(sessions: sessions.length, months: months.length);
+      }
       setState(() {
-        _sessions = resolved;
+        _sessions = sessions;
         _loading = false;
         _failed = false;
+        // Open on the newest month, as the design does. A choice the user has
+        // made stays unless that month is gone.
+        final keep = _monthChosen && (_month == null || months.contains(_month));
+        if (!keep) {
+          _month = months.isEmpty ? null : months.last;
+          _monthChosen = false;
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -69,19 +97,40 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
     }
   }
 
+  void _select(HistoryMonth? month) {
+    HistoryAnalytics.monthSelected(all: month == null);
+    setState(() {
+      _month = month;
+      _monthChosen = true;
+    });
+  }
+
+  void _open(WorkoutSessionModel s) {
+    HistoryAnalytics.sessionOpened(
+      exercises: SessionVolume.exercisesOf(s).length,
+      hasFeedback: !SessionFeedback.fromMap(s.feedback).isEmpty,
+    );
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => SessionDetailPage(session: s, imperial: _imperial, history: _sessions),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final months = HistoryMonth.distinct(_sessions.map((s) => s.sessionDate));
+    final visible = _month == null ? _sessions : [for (final s in _sessions) if (_month!.contains(s.sessionDate)) s];
+
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: kBodyBg,
       body: SafeArea(
         child: Column(
           children: [
-            _AppBar(count: _sessions.length),
+            const _Header(),
+            if (!_loading && !_failed && months.isNotEmpty)
+              _MonthChips(months: months, selected: _month, onSelect: _select),
             Expanded(
               child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: _kLime))
+                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: kBodyLime))
                   : _failed
                       ? _Message(
                           icon: Icons.cloud_off_rounded,
@@ -97,14 +146,27 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
                             )
                           : RefreshIndicator(
                               onRefresh: _load,
-                              color: _kLime,
-                              backgroundColor: _kCard,
-                              child: ListView.builder(
-                                padding:
-                                    const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                                itemCount: _sessions.length,
-                                itemBuilder: (_, i) =>
-                                    _SessionCard(session: _sessions[i]),
+                              color: kBodyLime,
+                              backgroundColor: kBodyCard,
+                              child: ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                                itemCount: visible.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                itemBuilder: (_, i) {
+                                  final card = SessionHistoryCard(
+                                    session: visible[i],
+                                    imperial: _imperial,
+                                    onTap: () => _open(visible[i]),
+                                  );
+                                  // Only the first screenful eases in; later cards
+                                  // build as they scroll and should just appear.
+                                  if (i >= 6) return card;
+                                  return card
+                                      .animate(key: ValueKey('${_month?.label()}-$i'))
+                                      .fadeIn(delay: (i * 40).ms, duration: 280.ms)
+                                      .slideY(begin: 0.05, end: 0, delay: (i * 40).ms, duration: 280.ms);
+                                },
                               ),
                             ),
             ),
@@ -115,250 +177,153 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
   }
 }
 
-class _AppBar extends StatelessWidget {
-  final int count;
-  const _AppBar({required this.count});
+class _Header extends StatelessWidget {
+  const _Header();
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).maybePop(),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kBorder),
-              ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 15, color: Colors.white),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Workout history',
-                    style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        height: 1)),
-                const SizedBox(height: 3),
-                Text(
-                  count == 0
-                      ? 'Every session you log'
-                      : '$count session${count == 1 ? '' : 's'} logged',
-                  style: GoogleFonts.inter(fontSize: 12, color: _kSub),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One session: summary always visible, exercises on tap.
-class _SessionCard extends StatefulWidget {
-  final WorkoutSessionModel session;
-  const _SessionCard({required this.session});
-
-  @override
-  State<_SessionCard> createState() => _SessionCardState();
-}
-
-class _SessionCardState extends State<_SessionCard> {
-  bool _open = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final v = SessionVolume.fromSession(widget.session);
-    final exercises = SessionVolume.exercisesOf(widget.session);
-    final d = v.date;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _open ? _kLime.withValues(alpha: 0.3) : _kBorder),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: exercises.isEmpty
-                ? null
-                : () => setState(() => _open = !_open),
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Date block
-                  Container(
-                    width: 46,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _kLime.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Column(
-                      children: [
-                        Text('${d.day}',
-                            style: GoogleFonts.poppins(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: _kLime,
-                                height: 1)),
-                        Text(_months[d.month - 1],
-                            style: GoogleFonts.inter(
-                                fontSize: 10, color: _kLime)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          v.dayLabel?.isNotEmpty == true
-                              ? v.dayLabel!
-                              : 'Session',
-                          style: GoogleFonts.poppins(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          [
-                            if (v.exerciseCount > 0)
-                              '${v.exerciseCount} exercises',
-                            if (v.setCount > 0) '${v.setCount} sets',
-                            if (v.durationMins > 0) '${v.durationMins} min',
-                          ].join(' · '),
-                          style:
-                              GoogleFonts.inter(fontSize: 11.5, color: _kSub),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (v.hasVolume)
-                    Text(v.shortVolume,
-                        style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: _kLime)),
-                  if (exercises.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    AnimatedRotation(
-                      turns: _open ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 200),
-                      child: const Icon(Icons.keyboard_arrow_down_rounded,
-                          size: 20, color: Colors.white38),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-
-          // Grid-rows animation avoids measuring the child.
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            child: _open
-                ? Column(
-                    children: [
-                      Divider(height: 1, color: _kBorder),
-                      for (final e in exercises) _ExerciseRow(exercise: e),
-                      const SizedBox(height: 6),
-                    ],
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExerciseRow extends StatelessWidget {
-  final ExerciseVolume exercise;
-  const _ExerciseRow({required this.exercise});
-
-  String _setLabel(LoggedSet s) {
-    if (s.durationSec != null) return '${s.durationSec}s';
-    final reps = s.reps ?? 0;
-    final kg = s.weightKg;
-    if (kg == null || kg == 0) return '$reps';
-    return '$reps × ${kg % 1 == 0 ? kg.toInt() : kg}kg';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(exercise.name,
-                    style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white)),
-              ),
-              if (exercise.volumeKg > 0)
-                Text('${exercise.volumeKg.round()}kg',
-                    style: GoogleFonts.inter(fontSize: 11, color: _kSub)),
-            ],
-          ),
-          const SizedBox(height: 7),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final s in exercise.sets)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    // A skipped set is dimmed rather than hidden — the gap in
-                    // a session is information too.
-                    color: s.wasPerformed
-                        ? _kLime.withValues(alpha: 0.09)
-                        : Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(
-                      color: s.wasPerformed
-                          ? _kLime.withValues(alpha: 0.22)
-                          : _kBorder,
-                    ),
-                  ),
-                  child: Text(
-                    s.wasPerformed ? _setLabel(s) : 'skipped',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: s.wasPerformed ? _kLime : Colors.white24,
+          SizedBox(
+            height: 40,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Semantics(
+                    button: true,
+                    label: 'Back',
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).maybePop(),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: kBodyCard,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: kBodyBorder),
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: Colors.white),
+                      ),
                     ),
                   ),
                 ),
-            ],
+                Text('Workout history', style: bodyHeading(17)),
+              ],
+            ),
           ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text('Every session you log', style: bodyText(13, color: kBodyMuted, weight: FontWeight.w400)),
+          ),
+          const SizedBox(height: 14),
         ],
+      ),
+    );
+  }
+}
+
+/// `All` and one chip per month that has sessions, scrolling sideways.
+class _MonthChips extends StatefulWidget {
+  final List<HistoryMonth> months;
+  final HistoryMonth? selected;
+  final ValueChanged<HistoryMonth?> onSelect;
+
+  const _MonthChips({required this.months, required this.selected, required this.onSelect});
+
+  @override
+  State<_MonthChips> createState() => _MonthChipsState();
+}
+
+class _MonthChipsState extends State<_MonthChips> {
+  final _selectedKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _reveal();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MonthChips old) {
+    super.didUpdateWidget(old);
+    if (old.selected != widget.selected) _reveal();
+  }
+
+  /// Brings the selected chip into view, since the newest month is last and may
+  /// start off-screen.
+  void _reveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _selectedKey.currentContext;
+      if (ctx != null && ctx.mounted) {
+        Scrollable.ensureVisible(ctx,
+            duration: const Duration(milliseconds: 200), alignment: 0.5, curve: Curves.easeOut);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final withYear = HistoryMonth.spansYears(widget.months);
+    return SizedBox(
+      height: 34,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        children: [
+          _Chip(
+            key: widget.selected == null ? _selectedKey : null,
+            label: 'All',
+            selected: widget.selected == null,
+            onTap: () => widget.onSelect(null),
+          ),
+          for (final m in widget.months) ...[
+            const SizedBox(width: 6),
+            _Chip(
+              key: m == widget.selected ? _selectedKey : null,
+              label: m.label(withYear: withYear),
+              selected: m == widget.selected,
+              onTap: () => widget.onSelect(m),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _Chip({super.key, required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? kBodyLime : kBodyChip,
+            borderRadius: BorderRadius.circular(17),
+            border: selected ? null : Border.all(color: kBodyBorder),
+          ),
+          child: Text(label, style: bodyText(13, color: selected ? kBodyBg : kBodySoft)),
+        ),
       ),
     );
   }
@@ -370,12 +335,7 @@ class _Message extends StatelessWidget {
   final String body;
   final VoidCallback? onRetry;
 
-  const _Message({
-    required this.icon,
-    required this.title,
-    required this.body,
-    this.onRetry,
-  });
+  const _Message({required this.icon, required this.title, required this.body, this.onRetry});
 
   @override
   Widget build(BuildContext context) => Center(
@@ -384,36 +344,23 @@ class _Message extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 34, color: _kLime.withValues(alpha: 0.4)),
+              Icon(icon, size: 34, color: kBodyLime.withValues(alpha: 0.4)),
               const SizedBox(height: 14),
-              Text(title,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white)),
+              Text(title, textAlign: TextAlign.center, style: bodyHeading(15)),
               const SizedBox(height: 6),
-              Text(body,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                      fontSize: 12.5, height: 1.5, color: _kSub)),
+              Text(body, textAlign: TextAlign.center, style: bodyText(12.5, color: kBodyMuted, height: 1.5)),
               if (onRetry != null) ...[
                 const SizedBox(height: 18),
                 GestureDetector(
                   onTap: onRetry,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 22, vertical: 11),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
                     decoration: BoxDecoration(
-                      color: _kLime.withValues(alpha: 0.1),
+                      color: kBodyLime.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: _kLime.withValues(alpha: 0.35)),
+                      border: Border.all(color: kBodyLime.withValues(alpha: 0.35)),
                     ),
-                    child: Text('Try again',
-                        style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: _kLime)),
+                    child: Text('Try again', style: bodyText(13, color: kBodyLime, weight: FontWeight.w700)),
                   ),
                 ),
               ],

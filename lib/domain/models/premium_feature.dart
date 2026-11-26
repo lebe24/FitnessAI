@@ -52,6 +52,20 @@ enum PremiumFeature {
   /// What you lifted the last times you did an exercise, and the "same as last
   /// time" shortcut in the log dialog.
   exerciseHistory,
+
+  /// A body goal, a weight log, tape measurements and the muscle development
+  /// map that guides what to train.
+  bodyTracking,
+
+  /// AI advice on the body goal, written from the user's own logs and training.
+  goalAdvice,
+
+  /// A coach's second look at each automatic plan update before it is applied.
+  coachReview,
+
+  /// On the exercise page: what weight and reps to use, whether the session has
+  /// enough, and extra exercises to add.
+  exerciseCoach,
 }
 
 extension PremiumFeatureCopy on PremiumFeature {
@@ -72,6 +86,10 @@ extension PremiumFeatureCopy on PremiumFeature {
         PremiumFeature.formAnalysis => 'Check your form',
         PremiumFeature.exerciseVideos => 'Film your sets',
         PremiumFeature.exerciseHistory => 'Beat your last session',
+        PremiumFeature.bodyTracking => 'Track your body goal',
+        PremiumFeature.goalAdvice => 'Get advice on your goal',
+        PremiumFeature.coachReview => 'Have your coach check every change',
+        PremiumFeature.exerciseCoach => 'Get coached on every set',
       };
 
   String get pitch => switch (this) {
@@ -101,5 +119,13 @@ extension PremiumFeatureCopy on PremiumFeature {
           'Record your sets, keep them on your phone, and watch them back in slow motion.',
         PremiumFeature.exerciseHistory =>
           'See what you lifted last time and how it compares, so every set has a number to beat.',
+        PremiumFeature.bodyTracking =>
+          'Set a goal to lose weight, gain weight or build muscle. Log your weight and measurements and see which muscles to focus on.',
+        PremiumFeature.goalAdvice =>
+          'Your coach reads your weight trend, measurements and training, then tells you what to change to reach your goal.',
+        PremiumFeature.coachReview =>
+          'Before your plan changes, your coach reviews each update against your goal and eases off anything too much, too soon.',
+        PremiumFeature.exerciseCoach =>
+          'See what weight and reps to use today, know when you have done enough, and get extra exercises that fit your goal.',
       };
 }

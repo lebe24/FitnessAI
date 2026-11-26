@@ -1,5 +1,6 @@
 import 'package:fitness/data/services/analytics/analytics.dart';
 import 'package:fitness/data/services/analytics/analytics_events.dart';
+import 'package:fitness/domain/coach/history_line.dart';
 import 'package:fitness/domain/models/exercise_history.dart';
 import 'package:fitness/domain/models/premium_feature.dart';
 import 'package:fitness/domain/models/session_volume.dart';
@@ -53,6 +54,10 @@ class ExerciseHistorySection extends StatelessWidget {
   /// a Pro feature: a free user sees what it is, not their numbers.
   final bool locked;
 
+  /// The short form used on the exercise page: one line per visit, with the
+  /// full detail behind "See all".
+  final bool compact;
+
   const ExerciseHistorySection({
     super.key,
     required this.exerciseName,
@@ -60,6 +65,7 @@ class ExerciseHistorySection extends StatelessWidget {
     required this.onRetry,
     this.now,
     this.locked = false,
+    this.compact = false,
   });
 
   @override
@@ -69,13 +75,15 @@ class ExerciseHistorySection extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.history_rounded, size: 18, color: _kLime),
-            const SizedBox(width: 8),
+            if (!compact) ...[
+              const Icon(Icons.history_rounded, size: 18, color: _kLime),
+              const SizedBox(width: 8),
+            ],
             Text(
               'History',
               style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
+                fontSize: compact ? 15 : 17,
+                fontWeight: compact ? FontWeight.w700 : FontWeight.w600,
                 color: Colors.white,
               ),
             ),
@@ -107,6 +115,13 @@ class ExerciseHistorySection extends StatelessWidget {
                 icon: Icons.fitness_center_rounded,
                 text: 'No history for this exercise yet. Log it once and '
                     'your past sessions will show up here.',
+              );
+            }
+            if (compact) {
+              return _CompactBody(
+                history: data,
+                exerciseName: exerciseName,
+                now: now ?? DateTime.now(),
               );
             }
             return _Body(
@@ -248,15 +263,86 @@ class _Body extends StatelessWidget {
     );
   }
 
-  void _showAll(BuildContext context) {
-    Analytics.track(
-        AnalyticsEvents.exerciseHistoryOpened, {'sessions': history.length});
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) =>
-          _AllSheet(history: history, exerciseName: exerciseName, now: now),
+  void _showAll(BuildContext context) =>
+      showExerciseHistory(context, history, exerciseName, now);
+}
+
+/// Every logged visit to an exercise, in a sheet.
+void showExerciseHistory(BuildContext context, ExerciseHistory history,
+    String exerciseName, DateTime now) {
+  Analytics.track(
+      AnalyticsEvents.exerciseHistoryOpened, {'sessions': history.length});
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) =>
+        _AllSheet(history: history, exerciseName: exerciseName, now: now),
+  );
+}
+
+/// One line per visit: `Nov 18` and `4 × 10 @ 28 kg`.
+class _CompactBody extends StatelessWidget {
+  final ExerciseHistory history;
+  final String exerciseName;
+  final DateTime now;
+
+  const _CompactBody(
+      {required this.history, required this.exerciseName, required this.now});
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  String _date(DateTime d) {
+    final base = '${_months[d.month - 1]} ${d.day}';
+    return d.year == now.year ? base : '$base ${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (final e in history.entries.take(_kInline))
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            constraints: const BoxConstraints(minHeight: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: _kCard,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _kBorder),
+            ),
+            child: Row(
+              children: [
+                Text(_date(e.date),
+                    style: GoogleFonts.inter(
+                        fontSize: 12, fontWeight: FontWeight.w600, color: _kLime)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(historyLine(e),
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFC9CCD3))),
+                ),
+              ],
+            ),
+          ),
+        TextButton(
+          onPressed: () =>
+              showExerciseHistory(context, history, exerciseName, now),
+          child: Text(
+            history.length == 1
+                ? 'See the sets'
+                : 'See all ${history.length} sessions',
+            style: GoogleFonts.inter(
+                fontSize: 13, fontWeight: FontWeight.w600, color: _kLime),
+          ),
+        ),
+      ],
     );
   }
 }

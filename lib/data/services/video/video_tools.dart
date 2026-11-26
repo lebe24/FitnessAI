@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io';
 import 'package:flutter/services.dart';
 
@@ -107,7 +108,8 @@ class VideoToolsUnavailable extends VideoToolsException {
 }
 
 /// Whether this build can run the video feature at all.
-bool get videoToolsSupported => Platform.isIOS;
+// `Platform` cannot be asked on the web, where the design previews run.
+bool get videoToolsSupported => !kIsWeb && Platform.isIOS;
 
 /// Talks to `ios/Runner/VideoToolsChannel.swift`.
 class MethodChannelVideoTools implements VideoTools {

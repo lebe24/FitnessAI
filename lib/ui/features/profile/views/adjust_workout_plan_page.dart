@@ -1,38 +1,61 @@
 import 'package:fitness/data/models/onboarding/onboarding_data.dart';
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/plan_analytics.dart';
+import 'package:fitness/domain/body/body_models.dart';
+import 'package:fitness/domain/models/height_text.dart';
 import 'package:fitness/ui/core/routes/app_router.dart';
+import 'package:fitness/ui/core/widgets/centered_title_bar.dart';
+import 'package:fitness/ui/features/analytic/views/body/body_ui.dart';
 import 'package:fitness/ui/features/onboarding/views/onboarding_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// ── Design tokens (matches profile_page.dart / BeFit dark theme) ───────────────
-const _kBg     = Color(0xFF0A0C12);
-const _kCard   = Color(0xFF111318);
-const _kBorder = Color(0xFF1E2330);
-const _kLime   = Color(0xFFCCFF00);
-const _kDim    = Color(0x80FFFFFF);
+const _kLime = kBodyLime;
+const _kDim = Color(0x80FFFFFF);
+const _kSelectedGoal = Color(0xFF161B16);
+const _kTile = Color(0xFF1B2030);
+const _kTileSelected = Color(0xFF222A12);
 
 const _goalOptions = [
-  ('Lose Weight',      '🔥', 'Burn fat, reveal your shape'),
-  ('Build Muscle',     '💪', 'Add size, strength and definition'),
-  ('Maintain Gains',   '⚖️', 'Keep what you have and stay lean'),
+  ('Lose Weight', '🔥', 'Burn fat, reveal your shape'),
+  ('Build Muscle', '💪', 'Add size, strength and definition'),
+  ('Maintain Gains', '⚖️', 'Keep what you have and stay lean'),
   ('Build Aesthetics', '🎨', 'Sculpt a symmetrical, visual physique'),
 ];
 
+/// Only the labels are shown. They are the strings that are stored and that the
+/// backend's prompt expects, so they are not renamed.
 const _experienceOptions = [
-  ('Beginner',          'Just starting out — no experience needed'),
-  ('Experienced',       'Training consistently for 1–3 years'),
-  ('Freak of Nature',   'Elite athlete — pushing every limit'),
+  ('Beginner', 'Just starting out — no experience needed'),
+  ('Experienced', 'Training consistently for 1–3 years'),
+  ('Freak of Nature', 'Elite athlete — pushing every limit'),
   ('God in Human Form', 'Legendary status — you ARE the standard'),
 ];
+
+const _genderOptions = ['Female', 'Male', 'Other'];
 
 /// Lets the user tweak the inputs that drive workout-plan generation
 /// (goal, experience, training days, gender, height, weight), persists
 /// them as the new onboarding baseline, then routes to the physique
 /// photo analyser so a fresh plan can be generated from the updated data.
 class AdjustWorkoutPlanPage extends StatefulWidget {
-  const AdjustWorkoutPlanPage({super.key});
+  /// Where the saved answers come from. Defaults to the onboarding storage;
+  /// tests and the preview pass their own.
+  final Future<OnboardingData?> Function()? load;
+
+  /// Where the new answers go. Defaults to the onboarding storage.
+  final Future<void> Function(OnboardingData data)? save;
+
+  /// What happens after saving. Defaults to opening the photo scan.
+  final VoidCallback? onContinue;
+
+  const AdjustWorkoutPlanPage({
+    super.key,
+    this.load,
+    this.save,
+    this.onContinue,
+  });
 
   @override
   State<AdjustWorkoutPlanPage> createState() => _AdjustWorkoutPlanPageState();
@@ -48,34 +71,42 @@ class _AdjustWorkoutPlanPageState extends State<AdjustWorkoutPlanPage> {
   int _days = 3;
   bool _heightMetric = true; // cm vs ft/in
   bool _weightMetric = true; // kg vs lbs
+  // Metric height is one number in _heightCtl. Imperial height is feet in
+  // _heightCtl and inches in _inchesCtl.
   final _heightCtl = TextEditingController();
+  final _inchesCtl = TextEditingController();
   final _weightCtl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    Analytics.screen('adjust_plan');
     _load();
   }
 
   @override
   void dispose() {
     _heightCtl.dispose();
+    _inchesCtl.dispose();
     _weightCtl.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
-    final data = await OnboardingStorage.loadOnboardingData();
+    final data = await (widget.load ?? OnboardingStorage.loadOnboardingData)();
     if (data != null) {
-      _original   = data;
-      _gender     = data.gender;
-      _goal       = data.goal;
+      _original = data;
+      _gender = data.gender;
+      _goal = data.goal;
       _experience = data.experience;
-      _days       = data.workoutDays ?? 3;
+      _days = data.workoutDays ?? 3;
       if (data.height != null) {
-        _heightMetric = !data.height!.toLowerCase().contains('ft') &&
-            !data.height!.toLowerCase().contains("'");
-        _heightCtl.text = _numericPart(data.height!);
+        // Onboarding wrote `1.8 m` or `5 ft 10 in`; this screen wrote `178 cm`
+        // or `5.9 ft`. Read them all as centimetres, then show them in the
+        // unit they were written in.
+        _heightMetric = !HeightText.isImperial(data.height);
+        final cm = HeightText.toCm(data.height);
+        if (cm != null) _showHeight(cm);
       }
       if (data.weight != null) {
         _weightMetric = !data.weight!.toLowerCase().contains('lb');
@@ -88,18 +119,102 @@ class _AdjustWorkoutPlanPageState extends State<AdjustWorkoutPlanPage> {
   String _numericPart(String value) =>
       RegExp(r'[\d.]+').firstMatch(value)?.group(0) ?? '';
 
+  /// Puts [cm] into the height boxes in the unit now selected.
+  void _showHeight(double cm) {
+    if (_heightMetric) {
+      _heightCtl.text = cm.round().toString();
+      _inchesCtl.clear();
+    } else {
+      final (ft, inch) = HeightText.feetInches(cm);
+      _heightCtl.text = '$ft';
+      _inchesCtl.text = '$inch';
+    }
+  }
+
+  /// The height typed so far, in centimetres. Null when the boxes are empty or
+  /// not numbers.
+  double? _typedHeightCm() {
+    if (_heightMetric) return double.tryParse(_heightCtl.text.trim());
+    final ft = int.tryParse(_heightCtl.text.trim());
+    if (ft == null) return null;
+    return HeightText.fromFeetInches(ft, int.tryParse(_inchesCtl.text.trim()) ?? 0);
+  }
+
+  /// Switches height unit and converts what is typed, so 178 cm becomes
+  /// 5 ft 10 in rather than "178 ft".
+  void _setHeightMetric(bool metric) {
+    if (metric == _heightMetric) return;
+    final cm = _typedHeightCm();
+    setState(() {
+      _heightMetric = metric;
+      if (cm != null) {
+        _showHeight(cm);
+      } else {
+        _heightCtl.clear();
+        _inchesCtl.clear();
+      }
+    });
+  }
+
+  /// Switches weight unit and converts what is typed.
+  void _setWeightMetric(bool metric) {
+    if (metric == _weightMetric) return;
+    final v = double.tryParse(_weightCtl.text.trim());
+    setState(() {
+      _weightMetric = metric;
+      if (v != null) {
+        final converted = metric ? BodyUnits.lbToKg(v) : BodyUnits.kgToLb(v);
+        final text = converted.toStringAsFixed(1);
+        _weightCtl.text = text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+      }
+    });
+  }
+
+  /// The height to save, `null` to keep the stored one, or an error message
+  /// when what was typed cannot be a height.
+  (String? value, String? error) _heightToSave() {
+    final typed = _heightCtl.text.trim();
+    if (typed.isEmpty) return (null, null);
+    if (_heightMetric) {
+      final cm = double.tryParse(typed);
+      if (cm == null || cm < HeightText.minCm || cm > HeightText.maxCm) {
+        return (null, 'Enter your height in centimetres, like 178.');
+      }
+      return (HeightText.storedMetric(cm), null);
+    }
+    final ft = int.tryParse(typed);
+    final inch = _inchesCtl.text.trim().isEmpty ? 0 : int.tryParse(_inchesCtl.text.trim());
+    if (ft == null || inch == null || ft < 1 || ft > 8 || inch < 0 || inch > 11) {
+      return (null, 'Enter your height as feet and inches, like 5 and 10.');
+    }
+    return (HeightText.storedImperial(ft, inch), null);
+  }
+
   bool get _isValid =>
-      _gender != null && _goal != null && _goal!.isNotEmpty && _experience != null;
+      _gender != null &&
+      _goal != null &&
+      _goal!.isNotEmpty &&
+      _experience != null;
 
   Future<void> _saveAndContinue() async {
     if (!_isValid) {
+      PlanAnalytics.adjustBlocked('missing_fields');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in gender, goal and experience before continuing.')),
+        const SnackBar(
+          content: Text(
+            'Please fill in gender, goal and experience before continuing.',
+          ),
+        ),
       );
       return;
     }
 
-    final heightVal = _heightCtl.text.trim();
+    final (height, heightError) = _heightToSave();
+    if (heightError != null) {
+      PlanAnalytics.adjustBlocked('invalid_height');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(heightError)));
+      return;
+    }
     final weightVal = _weightCtl.text.trim();
 
     final updated = _original.copyWith(
@@ -107,133 +222,163 @@ class _AdjustWorkoutPlanPageState extends State<AdjustWorkoutPlanPage> {
       goal: _goal,
       experience: _experience,
       workoutDays: _days,
-      height: heightVal.isEmpty ? _original.height : '$heightVal${_heightMetric ? ' cm' : ' ft'}',
-      weight: weightVal.isEmpty ? _original.weight : '$weightVal${_weightMetric ? ' kg' : ' lbs'}',
+      height: height ?? _original.height,
+      weight: weightVal.isEmpty
+          ? _original.weight
+          : '$weightVal${_weightMetric ? ' kg' : ' lbs'}',
     );
 
-    await OnboardingStorage.saveOnboardingData(updated);
+    PlanAnalytics.adjustSubmitted(
+      goal: _goal,
+      experience: _experience,
+      days: _days,
+      changedGoal: _goal != _original.goal,
+      changedExperience: _experience != _original.experience,
+      changedDays: _days != (_original.workoutDays ?? 3),
+      heightMetric: _heightMetric,
+      weightMetric: _weightMetric,
+    );
+    await (widget.save ?? OnboardingStorage.saveOnboardingData)(updated);
     if (!mounted) return;
-    context.push(ScreenPaths.analysis);
+    if (widget.onContinue != null) {
+      widget.onContinue!();
+    } else {
+      context.push(ScreenPaths.analysis);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBg,
-      appBar: AppBar(
-        backgroundColor: _kBg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: Text('Adjust Workout Plan',
-            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _kLime))
-          : SafeArea(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      backgroundColor: kBodyBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const CenteredTitleBar(title: 'Adjust Workout Plan'),
+            Expanded(
+              child: _loading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: _kLime),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(24, 6, 24, 24),
                       physics: const BouncingScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
                       children: [
-                        Text(
-                          'Update your stats and preferences below. We\'ll '
-                          'rebuild your plan from a fresh physique photo using '
-                          'this new information.',
-                          style: GoogleFonts.inter(fontSize: 13, height: 1.5, color: _kDim),
-                        ).animate().fadeIn(duration: 300.ms),
-
-                        const SizedBox(height: 24),
-                        _SectionLabel(label: 'Goal', icon: Icons.flag_outlined),
-                        const SizedBox(height: 10),
-                        _GoalGrid(selected: _goal, onSelect: (g) => setState(() => _goal = g)),
-
-                        const SizedBox(height: 24),
-                        _SectionLabel(label: 'Experience Level', icon: Icons.bar_chart_rounded),
-                        const SizedBox(height: 10),
-                        _ExperienceList(
-                          selected: _experience,
-                          onSelect: (e) => setState(() => _experience = e),
+                        const _SectionLabel('Goal'),
+                        const SizedBox(height: 14),
+                        _GoalGrid(
+                          selected: _goal,
+                          onSelect: (g) => setState(() => _goal = g),
                         ),
 
-                        const SizedBox(height: 24),
-                        _SectionLabel(label: 'Training Days / Week', icon: Icons.calendar_view_week_rounded),
-                        const SizedBox(height: 10),
-                        _DaysSelector(selected: _days, onSelect: (d) => setState(() => _days = d)),
-
-                        const SizedBox(height: 24),
-                        _SectionLabel(label: 'Gender', icon: Icons.person_outline_rounded),
-                        const SizedBox(height: 10),
-                        _GenderRow(selected: _gender, onSelect: (g) => setState(() => _gender = g)),
-
-                        const SizedBox(height: 24),
-                        _SectionLabel(label: 'Height', icon: Icons.height_rounded),
-                        const SizedBox(height: 10),
-                        _MeasurementField(
-                          controller: _heightCtl,
-                          hint: _heightMetric ? 'e.g. 180' : 'e.g. 5.9',
-                          unitA: 'cm',
-                          unitB: 'ft',
-                          isUnitA: _heightMetric,
-                          onUnitChanged: (isA) => setState(() => _heightMetric = isA),
-                        ),
-
-                        const SizedBox(height: 24),
-                        _SectionLabel(label: 'Weight', icon: Icons.monitor_weight_outlined),
-                        const SizedBox(height: 10),
-                        _MeasurementField(
-                          controller: _weightCtl,
-                          hint: _weightMetric ? 'e.g. 75' : 'e.g. 165',
-                          unitA: 'kg',
-                          unitB: 'lbs',
-                          isUnitA: _weightMetric,
-                          onUnitChanged: (isA) => setState(() => _weightMetric = isA),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // ── Bottom CTA ────────────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                    child: GestureDetector(
-                      onTap: _saveAndContinue,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: _isValid ? _kLime : _kCard,
-                          borderRadius: BorderRadius.circular(16),
-                          border: _isValid ? null : Border.all(color: _kBorder),
-                          boxShadow: _isValid
-                              ? [BoxShadow(color: _kLime.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 6))]
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        const SizedBox(height: 26),
+                        const _SectionLabel('Experience Level'),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Icon(Icons.camera_alt_rounded,
-                                color: _isValid ? Colors.black : _kDim, size: 19),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Continue to Photo Scan',
-                              style: GoogleFonts.poppins(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: _isValid ? Colors.black : _kDim,
+                            for (final (label, _) in _experienceOptions)
+                              _PillChip(
+                                label: label,
+                                selected: _experience == label,
+                                onTap: () =>
+                                    setState(() => _experience = label),
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 26),
+                        const _SectionLabel('Training Days / Week'),
+                        const SizedBox(height: 14),
+                        _DaysSelector(
+                          selected: _days,
+                          onSelect: (d) => setState(() => _days = d),
+                        ),
+
+                        const SizedBox(height: 26),
+                        const _SectionLabel('Gender'),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final g in _genderOptions)
+                              _PillChip(
+                                label: g,
+                                selected: _gender == g,
+                                onTap: () => setState(() => _gender = g),
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 26),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _MeasurementField(
+                                label: 'Height',
+                                controller: _heightCtl,
+                                secondController: _heightMetric ? null : _inchesCtl,
+                                hint: _heightMetric ? '178' : '5',
+                                unitA: 'cm',
+                                unitB: 'ft',
+                                isUnitA: _heightMetric,
+                                onUnitChanged: _setHeightMetric,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _MeasurementField(
+                                label: 'Weight',
+                                controller: _weightCtl,
+                                hint: _weightMetric ? '78' : '165',
+                                unitA: 'kg',
+                                unitB: 'lbs',
+                                isUnitA: _weightMetric,
+                                onUnitChanged: _setWeightMetric,
                               ),
                             ),
                           ],
                         ),
+                      ],
+                    ),
+            ),
+            // ── Bottom CTA ────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Semantics(
+                button: true,
+                enabled: _isValid,
+                child: GestureDetector(
+                  onTap: _saveAndContinue,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 56,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _isValid ? _kLime : kBodyCard,
+                      borderRadius: BorderRadius.circular(28),
+                      border: _isValid ? null : Border.all(color: kBodyBorder),
+                    ),
+                    child: Text(
+                      'Continue to Photo Scan',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: _isValid ? kBodyBg : _kDim,
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -242,18 +387,17 @@ class _AdjustWorkoutPlanPageState extends State<AdjustWorkoutPlanPage> {
 
 class _SectionLabel extends StatelessWidget {
   final String label;
-  final IconData icon;
-  const _SectionLabel({required this.label, required this.icon});
+  const _SectionLabel(this.label);
 
   @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      Icon(icon, size: 15, color: _kDim),
-      const SizedBox(width: 6),
-      Text(label.toUpperCase(),
-          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _kDim, letterSpacing: 0.8)),
-    ]);
-  }
+  Widget build(BuildContext context) => Text(
+    label,
+    style: bodyText(
+      12,
+      color: kBodyMuted,
+      weight: FontWeight.w600,
+    ).copyWith(letterSpacing: 0.5),
+  );
 }
 
 // ── Goal grid ─────────────────────────────────────────────────────────────────────
@@ -265,84 +409,70 @@ class _GoalGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
+    // The cards grow with the phone's text size so larger text is not clipped.
+    final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.4);
+    return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.5,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        mainAxisExtent: 106 + (scale - 1) * 60,
+      ),
       children: _goalOptions.map((opt) {
         final (label, emoji, desc) = opt;
         final isSelected = selected == label;
-        return GestureDetector(
-          onTap: () => onSelect(label),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isSelected ? _kLime.withValues(alpha: 0.1) : _kCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isSelected ? _kLime.withValues(alpha: 0.5) : _kBorder,
-                  width: isSelected ? 1.5 : 1),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(emoji, style: const TextStyle(fontSize: 20)),
-              const SizedBox(height: 6),
-              Text(label, style: GoogleFonts.poppins(
-                  fontSize: 13, fontWeight: FontWeight.w700,
-                  color: isSelected ? _kLime : Colors.white)),
-              const SizedBox(height: 2),
-              Text(desc, maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontSize: 10, color: _kDim, height: 1.3)),
-            ]),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-// ── Experience list ──────────────────────────────────────────────────────────────
-
-class _ExperienceList extends StatelessWidget {
-  final String? selected;
-  final ValueChanged<String> onSelect;
-  const _ExperienceList({required this.selected, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: _experienceOptions.map((opt) {
-        final (label, desc) = opt;
-        final isSelected = selected == label;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+        return Semantics(
+          button: true,
+          selected: isSelected,
           child: GestureDetector(
             onTap: () => onSelect(label),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               decoration: BoxDecoration(
-                color: isSelected ? _kLime.withValues(alpha: 0.1) : _kCard,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: isSelected ? _kLime.withValues(alpha: 0.5) : _kBorder,
-                    width: isSelected ? 1.5 : 1),
-              ),
-              child: Row(children: [
-                Icon(isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                    size: 18, color: isSelected ? _kLime : _kDim),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(label, style: GoogleFonts.poppins(
-                        fontSize: 13, fontWeight: FontWeight.w700,
-                        color: isSelected ? _kLime : Colors.white)),
-                    const SizedBox(height: 2),
-                    Text(desc, style: GoogleFonts.inter(fontSize: 11, color: _kDim)),
-                  ]),
+                color: isSelected ? _kSelectedGoal : kBodyCard,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? _kLime : kBodyBorder,
+                  width: isSelected ? 1.5 : 1,
                 ),
-              ]),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isSelected ? _kTileSelected : _kTile,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: bodyHeading(13).copyWith(height: 1.15),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    desc,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: bodyText(
+                      10.5,
+                      color: kBodyMuted,
+                      weight: FontWeight.w400,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -351,7 +481,50 @@ class _ExperienceList extends StatelessWidget {
   }
 }
 
-// ── Days selector (1-7 chips) ─────────────────────────────────────────────────────
+// ── Pill chip (experience, gender) ────────────────────────────────────────────────
+
+class _PillChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _PillChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: selected ? _kLime : kBodyChip,
+            borderRadius: BorderRadius.circular(19),
+            border: selected ? null : Border.all(color: kBodyBorder),
+          ),
+          // widthFactor so the chip hugs its text instead of stretching to the
+          // full width it is offered.
+          child: Center(
+            widthFactor: 1,
+            child: Text(label, style: bodyText(13, color: selected ? kBodyBg : kBodySoft)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Days selector (1-7 circles) ───────────────────────────────────────────────────
 
 class _DaysSelector extends StatelessWidget {
   final int selected;
@@ -360,88 +533,45 @@ class _DaysSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(7, (i) {
-        final day = i + 1;
-        final isSelected = selected == day;
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(right: day == 7 ? 0 : 6),
-            child: GestureDetector(
-              onTap: () => onSelect(day),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isSelected ? _kLime : _kCard,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isSelected ? _kLime : _kBorder),
-                ),
-                child: Center(
-                  child: Text('$day', style: GoogleFonts.poppins(
-                      fontSize: 15, fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.black : Colors.white)),
+    return LayoutBuilder(
+      builder: (context, box) {
+        // 40px circles when there is room, smaller on a narrow phone.
+        final size = ((box.maxWidth - 6 * 4) / 7).clamp(30.0, 40.0);
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(7, (i) {
+            final day = i + 1;
+            final isSelected = selected == day;
+            return Semantics(
+              button: true,
+              selected: isSelected,
+              label: '$day ${day == 1 ? 'day' : 'days'} a week',
+              excludeSemantics: true,
+              child: GestureDetector(
+                onTap: () => onSelect(day),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: size,
+                  height: size,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? _kLime : kBodyChip,
+                    border: isSelected ? null : Border.all(color: kBodyBorder),
+                  ),
+                  child: Text(
+                    '$day',
+                    style: bodyHeading(
+                      14,
+                      color: isSelected ? kBodyBg : kBodySoft,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          }),
         );
-      }),
-    );
-  }
-}
-
-// ── Gender row ────────────────────────────────────────────────────────────────────
-
-class _GenderRow extends StatelessWidget {
-  final String? selected;
-  final ValueChanged<String> onSelect;
-  const _GenderRow({required this.selected, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      Expanded(child: _GenderOption(
-        label: 'Male', icon: Icons.male_rounded,
-        isSelected: selected == 'Male', onTap: () => onSelect('Male'),
-      )),
-      const SizedBox(width: 10),
-      Expanded(child: _GenderOption(
-        label: 'Female', icon: Icons.female_rounded,
-        isSelected: selected == 'Female', onTap: () => onSelect('Female'),
-      )),
-    ]);
-  }
-}
-
-class _GenderOption extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-  const _GenderOption({required this.label, required this.icon, required this.isSelected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? _kLime.withValues(alpha: 0.1) : _kCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isSelected ? _kLime.withValues(alpha: 0.5) : _kBorder,
-              width: isSelected ? 1.5 : 1),
-        ),
-        child: Column(children: [
-          Icon(icon, size: 22, color: isSelected ? _kLime : _kDim),
-          const SizedBox(height: 6),
-          Text(label, style: GoogleFonts.poppins(
-              fontSize: 13, fontWeight: FontWeight.w700,
-              color: isSelected ? _kLime : Colors.white)),
-        ]),
-      ),
+      },
     );
   }
 }
@@ -449,7 +579,11 @@ class _GenderOption extends StatelessWidget {
 // ── Measurement field with unit toggle ───────────────────────────────────────────
 
 class _MeasurementField extends StatelessWidget {
+  final String label;
   final TextEditingController controller;
+
+  /// A second box, for inches beside feet. Null for a single number.
+  final TextEditingController? secondController;
   final String hint;
   final String unitA;
   final String unitB;
@@ -457,7 +591,9 @@ class _MeasurementField extends StatelessWidget {
   final ValueChanged<bool> onUnitChanged;
 
   const _MeasurementField({
+    required this.label,
     required this.controller,
+    this.secondController,
     required this.hint,
     required this.unitA,
     required this.unitB,
@@ -467,64 +603,121 @@ class _MeasurementField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      Expanded(
-        child: Container(
+    // The switch names the unit you are in; feet and inches show as `ft`.
+    final unit = isUnitA ? unitA : unitB;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: bodyText(12, color: kBodyMuted)),
+        const SizedBox(height: 10),
+        Container(
+          height: 48,
           decoration: BoxDecoration(
-            color: _kCard,
+            color: kBodyCard,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _kBorder),
+            border: Border.all(color: kBodyBorder),
           ),
-          child: TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: GoogleFonts.inter(fontSize: 15, color: Colors.black, fontWeight: FontWeight.w600),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: GoogleFonts.inter(fontSize: 14, color: _kDim),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: secondController == null
+                    ? _NumberBox(controller: controller, hint: hint, padLeft: 16)
+                    // Feet and inches: two small boxes, scaled down together on
+                    // a narrow phone.
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 14),
+                            SizedBox(
+                              width: 30,
+                              child: _NumberBox(controller: controller, hint: hint, whole: true),
+                            ),
+                            Text('ft', style: bodyText(13, color: kBodyMuted, weight: FontWeight.w400)),
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              width: 30,
+                              child: _NumberBox(controller: secondController!, hint: '10', whole: true),
+                            ),
+                            Text('in', style: bodyText(13, color: kBodyMuted, weight: FontWeight.w400)),
+                          ],
+                        ),
+                      ),
+              ),
+              // The design shows the unit as plain text. It is also the switch
+              // between metric and imperial, which this screen still needs.
+              Semantics(
+                button: true,
+                label:
+                    'Unit: $unit. Tap to switch to ${isUnitA ? unitB : unitA}.',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onUnitChanged(!isUnitA),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 0, 12, 0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          unit,
+                          style: bodyText(
+                            13,
+                            color: _kLime,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        const Icon(
+                          Icons.unfold_more_rounded,
+                          size: 14,
+                          color: _kLime,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-      const SizedBox(width: 10),
-      Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _kBorder),
-        ),
-        child: Row(children: [
-          _UnitPill(label: unitA, isSelected: isUnitA, onTap: () => onUnitChanged(true)),
-          _UnitPill(label: unitB, isSelected: !isUnitA, onTap: () => onUnitChanged(false)),
-        ]),
-      ),
-    ]);
+      ],
+    );
   }
 }
 
-class _UnitPill extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-  const _UnitPill({required this.label, required this.isSelected, required this.onTap});
+/// A plain number box inside a measurement field.
+class _NumberBox extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final double padLeft;
+
+  /// Whole numbers only (feet, inches) rather than decimals.
+  final bool whole;
+
+  const _NumberBox({
+    required this.controller,
+    required this.hint,
+    this.padLeft = 0,
+    this.whole = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? _kLime : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(label, style: GoogleFonts.inter(
-            fontSize: 12, fontWeight: FontWeight.w700,
-            color: isSelected ? Colors.black : _kDim)),
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.numberWithOptions(decimal: !whole),
+      textAlign: whole ? TextAlign.center : TextAlign.start,
+      // White on the dark field. It used to be black, which could not be read.
+      style: bodyText(14, weight: FontWeight.w400),
+      cursorColor: _kLime,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: bodyText(14, color: _kDim, weight: FontWeight.w400),
+        border: InputBorder.none,
+        isDense: true,
+        contentPadding: EdgeInsets.fromLTRB(padLeft, 14, whole ? 0 : 4, 14),
       ),
     );
   }

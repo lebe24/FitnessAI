@@ -1,4 +1,17 @@
 import 'dart:async';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/data/models/body/scan_mapper.dart';
+import 'package:fitness/data/repositories/body_tracking_repository.dart';
+import 'package:fitness/data/services/body/body_tracking_remote.dart';
+import 'package:fitness/data/services/body/body_tracking_store.dart';
+import 'package:fitness/data/services/body/legacy_weight.dart';
+import 'package:fitness/data/services/fitness/body_scan_storage.dart';
+import 'package:fitness/data/services/coach/checkin_store.dart';
+import 'package:fitness/data/services/coach/exercise_coach_service.dart';
+import 'package:fitness/data/services/progression/coach_review_service.dart';
+import 'package:fitness/ui/features/analytic/view_models/analytics_view_model.dart';
+import 'package:fitness/data/services/progression/progression_store.dart';
+import 'package:fitness/ui/features/progression/view_models/progression_view_model.dart';
 import 'package:fitness/data/repositories/auth_repository_impl.dart';
 import 'package:fitness/data/repositories/workout_log_repository_impl.dart';
 import 'package:fitness/data/services/workout_log/session_supabase_source.dart';
@@ -268,6 +281,36 @@ Future<void> initDI() async {
   sl.registerLazySingleton(() => GetFitnessPlanByIdUsecase(sl()));
   sl.registerLazySingleton(() => DeleteFitnessPlanUsecase(sl()));
   sl.registerLazySingleton(() => UpdateFitnessPlanUsecase(sl()));
+  // One instance: the home screen and the programs screen show the same
+  // update state, and it owns no widgets.
+  sl.registerLazySingleton<CoachReviewer>(() => DioCoachReviewer());
+  sl.registerLazySingleton<ExerciseCoach>(() => DioExerciseCoach());
+  sl.registerLazySingleton<CheckInStore>(() => HiveCheckInStore());
+  sl.registerLazySingleton(() => ProgressionViewModel(
+        history: sl<ExerciseHistoryService>(),
+        store: HiveProgressionStore(),
+        updatePlan: sl(),
+        coach: sl<CoachReviewer>(),
+        coachAllowed: () => sl<AccessPolicy>().canUse(PremiumFeature.coachReview),
+        activeGoal: () async => (await sl<BodyTrackingRepository>().load()).goal,
+      ));
+
+  // ── Body tracking: goal, weight log, measurements ─────────────────────────
+  sl.registerLazySingleton<BodyTrackingRepository>(() => BodyTrackingRepository(
+        remote: DioBodyTrackingRemote(),
+        store: HiveBodyTrackingStore(),
+        legacyWeightKg: LegacyWeight.readKg,
+        currentUserId: () => sl<GetCurrentUser>().call()?.id,
+      ));
+  sl.registerLazySingleton(() => AnalyticsViewModel(
+        repo: sl<BodyTrackingRepository>(),
+        history: sl<ExerciseHistoryService>(),
+        latestScan: () async {
+          final all = await BodyScanStorage().getAll();
+          return all.isEmpty ? null : ScanMapper.fromStored(all.first);
+        },
+        canUse: (f) => sl<AccessPolicy>().canUse(f),
+      ));
   sl.registerLazySingleton(() => UpdateSyncStatusUsecase(sl()));
   sl.registerLazySingleton(() => GetUnsyncedPlansUsecase(sl()));
 

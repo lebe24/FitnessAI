@@ -31,10 +31,15 @@ class MuscleCoverageCard extends StatefulWidget {
   final List<WorkoutSessionModel> sessions;
   final bool isLoading;
 
+  /// Opens the muscle development page. Tapping anywhere on the card that is
+  /// not a muscle does this.
+  final VoidCallback? onOpenDevelopment;
+
   const MuscleCoverageCard({
     super.key,
     required this.sessions,
     required this.isLoading,
+    this.onOpenDevelopment,
   });
 
   @override
@@ -88,7 +93,10 @@ class _MuscleCoverageCardState extends State<MuscleCoverageCard> {
         ? MuscleCoverage.empty
         : MuscleCoverage.fromSessions(widget.sessions);
 
-    return Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onOpenDevelopment,
+      child: Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
         color: _kCard,
@@ -125,8 +133,31 @@ class _MuscleCoverageCardState extends State<MuscleCoverageCard> {
               _Unresolved(count: coverage.unresolvedExercises),
             ],
           ],
+          if (widget.onOpenDevelopment != null) ...[
+            const SizedBox(height: 14),
+            const _OpenRow(),
+          ],
         ],
       ),
+      ),
+    );
+  }
+}
+
+/// The way into the muscle development page.
+class _OpenRow extends StatelessWidget {
+  const _OpenRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text('Strengths, focus areas and scores',
+              style: GoogleFonts.inter(fontSize: 12, color: _kSub)),
+        ),
+        const Icon(Icons.arrow_forward_rounded, size: 15, color: Colors.white),
+      ],
     );
   }
 }

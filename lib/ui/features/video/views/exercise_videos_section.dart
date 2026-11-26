@@ -33,6 +33,10 @@ class ExerciseVideosSection extends StatefulWidget {
   final Future<void> Function()? onAdd;
   final DateTime? now;
 
+  /// Inside the exercise page's "My Videos" tab: the tab is the heading, and the
+  /// tiles are the design's smaller 108×140.
+  final bool tabbed;
+
   const ExerciseVideosSection({
     super.key,
     required this.exerciseName,
@@ -44,6 +48,7 @@ class ExerciseVideosSection extends StatefulWidget {
     this.analysisLocked,
     this.onAdd,
     this.now,
+    this.tabbed = false,
   });
 
   @override
@@ -105,13 +110,19 @@ class _ExerciseVideosSectionState extends State<ExerciseVideosSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (!widget.tabbed || (videos != null && videos.isNotEmpty))
         Row(
           children: [
-            const Icon(Icons.videocam_outlined, size: 18, color: kVideoLime),
-            const SizedBox(width: 8),
-            Text('My Videos',
-                style: GoogleFonts.poppins(
-                    fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white)),
+            if (!widget.tabbed) ...[
+              const Icon(Icons.videocam_outlined, size: 18, color: kVideoLime),
+              const SizedBox(width: 8),
+              Text('My Videos',
+                  style: GoogleFonts.poppins(
+                      fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white)),
+            ] else if (videos != null)
+              Text('${videos.length} ${videos.length == 1 ? 'clip' : 'clips'}',
+                  style: GoogleFonts.inter(
+                      fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF8C909B))),
             const Spacer(),
             if (videos != null && videos.isNotEmpty) ...[
               TextButton(
@@ -135,14 +146,14 @@ class _ExerciseVideosSectionState extends State<ExerciseVideosSection> {
             ],
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: widget.tabbed ? 8 : 12),
         if (videos == null)
           const SizedBox(height: 40)
         else if (videos.isEmpty)
           _Empty(onAdd: _adding ? null : _add)
         else
           SizedBox(
-            height: 262,
+            height: widget.tabbed ? 216 : 262,
             child: ListenableBuilder(
               listenable: _runner,
               builder: (context, _) => ListView.separated(
@@ -156,6 +167,8 @@ class _ExerciseVideosSectionState extends State<ExerciseVideosSection> {
                   runner: _runner,
                   locked: _locked,
                   now: widget.now ?? DateTime.now(),
+                  width: widget.tabbed ? 108 : 140,
+                  height: widget.tabbed ? 140 : 186,
                 ),
               ),
             ),
@@ -205,6 +218,8 @@ class VideoCard extends StatelessWidget {
   final FormAnalysisRunner runner;
   final bool locked;
   final DateTime now;
+  final double width;
+  final double height;
 
   const VideoCard({
     super.key,
@@ -213,6 +228,8 @@ class VideoCard extends StatelessWidget {
     required this.runner,
     required this.locked,
     required this.now,
+    this.width = 140,
+    this.height = 186,
   });
 
   @override
@@ -222,7 +239,7 @@ class VideoCard extends StatelessWidget {
     final failed = job != null && job.phase == AnalysisPhase.failed;
 
     return SizedBox(
-      width: 140,
+      width: width,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -234,8 +251,8 @@ class VideoCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
                 child: SizedBox(
-                  width: 140,
-                  height: 186,
+                  width: width,
+                  height: height,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [

@@ -134,6 +134,37 @@ class ExerciseAnalytics {
   void logDismissed() =>
       Analytics.track(AnalyticsEvents.exerciseLogDismissed, _base);
 
+  // ── The coach ───────────────────────────────────────────────────────────────
+
+  void coachAsked(String mode) =>
+      Analytics.track(AnalyticsEvents.exerciseCoachAsked, {..._base, 'mode': mode});
+
+  void coachReceived(String mode, {required bool fromModel, required String verdict, required int suggestions}) {
+    Analytics.track(AnalyticsEvents.exerciseCoachReceived, {
+      ..._base,
+      'mode': mode,
+      'from_model': fromModel,
+      'verdict': verdict,
+      'suggestions': suggestions,
+    });
+    if (mode == 'workout' && suggestions > 0) {
+      Analytics.track(AnalyticsEvents.extraWorkoutGenerated, {'exercises': suggestions});
+    }
+  }
+
+  void coachFailed(String mode, String reason) =>
+      Analytics.track(AnalyticsEvents.exerciseCoachFailed, {..._base, 'mode': mode, 'reason': reason});
+
+  /// The recommended numbers, or the alternative, were put into the log.
+  void coachUsed({required bool alternative}) => Analytics.track(
+      AnalyticsEvents.exerciseCoachUsed, {..._base, 'option': alternative ? 'alternative' : 'recommended'});
+
+  /// That the check-in was answered. The answer itself is not sent.
+  void checkInAnswered() => Analytics.track(AnalyticsEvents.sessionCheckinAnswered, _base);
+
+  void extraAdded({required int count, required bool toPlan, required String source}) => Analytics.track(
+      AnalyticsEvents.extraExerciseAdded, {'count': count, 'to_plan': toPlan, 'source': source});
+
   // ── Tutorials ───────────────────────────────────────────────────────────────
 
   void tutorialsLoaded(

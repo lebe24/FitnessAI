@@ -85,15 +85,28 @@ class Exercise extends Equatable {
   final String reps;
   final String? notes;
 
+  /// The working weight the plan asks for, in kilograms. Null for bodyweight
+  /// work and for plans made before targets existed. Smart updates write it.
+  final double? targetKg;
+
   const Exercise({
     required this.name,
     required this.sets,
     required this.reps,
     this.notes,
+    this.targetKg,
   });
 
+  Exercise copyWith({int? sets, String? reps, double? targetKg}) => Exercise(
+        name: name,
+        sets: sets ?? this.sets,
+        reps: reps ?? this.reps,
+        notes: notes,
+        targetKg: targetKg ?? this.targetKg,
+      );
+
   @override
-  List<Object?> get props => [name, sets, reps, notes];
+  List<Object?> get props => [name, sets, reps, notes, targetKg];
 }
 
 class TrainingGuidelines extends Equatable {

@@ -15,6 +15,9 @@ import 'package:fitness/ui/features/fitness/views/fitness_page_method.dart';
 import 'package:provider/provider.dart';
 import 'package:fitness/ui/features/fitness/views/exercise_hero_page.dart';
 import 'package:fitness/domain/models/workout_plan.dart';
+import 'package:fitness/domain/coach/plan_extras.dart';
+import 'package:fitness/domain/models/exercise_history.dart' show ExerciseHistory, formatKg;
+import 'package:fitness/domain/use_cases/storage/update_fitness_plan_usecase.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/domain/models/premium_feature.dart';
 import 'package:fitness/ui/core/widgets/premium_gate.dart';
@@ -52,6 +55,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   /// Set once the session is uploaded; "Undo" is not offered after that.
   bool _saved = false;
+
+  /// Exercises were added to this day, which the draft has to keep.
+  bool _listChanged = false;
 
   final TextEditingController _messageController    = TextEditingController();
   final TextEditingController _durationController   = TextEditingController();
@@ -97,6 +103,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
         ..clear()
         ..addAll(draft.completionTimestamps);
       _setLogs = Map.of(draft.setLogs);
+      _listChanged = draft.listChanged;
     });
     if (mounted && _completedExercises.isNotEmpty) {
       _showSnack('Resumed your workout — '
@@ -115,6 +122,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
       currentIndex: _currentExerciseIndex,
       completionTimestamps: _completionTimestamps,
       setLogs: _setLogs,
+      listChanged: _listChanged,
     ));
   }
 
@@ -320,6 +328,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
         exerciseIndex: index,
         workoutDate: widget.date ?? DateTime.now(),
         dayLabel: widget.workoutDay?.day,
+        sessionExercises: List.of(_exercises),
+        onAddExercises: _addFromCoach,
+        canAddToPlan: _canAddToPlan,
         // Seed the log dialog with anything already typed for this exercise,
         // and keep every edit in the draft so it survives an app restart.
         initialSets: _setLogs[name],
@@ -337,6 +348,57 @@ class _WorkoutPageState extends State<WorkoutPage> {
         },
       ),
     ));
+  }
+
+  // ─── Extras from the coach ───────────────────────────────────────────────────
+
+  /// Whether this workout is a day of the active plan.
+  Future<bool> _canAddToPlan() async {
+    final day = widget.workoutDay;
+    if (day == null || !mounted) return false;
+    try {
+      final fitness = context.read<FitnessViewModel>();
+      if (fitness.activePlan == null) await fitness.loadFitnessPlans();
+      final plan = fitness.activePlan;
+      return plan != null && planDayIndex(plan.workoutPlan.plan, day) != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Puts [added] into today's workout, and into the saved plan if asked.
+  Future<ExerciseAddOutcome> _addFromCoach(List<Exercise> added, {required bool toPlan}) async {
+    final have = {for (final e in _localExercises) ExerciseHistory.keyFor(e.name)};
+    final fresh = [
+      for (final e in added)
+        if (have.add(ExerciseHistory.keyFor(e.name))) e
+    ];
+    if (fresh.isNotEmpty && mounted) {
+      setState(() {
+        _localExercises = [..._localExercises, ...fresh];
+        if (_currentExerciseIndex == -1) _currentExerciseIndex = 0;
+        _listChanged = true;
+      });
+      _saveDraft();
+    }
+    if (!toPlan) return ExerciseAddOutcome.today;
+
+    final day = widget.workoutDay;
+    if (day == null || !mounted) return ExerciseAddOutcome.planFailed;
+    try {
+      final fitness = context.read<FitnessViewModel>();
+      final stored = fitness.activePlan;
+      final next = stored == null ? null : withExtraExercises(stored.workoutPlan.plan, day, added);
+      if (stored == null || next == null) return ExerciseAddOutcome.planFailed;
+      await sl<UpdateFitnessPlanUsecase>()(stored.copyWith(
+        workoutPlan: WorkoutPlanEntity(plan: next, status: stored.workoutPlan.status),
+      ));
+      await fitness.loadFitnessPlans();
+      return ExerciseAddOutcome.todayAndPlan;
+    } catch (e) {
+      debugPrint('Adding to the plan failed: $e');
+      return ExerciseAddOutcome.planFailed;
+    }
   }
 
   // ─── Duration dialog ─────────────────────────────────────────────────────────
@@ -566,7 +628,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
       setState(() {
         _localExercises = [..._localExercises, added];
         if (_currentExerciseIndex == -1) _currentExerciseIndex = 0;
+        _listChanged = true;
       });
+      _saveDraft();
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -608,6 +672,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
       setState(() {
         _localExercises = [..._localExercises, ...added];
         if (_currentExerciseIndex == -1) _currentExerciseIndex = 0;
+        _listChanged = true;
       });
       _saveDraft();
       messenger.showSnackBar(
@@ -1037,6 +1102,13 @@ class _ActiveCard extends StatelessWidget {
                 icon: Icons.fitness_center_rounded,
                 label: exercise.reps,
               ),
+              if (exercise.targetKg != null) ...[
+                const SizedBox(width: 8),
+                _StatPill(
+                  icon: Icons.flag_rounded,
+                  label: '${formatKg(exercise.targetKg!)} kg',
+                ),
+              ],
             ],
           ),
           if (exercise.notes != null) ...[
@@ -1134,7 +1206,8 @@ class _PendingCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${exercise.sets} sets · ${exercise.reps}',
+                  '${exercise.sets} sets · ${exercise.reps}'
+                  '${exercise.targetKg == null ? '' : ' · ${formatKg(exercise.targetKg!)} kg'}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.25),

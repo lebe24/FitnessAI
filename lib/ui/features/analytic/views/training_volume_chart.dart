@@ -4,6 +4,7 @@ import 'package:fitness/domain/models/premium_feature.dart';
 import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/widgets/premium_gate.dart';
 import 'package:fitness/domain/models/session_volume.dart';
+import 'package:fitness/domain/models/volume_format.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:fitness/ui/core/routes/app_router.dart';
 import 'package:go_router/go_router.dart';
@@ -35,11 +36,15 @@ class TrainingVolumeChart extends StatelessWidget {
   /// get too narrow to touch on a phone.
   final int maxBars;
 
+  /// Show the total in pounds. The bars below stay in kilograms.
+  final bool imperial;
+
   const TrainingVolumeChart({
     super.key,
     required this.sessions,
     required this.isLoading,
     this.maxBars = 8,
+    this.imperial = false,
   });
 
   List<SessionVolume> get _data {
@@ -86,7 +91,7 @@ class TrainingVolumeChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Header(data: data, locked: locked),
+          _Header(data: data, locked: locked, imperial: imperial),
           const SizedBox(height: 20),
           SizedBox(
             height: 180,
@@ -131,7 +136,8 @@ class TrainingVolumeChart extends StatelessWidget {
 class _Header extends StatelessWidget {
   final List<SessionVolume> data;
   final bool locked;
-  const _Header({required this.data, required this.locked});
+  final bool imperial;
+  const _Header({required this.data, required this.locked, required this.imperial});
 
   @override
   Widget build(BuildContext context) {
@@ -179,9 +185,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                total >= 1000
-                    ? '${(total / 1000).toStringAsFixed(1)}t'
-                    : '${total.round()}kg',
+                formatVolumeShort(total.toDouble(), imperial: imperial),
                 style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,

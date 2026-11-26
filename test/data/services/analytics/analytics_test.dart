@@ -2,6 +2,8 @@ import 'package:fitness/data/services/analytics/analytics.dart';
 import 'package:fitness/data/services/analytics/analytics_bootstrap.dart';
 import 'package:fitness/data/services/analytics/analytics_events.dart';
 import 'package:fitness/data/services/analytics/analytics_service.dart';
+import 'package:fitness/data/services/analytics/body_analytics.dart';
+import 'package:fitness/data/services/analytics/plan_analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../fakes/recording_analytics.dart';
@@ -154,11 +156,68 @@ void main() {
         AnalyticsEvents.formAnalysisFailed,
         AnalyticsEvents.formAnalysisResultViewed,
         AnalyticsEvents.muscleVideosOpened,
+        AnalyticsEvents.analyticsCardTapped,
+        AnalyticsEvents.goalSet,
+        AnalyticsEvents.goalCleared,
+        AnalyticsEvents.weightLogged,
+        AnalyticsEvents.measurementsLogged,
+        AnalyticsEvents.goalAdviceRequested,
+        AnalyticsEvents.goalAdviceReceived,
+        AnalyticsEvents.goalAdviceFailed,
+        AnalyticsEvents.muscleFocusChanged,
+        AnalyticsEvents.workoutHistoryOpened,
+        AnalyticsEvents.workoutHistoryMonthSelected,
+        AnalyticsEvents.workoutSessionOpened,
+        AnalyticsEvents.workoutVideosOpened,
+        AnalyticsEvents.workoutVideosDeletedAll,
+        AnalyticsEvents.planAdjustSubmitted,
+        AnalyticsEvents.planAdjustBlocked,
+        AnalyticsEvents.planUpdateProposed,
+        AnalyticsEvents.planUpdateCoachReviewed,
+        AnalyticsEvents.planUpdateApplied,
+        AnalyticsEvents.planUpdateDismissed,
+        AnalyticsEvents.planUpdateUndone,
+        AnalyticsEvents.exerciseCoachAsked,
+        AnalyticsEvents.exerciseCoachReceived,
+        AnalyticsEvents.exerciseCoachFailed,
+        AnalyticsEvents.exerciseCoachUsed,
+        AnalyticsEvents.sessionCheckinAnswered,
+        AnalyticsEvents.extraExerciseAdded,
+        AnalyticsEvents.extraWorkoutGenerated,
+        AnalyticsEvents.sessionShareOpened,
+        AnalyticsEvents.sessionShareFinished,
+        AnalyticsEvents.sessionShareFailed,
       ];
       expect(names.toSet().length, names.length, reason: 'duplicate event name');
       for (final n in names) {
         expect(RegExp(r'^[a-z]+(_[a-z]+)*$').hasMatch(n), isTrue, reason: n);
       }
+    });
+  });
+
+  group('stats tab card taps', () {
+    test('say which card and whether it was locked', () async {
+      final rec = RecordingAnalytics();
+      Analytics.use(rec);
+      BodyAnalytics.cardTapped(card: 'body_weight', locked: true);
+      await Future<void>.delayed(Duration.zero);
+      Analytics.use(NoopAnalyticsService());
+
+      expect(rec.events.single.$1, 'analytics_card_tapped');
+      expect(rec.events.single.$2, {'card': 'body_weight', 'locked': true});
+    });
+  });
+
+  group('plan analytics labels', () {
+    test('only the four preset goals are sent by name; anything typed is "custom"', () {
+      expect(PlanAnalytics.goalLabel('Build Muscle'), 'Build Muscle');
+      expect(PlanAnalytics.goalLabel('I want to look good for my wedding in June'), 'custom');
+      expect(PlanAnalytics.goalLabel(null), 'none');
+    });
+
+    test('experience levels are fixed labels too', () {
+      expect(PlanAnalytics.levelLabel('God in Human Form'), 'God in Human Form');
+      expect(PlanAnalytics.levelLabel('whatever'), 'other');
     });
   });
 
