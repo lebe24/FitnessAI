@@ -1,3 +1,9 @@
+import 'package:fitness/data/models/workout_log/workout_log_model.dart';
+import 'package:fitness/data/services/analytics/energy_analytics.dart';
+import 'package:fitness/ui/features/energy/energy_services.dart';
+import 'package:fitness/ui/features/energy/views/finished_session.dart';
+import 'package:fitness/ui/features/energy/views/workout_complete_dialog.dart';
+import 'package:fitness/data/services/workout_log/exercise_history_service.dart';
 import 'dart:io';
 import 'package:fitness/data/models/equipment_scan_model.dart';
 import 'package:fitness/data/services/fitness/equipment_scan_service.dart';
@@ -14,6 +20,9 @@ import 'package:fitness/ui/features/fitness/views/fitness_page_method.dart';
 import 'package:provider/provider.dart';
 import 'package:fitness/ui/features/fitness/views/exercise_hero_page.dart';
 import 'package:fitness/domain/models/workout_plan.dart';
+import 'package:fitness/domain/coach/plan_extras.dart';
+import 'package:fitness/domain/models/exercise_history.dart' show ExerciseHistory, formatKg;
+import 'package:fitness/domain/use_cases/storage/update_fitness_plan_usecase.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/domain/models/premium_feature.dart';
 import 'package:fitness/ui/core/widgets/premium_gate.dart';
@@ -48,6 +57,15 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   // Rest-time tracking: timestamps when each exercise is marked complete.
   final List<DateTime> _completionTimestamps = [];
+
+  /// Set once the session is uploaded; "Undo" is not offered after that.
+  bool _saved = false;
+
+  /// The session as stored, kept for the energy bot.
+  WorkoutSessionModel? _savedSession;
+
+  /// Exercises were added to this day, which the draft has to keep.
+  bool _listChanged = false;
 
   final TextEditingController _messageController    = TextEditingController();
   final TextEditingController _durationController   = TextEditingController();
@@ -93,6 +111,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
         ..clear()
         ..addAll(draft.completionTimestamps);
       _setLogs = Map.of(draft.setLogs);
+      _listChanged = draft.listChanged;
     });
     if (mounted && _completedExercises.isNotEmpty) {
       _showSnack('Resumed your workout — '
@@ -111,6 +130,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
       currentIndex: _currentExerciseIndex,
       completionTimestamps: _completionTimestamps,
       setLogs: _setLogs,
+      listChanged: _listChanged,
     ));
   }
 
@@ -277,7 +297,24 @@ class _WorkoutPageState extends State<WorkoutPage> {
     return totalSecs ~/ (_completionTimestamps.length - 1);
   }
 
+  /// Take back "Done" on [index]. Not offered once the workout is saved: the
+  /// session is already on the server by then.
+  void _uncompleteExercise(int index) {
+    if (_saved || !_completedExercises.contains(index)) return;
+    final name = _exercises[index].name;
+    setState(() {
+      _completedExercises.remove(index);
+      _currentExerciseIndex = _firstIncompleteIndex();
+      if (_completionTimestamps.isNotEmpty) _completionTimestamps.removeLast();
+    });
+    _saveDraft();
+    _showSnack('"$name" marked as not done');
+  }
+
   void _openHeroPage(int index) {
+    // A completed exercise has nothing to open; "Complete the previous
+    // exercise first" would be the wrong thing to say about it.
+    if (_isDone(index)) return;
     if (!_isActive(index)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -297,6 +334,11 @@ class _WorkoutPageState extends State<WorkoutPage> {
       builder: (_) => ExerciseHeroPage(
         exercise: _exercises[index],
         exerciseIndex: index,
+        workoutDate: widget.date ?? DateTime.now(),
+        dayLabel: widget.workoutDay?.day,
+        sessionExercises: List.of(_exercises),
+        onAddExercises: _addFromCoach,
+        canAddToPlan: _canAddToPlan,
         // Seed the log dialog with anything already typed for this exercise,
         // and keep every edit in the draft so it survives an app restart.
         initialSets: _setLogs[name],
@@ -314,6 +356,57 @@ class _WorkoutPageState extends State<WorkoutPage> {
         },
       ),
     ));
+  }
+
+  // ─── Extras from the coach ───────────────────────────────────────────────────
+
+  /// Whether this workout is a day of the active plan.
+  Future<bool> _canAddToPlan() async {
+    final day = widget.workoutDay;
+    if (day == null || !mounted) return false;
+    try {
+      final fitness = context.read<FitnessViewModel>();
+      if (fitness.activePlan == null) await fitness.loadFitnessPlans();
+      final plan = fitness.activePlan;
+      return plan != null && planDayIndex(plan.workoutPlan.plan, day) != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Puts [added] into today's workout, and into the saved plan if asked.
+  Future<ExerciseAddOutcome> _addFromCoach(List<Exercise> added, {required bool toPlan}) async {
+    final have = {for (final e in _localExercises) ExerciseHistory.keyFor(e.name)};
+    final fresh = [
+      for (final e in added)
+        if (have.add(ExerciseHistory.keyFor(e.name))) e
+    ];
+    if (fresh.isNotEmpty && mounted) {
+      setState(() {
+        _localExercises = [..._localExercises, ...fresh];
+        if (_currentExerciseIndex == -1) _currentExerciseIndex = 0;
+        _listChanged = true;
+      });
+      _saveDraft();
+    }
+    if (!toPlan) return ExerciseAddOutcome.today;
+
+    final day = widget.workoutDay;
+    if (day == null || !mounted) return ExerciseAddOutcome.planFailed;
+    try {
+      final fitness = context.read<FitnessViewModel>();
+      final stored = fitness.activePlan;
+      final next = stored == null ? null : withExtraExercises(stored.workoutPlan.plan, day, added);
+      if (stored == null || next == null) return ExerciseAddOutcome.planFailed;
+      await sl<UpdateFitnessPlanUsecase>()(stored.copyWith(
+        workoutPlan: WorkoutPlanEntity(plan: next, status: stored.workoutPlan.status),
+      ));
+      await fitness.loadFitnessPlans();
+      return ExerciseAddOutcome.todayAndPlan;
+    } catch (e) {
+      debugPrint('Adding to the plan failed: $e');
+      return ExerciseAddOutcome.planFailed;
+    }
   }
 
   // ─── Duration dialog ─────────────────────────────────────────────────────────
@@ -350,6 +443,10 @@ class _WorkoutPageState extends State<WorkoutPage> {
       // Uploaded — the local draft has served its purpose. Cleared here and
       // nowhere else, so a failed upload keeps the user's progress.
       await WorkoutDraftStorage.clear(workoutDate);
+      _saved = true;
+      _savedSession = session;
+      // A new session changes every exercise's history.
+      sl<ExerciseHistoryService>().invalidate();
       if (mounted) {
         _showSnack('Workout saved!');
         _showRestTimeDialog(duration, workoutDate, sessionId: session.id);
@@ -386,6 +483,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
       if (e.notes != null) 'notes': e.notes!,
     }).toList();
 
+    // The sheet can also be swiped away, which finishes the workout too.
+    var done = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -398,11 +497,14 @@ class _WorkoutPageState extends State<WorkoutPage> {
         focus: widget.workoutDay?.focus,
         sessionId: sessionId,
         onDone: () {
+          done = true;
           Navigator.of(context).pop();
           _markStreakComplete(workoutDate, duration.round());
         },
       ),
-    );
+    ).then((_) {
+      if (!done) _markStreakComplete(workoutDate, duration.round());
+    });
   }
 
   void _markStreakComplete(DateTime workoutDate, int durationMins) {
@@ -412,6 +514,26 @@ class _WorkoutPageState extends State<WorkoutPage> {
       durationMins: durationMins,
     );
     _showSnack('Keep the streak alive 🔥');
+    _offerEnergy(durationMins);
+  }
+
+  /// With the workout finished and saved, the bot pops up and takes the user to
+  /// the session to see the energy it used.
+  Future<void> _offerEnergy(int durationMins) async {
+    final saved = _savedSession;
+    final energy = EnergyServices.fromLocator();
+    if (saved == null || energy == null || !energy.allowed()) return;
+    await energy.bot.loaded;
+    if (!mounted) return;
+    final see = await showWorkoutCompleteDialog(
+      context,
+      bot: energy.bot.value,
+      exercises: _localExercises.length,
+      minutes: durationMins,
+    );
+    const EnergyAnalytics().finishPrompt(accepted: see);
+    if (!see || !mounted) return;
+    await openFinishedSession(context, saved: saved);
   }
 
   void _showSnack(String msg, {bool isError = false}) {
@@ -493,6 +615,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                               isActive: _isActive(i),
                               isDone: _isDone(i),
                               onComplete: () => _completeExercise(i),
+                              onUndo: _saved ? null : () => _uncompleteExercise(i),
                               onOpen: () => _openHeroPage(i),
                             ),
                           ),
@@ -539,7 +662,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
       setState(() {
         _localExercises = [..._localExercises, added];
         if (_currentExerciseIndex == -1) _currentExerciseIndex = 0;
+        _listChanged = true;
       });
+      _saveDraft();
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -581,6 +706,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
       setState(() {
         _localExercises = [..._localExercises, ...added];
         if (_currentExerciseIndex == -1) _currentExerciseIndex = 0;
+        _listChanged = true;
       });
       _saveDraft();
       messenger.showSnackBar(
@@ -788,6 +914,9 @@ class _ExerciseItem extends StatelessWidget {
   final VoidCallback onComplete;
   final VoidCallback onOpen;
 
+  /// Takes back "Done". Null once the workout is saved, which hides the button.
+  final VoidCallback? onUndo;
+
   const _ExerciseItem({
     super.key,
     required this.exercise,
@@ -797,6 +926,7 @@ class _ExerciseItem extends StatelessWidget {
     required this.isDone,
     required this.onComplete,
     required this.onOpen,
+    this.onUndo,
   });
 
   bool get _isLast => index == total - 1;
@@ -909,7 +1039,7 @@ class _ExerciseItem extends StatelessWidget {
                         : null,
                   ),
                   child: isDone
-                      ? _DoneCard(exercise: exercise, index: index)
+                      ? _DoneCard(exercise: exercise, index: index, onUndo: onUndo)
                       : isActive
                           ? _ActiveCard(
                               exercise: exercise,
@@ -1006,6 +1136,13 @@ class _ActiveCard extends StatelessWidget {
                 icon: Icons.fitness_center_rounded,
                 label: exercise.reps,
               ),
+              if (exercise.targetKg != null) ...[
+                const SizedBox(width: 8),
+                _StatPill(
+                  icon: Icons.flag_rounded,
+                  label: '${formatKg(exercise.targetKg!)} kg',
+                ),
+              ],
             ],
           ),
           if (exercise.notes != null) ...[
@@ -1103,7 +1240,8 @@ class _PendingCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${exercise.sets} sets · ${exercise.reps}',
+                  '${exercise.sets} sets · ${exercise.reps}'
+                  '${exercise.targetKg == null ? '' : ' · ${formatKg(exercise.targetKg!)} kg'}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.25),
@@ -1128,7 +1266,12 @@ class _PendingCard extends StatelessWidget {
 class _DoneCard extends StatelessWidget {
   final Exercise exercise;
   final int index;
-  const _DoneCard({required this.exercise, required this.index});
+  final VoidCallback? onUndo;
+  const _DoneCard({
+    required this.exercise,
+    required this.index,
+    this.onUndo,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1170,6 +1313,35 @@ class _DoneCard extends StatelessWidget {
               ],
             ),
           ),
+          if (onUndo != null) ...[
+            const SizedBox(width: 6),
+            Semantics(
+              button: true,
+              label: 'Mark ${exercise.name} as not done',
+              excludeSemantics: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onUndo,
+                child: Padding(
+                  // Wide enough to tap without hitting the card behind it.
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.undo_rounded,
+                          size: 14, color: Colors.white.withValues(alpha: 0.6)),
+                      const SizedBox(width: 3),
+                      Text('Undo',
+                          style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withValues(alpha: 0.6))),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

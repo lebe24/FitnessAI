@@ -1,3 +1,5 @@
+import 'package:fitness/ui/features/energy/view_models/bot_settings_controller.dart';
+import 'package:fitness/ui/features/profile/views/bot_settings_page.dart';
 import 'package:fitness/l10n/generated/app_localizations.dart';
 import 'package:fitness/ui/core/di.dart' as di;
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
@@ -7,6 +9,7 @@ import 'package:fitness/ui/features/profile/views/billing_page.dart';
 import 'package:fitness/ui/features/profile/views/feature_request_page.dart';
 import 'package:fitness/ui/features/profile/views/language_settings_page.dart';
 import 'package:fitness/ui/features/profile/views/usage_data_page.dart';
+import 'package:fitness/ui/features/profile/views/workout_videos_page.dart';
 import 'package:fitness/ui/features/profile/views/legal_document_page.dart';
 import 'package:fitness/ui/features/profile/views/personal_details.dart';
 import 'package:fitness/ui/features/profile/views/profile_dialogs.dart';
@@ -515,6 +518,26 @@ List<_Item> _generalItems(AppLocalizations t) => [
     title: t.menuBilling,
     onTap: (ctx) => Navigator.of(ctx).push(
       MaterialPageRoute(builder: (_) => const BillingPage()),
+    ),
+  ),
+  _Item(
+    icon: Icons.videocam_outlined,
+    title: 'Workout videos',
+    onTap: (ctx) => Navigator.of(ctx).push(
+      MaterialPageRoute(builder: (_) => const WorkoutVideosPage()),
+    ),
+  ),
+  _Item(
+    icon: Icons.smart_toy_outlined,
+    title: 'Your bot',
+    onTap: (ctx) => requirePremium(
+      ctx,
+      PremiumFeature.energyChat,
+      () => Navigator.of(ctx).push(
+        MaterialPageRoute(
+          builder: (_) => BotSettingsPage(controller: di.sl<BotSettingsController>()),
+        ),
+      ),
     ),
   ),
   _Item(

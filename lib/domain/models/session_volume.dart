@@ -1,4 +1,5 @@
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
+import 'package:fitness/domain/models/exercise_history.dart';
 
 /// One logged set, recovered from the free-text notes a session stores.
 class LoggedSet {
@@ -138,33 +139,55 @@ class SessionVolume {
   /// The prescription and the record share one array and the same exercise
   /// appears in both, so entries without set data are skipped — otherwise the
   /// history page would list each movement twice.
+  ///
+  /// An exercise saved more than once in a day is one exercise. Older sessions
+  /// hold a copy per save, so the copies are merged set by set: a later save
+  /// wins, except that a set it left unperformed does not erase one an earlier
+  /// save recorded. Nothing is counted twice and nothing logged is lost.
   static List<ExerciseVolume> exercisesOf(WorkoutSessionModel session) {
-    final out = <ExerciseVolume>[];
+    final order = <String>[];
+    final first = <String, Map<String, dynamic>>{};
+    final merged = <String, List<LoggedSet>>{};
     for (final entry in session.workoutLogs) {
       final sets = parseSets(entry['notes'] as String?);
       if (sets.isEmpty) continue;
-      out.add(ExerciseVolume(
-        name: (entry['name'] as String?)?.trim() ?? 'Exercise',
-        sets: sets,
-        muscleGroup: entry['muscle_group'] as String?,
-      ));
+      final key = ExerciseHistory.keyFor((entry['name'] as String?) ?? '');
+      final have = merged[key];
+      if (have == null) {
+        order.add(key);
+        first[key] = entry;
+        merged[key] = sets;
+      } else {
+        merged[key] = _mergeSets(have, sets);
+      }
     }
-    return out;
+    return [
+      for (final key in order)
+        ExerciseVolume(
+          name: (first[key]!['name'] as String?)?.trim() ?? 'Exercise',
+          sets: merged[key]!,
+          muscleGroup: first[key]!['muscle_group'] as String?,
+        )
+    ];
+  }
+
+  static List<LoggedSet> _mergeSets(List<LoggedSet> earlier, List<LoggedSet> later) {
+    final byNumber = {for (final s in earlier) s.setNumber: s};
+    for (final s in later) {
+      final old = byNumber[s.setNumber];
+      if (old == null || s.wasPerformed || !old.wasPerformed) byNumber[s.setNumber] = s;
+    }
+    return byNumber.values.toList()..sort((a, b) => a.setNumber.compareTo(b.setNumber));
   }
 
   /// Reduce one session to its totals.
   static SessionVolume fromSession(WorkoutSessionModel session) {
     var volume = 0.0;
     var setCount = 0;
-    var exercises = 0;
+    final exercises = exercisesOf(session);
 
-    for (final entry in session.workoutLogs) {
-      final notes = entry['notes'] as String?;
-      final sets = parseSets(notes);
-      if (sets.isEmpty) continue; // a prescription, not a record
-
-      exercises++;
-      for (final s in sets) {
+    for (final exercise in exercises) {
+      for (final s in exercise.sets) {
         if (!s.wasPerformed) continue;
         setCount++;
         volume += s.volumeKg;
@@ -176,7 +199,7 @@ class SessionVolume {
       dayLabel: session.dayLabel,
       totalVolumeKg: volume,
       setCount: setCount,
-      exerciseCount: exercises,
+      exerciseCount: exercises.length,
       durationMins: session.durationMins ?? 0,
     );
   }

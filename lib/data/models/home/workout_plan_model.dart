@@ -319,19 +319,22 @@ class ExerciseModel extends Exercise {
     required super.sets,
     required super.reps,
     super.notes,
+    super.targetKg,
   });
 
-  /// Legacy format: { name, sets, reps, notes? }
+  /// Legacy format: { name, sets, reps, notes?, target_kg? }
   factory ExerciseModel.fromJson(Map<String, dynamic> json) => ExerciseModel(
         name: _str(json['name'], 'Exercise'),
         sets: (json['sets'] as num?)?.toInt() ?? 3,
         reps: _str(json['reps'], '10'),
         notes: json['notes'] as String?,
+        targetKg: (json['target_kg'] as num?)?.toDouble(),
       );
 
   static ExerciseModel fromExercise(Exercise ex) {
     if (ex is ExerciseModel) return ex;
-    return ExerciseModel(name: ex.name, sets: ex.sets, reps: ex.reps, notes: ex.notes);
+    return ExerciseModel(
+        name: ex.name, sets: ex.sets, reps: ex.reps, notes: ex.notes, targetKg: ex.targetKg);
   }
 
   /// New backend ExerciseDetail: { name, sets, reps, rest_seconds, tempo,
@@ -359,6 +362,7 @@ class ExerciseModel extends Exercise {
         'sets': sets,
         'reps': reps,
         'notes': notes,
+        if (targetKg != null) 'target_kg': targetKg,
       };
 }
 

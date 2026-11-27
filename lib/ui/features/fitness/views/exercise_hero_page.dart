@@ -1,8 +1,30 @@
 import 'dart:math' as math;
 
+import 'package:fitness/data/repositories/body_tracking_repository.dart';
 import 'package:fitness/data/services/api/youtube_video_cache.dart';
+import 'package:fitness/data/services/coach/checkin_store.dart';
+import 'package:fitness/data/services/coach/exercise_coach_service.dart';
 import 'package:fitness/data/services/fitness/log_parser_service.dart';
+import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/data/services/analytics/exercise_analytics.dart';
+import 'package:fitness/data/services/workout_log/exercise_history_service.dart';
 import 'package:fitness/data/services/workout_log/workout_log_remote_service.dart';
+import 'package:fitness/domain/coach/exercise_catalog.dart';
+import 'package:fitness/domain/coach/exercise_recommendation.dart';
+import 'package:fitness/domain/models/exercise_history.dart';
+import 'package:fitness/domain/models/session_volume.dart';
+import 'package:fitness/ui/features/analytic/views/body/body_ui.dart';
+import 'package:fitness/ui/features/fitness/view_models/exercise_coach_view_model.dart';
+import 'package:fitness/ui/features/fitness/views/exercise_detail/add_exercise_sheet.dart';
+import 'package:fitness/ui/features/fitness/views/exercise_detail/coach_card.dart';
+import 'package:fitness/ui/features/fitness/views/exercise_detail/detail_widgets.dart';
+import 'package:fitness/ui/features/fitness/views/exercise_detail/session_card.dart';
+import 'package:fitness/ui/features/fitness/views/exercise_detail/tutorials_tab.dart';
+import 'package:fitness/ui/features/fitness/views/exercise_history_section.dart';
+import 'package:fitness/ui/features/onboarding/views/onboarding_storage.dart';
+import 'package:fitness/ui/features/video/views/exercise_videos_section.dart';
+import 'package:fitness/data/services/video/video_tools.dart';
+import 'package:fitness/domain/models/muscle_coverage.dart';
 import 'package:fitness/data/services/workout_log/workout_draft_storage.dart';
 import 'package:fitness/domain/use_cases/exercise/search_youtube_videos_usecase.dart';
 import 'package:fitness/ui/core/di.dart';
@@ -15,12 +37,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+export 'package:fitness/ui/features/fitness/views/exercise_detail/add_exercise_sheet.dart' show ExerciseAddOutcome;
+
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const _kLime     = Color(0xFFCCFF00);
 const _kCard     = Color(0xFF111318);
 const _kBorder   = Color(0xFF1E2330);
 const _kDimWhite = Color(0x80FFFFFF);
-const _kAmber    = Color(0xFFFFAA00);
 
 class ExerciseHeroPage extends StatefulWidget {
   final Exercise exercise;
@@ -33,6 +56,23 @@ class ExerciseHeroPage extends StatefulWidget {
   /// Fired whenever the user edits a set, so the parent can persist it.
   final void Function(List<DraftSet>)? onSetsChanged;
 
+  /// Which workout this is, saved with any video recorded here.
+  final DateTime? workoutDate;
+  final String? dayLabel;
+
+  /// Every exercise in today's workout, which the coach counts sets over.
+  final List<Exercise> sessionExercises;
+
+  /// Adds exercises to today's workout, and to the saved plan when [toPlan].
+  /// Without it the page suggests but cannot add.
+  final Future<ExerciseAddOutcome> Function(List<Exercise> added, {required bool toPlan})? onAddExercises;
+
+  /// Whether this workout is a day of the saved plan, so extras can go there.
+  final Future<bool> Function()? canAddToPlan;
+
+  /// Replaces the coach in tests and previews.
+  final ExerciseCoachViewModel? coach;
+
   const ExerciseHeroPage({
     super.key,
     required this.exercise,
@@ -40,6 +80,12 @@ class ExerciseHeroPage extends StatefulWidget {
     required this.onComplete,
     this.initialSets,
     this.onSetsChanged,
+    this.workoutDate,
+    this.dayLabel,
+    this.sessionExercises = const [],
+    this.onAddExercises,
+    this.canAddToPlan,
+    this.coach,
   });
 
   @override
@@ -48,6 +94,16 @@ class ExerciseHeroPage extends StatefulWidget {
 
 class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   bool _isViewing = false;
+
+  // Pro features on this page. Watched, so a purchase made from a locked card
+  // opens them straight away.
+  late final AccessPolicy _access = sl<AccessPolicy>();
+  bool get _historyLocked => !_access.canUse(PremiumFeature.exerciseHistory);
+  bool get _videosLocked => !_access.canUse(PremiumFeature.exerciseVideos);
+  bool get _tutorialsLocked => !_access.canUse(PremiumFeature.videoTutorial);
+  bool get _coachLocked => !_access.canUse(PremiumFeature.exerciseCoach);
+  bool _historyWasLocked = false;
+  bool _coachWasLocked = false;
   dynamic _videoContent;
   bool _isLoadingVideos = false;
   String? _errorMessage;
@@ -58,8 +114,44 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   late final List<TextEditingController> _repsCtls;
   bool _logSaved = false;
 
+  /// What was typed at the last successful save. Anything different since is
+  /// unsaved again.
+  String? _savedSets;
+  Future<bool>? _saving;
+
+  // What was logged for this exercise before. Started as the page opens so it
+  // is usually ready by the time the user taps Log, and reused to pre-fill it.
+  late Future<ExerciseHistory?> _history;
+  bool _historyReported = false;
+
+  // Records how this visit to the exercise is used (never the exercise name).
+  late final ExerciseAnalytics _analytics =
+      ExerciseAnalytics(widget.exercise, widget.exerciseIndex);
+
+  late final ExerciseCoachViewModel _coach = widget.coach ??
+      ExerciseCoachViewModel(
+        exercise: widget.exercise,
+        today: widget.sessionExercises,
+        sessions: () => sl<ExerciseHistoryService>().sessions(),
+        bodyGoal: () async => (await sl<BodyTrackingRepository>().load()).goal,
+        profile: OnboardingStorage.loadOnboardingData,
+        coach: sl<ExerciseCoach>(),
+        checkIns: sl<CheckInStore>(),
+        allowed: () => !_coachLocked,
+        analytics: _analytics,
+      );
+
+  // 0 is My Videos, 1 is Tutorials. Videos exist only where filming does.
+  int _tab = videoToolsSupported ? 0 : 1;
+  final _sessionCard = GlobalKey();
+
+  String get _typedSets => [
+        for (var i = 0; i < _weightCtls.length; i++)
+          '${_weightCtls[i].text.trim()}x${_repsCtls[i].text.trim()}'
+      ].join(';');
+
   bool get _hasUnsavedData =>
-      _weightCtls.any((c) => c.text.trim().isNotEmpty) && !_logSaved;
+      _weightCtls.any((c) => c.text.trim().isNotEmpty) && _typedSets != _savedSets;
 
   @override
   void initState() {
@@ -81,13 +173,68 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
     for (final c in [..._weightCtls, ..._repsCtls]) {
       c.addListener(_publishSets);
     }
+    _historyWasLocked = _historyLocked;
+    _coachWasLocked = _coachLocked;
+    _history = _loadHistory();
     _loadCachedVideos();
+    _coach.load();
+    _access.addListener(_onAccessChanged);
+    _analytics.viewed();
+    // This page is opened with a plain route, so the router does not see it.
+    // Name the screen so events fired here are tagged with it.
+    Analytics.screen('exercise');
+  }
+
+  /// Access changed (a purchase, a restore, a lapse). Read what just opened.
+  void _onAccessChanged() {
+    if (!mounted) return;
+    if (_historyWasLocked && !_historyLocked) {
+      _historyWasLocked = false;
+      _reloadHistory();
+    } else {
+      _historyWasLocked = _historyLocked;
+      setState(() {});
+    }
+    if (_coachWasLocked && !_coachLocked) _coach.load();
+    _coachWasLocked = _coachLocked;
+    if (!_tutorialsLocked) _loadCachedVideos();
+  }
+
+  Future<ExerciseHistory?> _loadHistory() async {
+    // Not read at all for a free user: nothing is fetched or counted for
+    // something they cannot see.
+    if (_historyLocked) return null;
+    final history = await sl<ExerciseHistoryService>().load(widget.exercise.name);
+    // Once per visit: a refresh after saving should not count as a second look.
+    if (!_historyReported) {
+      _historyReported = true;
+      _analytics.historyLoaded(history);
+    }
+    return history;
+  }
+
+  /// [fresh] drops the cached sessions first — used after a save, so the log
+  /// just made appears, and by "Try again" after a failed read.
+  void _reloadHistory({bool fresh = false}) {
+    if (fresh) sl<ExerciseHistoryService>().invalidate();
+    // A block, not an arrow: an arrow would hand setState the future, which it
+    // rejects. That threw after every successful save in debug builds and was
+    // reported as "Failed to save log", inviting a second save.
+    setState(() {
+      _history = _loadHistory();
+    });
   }
 
   @override
   void dispose() {
+    _access.removeListener(_onAccessChanged);
+    // Leaving without Mark Complete (the back button, a swipe, a discard).
+    _analytics.left(logged: _logSaved);
+    // The workout list is the screen underneath.
+    Analytics.screen('workout');
     for (final c in _weightCtls) { c.dispose(); }
     for (final c in _repsCtls) { c.dispose(); }
+    if (widget.coach == null) _coach.dispose();
     super.dispose();
   }
 
@@ -100,6 +247,19 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   }
 
   Future<void> _openLogDialog() async {
+    // Wait briefly for the history so the dialog can show last time's numbers,
+    // but never hold the dialog up for it: no history is a fine answer.
+    List<LoggedSet> previous = const [];
+    try {
+      final history = await _history.timeout(
+        const Duration(milliseconds: 800),
+        onTimeout: () => null,
+      );
+      previous = history?.last?.sets ?? const [];
+    } catch (_) {}
+    if (!mounted) return;
+
+    _analytics.logOpened(hadPrevious: previous.isNotEmpty);
     final saved = await showDialog<bool>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.7),
@@ -109,23 +269,35 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         targetReps: widget.exercise.reps,
         weightCtls: _weightCtls,
         repsCtls: _repsCtls,
+        previousSets: previous,
+        analytics: _analytics,
       ),
     );
     if (saved == true && mounted) {
       await _saveToDatabase();
+    } else {
+      _analytics.logDismissed();
     }
   }
 
-  Future<void> _saveToDatabase() async {
+  /// Saves what is typed. A call made while one is running waits for it, so a
+  /// double tap cannot save twice. Returns whether it was saved.
+  Future<bool> _saveToDatabase() =>
+      _saving ??= _save().whenComplete(() => _saving = null);
+
+  Future<bool> _save() async {
+    final typed = _typedSets;
     try {
       final remote = sl<WorkoutLogRemoteDataSource>();
       // Build a plain Exercise with the actual reps/weight captured in the log
-      // dialog, embedded in the sets notes field for record-keeping.
+      // dialog, embedded in the sets notes field for record-keeping. A set
+      // without both numbers was not done: it is recorded as 0 reps, never
+      // filled in from the plan's target.
       final setsNotes = List.generate(widget.exercise.sets, (i) {
         final weight = _weightCtls[i].text.trim();
         final reps   = _repsCtls[i].text.trim();
-        return 'set ${i + 1}: ${reps.isNotEmpty ? reps : '?'} reps'
-               '${weight.isNotEmpty ? ' @ ${weight}kg' : ''}';
+        if (weight.isEmpty || reps.isEmpty) return 'set ${i + 1}: 0 reps';
+        return 'set ${i + 1}: $reps reps @ ${weight}kg';
       }).join(' | ');
 
       final logged = Exercise(
@@ -135,15 +307,23 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         notes: setsNotes.isNotEmpty ? setsNotes : widget.exercise.notes,
       );
 
+      // Filed under the workout's own day and name, the same row the finished
+      // workout is saved to.
       await remote.saveCompleteSession(
-        sessionDate: DateTime.now(),
+        sessionDate: widget.workoutDate ?? DateTime.now(),
+        dayLabel: widget.dayLabel,
         exercises: [logged],
         durationMins: 0,
       );
+      _savedSets = typed;
+      _analytics.logSaved();
       if (mounted) {
         setState(() => _logSaved = true);
+        _reloadHistory(fresh: true);
       }
+      return true;
     } catch (e) {
+      _analytics.logSaveFailed();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -152,7 +332,42 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
           ),
         );
       }
+      return false;
     }
+  }
+
+  /// "Complete exercise". Sets typed but not saved would be lost with the
+  /// page, so it asks first.
+  Future<void> _complete() async {
+    if (_hasUnsavedData) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF0D0F14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Save your sets first?',
+              style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700)),
+          content: Text('You typed sets that have not been saved.',
+              style: GoogleFonts.inter(color: const Color(0x80FFFFFF))),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('skip'),
+              child: Text('Complete without saving', style: GoogleFonts.inter(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('save'),
+              child: Text('Save and complete', style: GoogleFonts.inter(color: const Color(0xFFCCFF00))),
+            ),
+          ],
+        ),
+      );
+      if (choice == null || !mounted) return;
+      // A failed save keeps the page open with everything still typed.
+      if (choice == 'save' && !await _saveToDatabase()) return;
+      if (!mounted) return;
+    }
+    _analytics.completed(logged: _logSaved);
+    widget.onComplete();
   }
 
   Future<bool> _confirmLeave() async {
@@ -177,14 +392,15 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         ],
       ),
     );
-    if (result == 'save') {
-      await _saveToDatabase();
-      return true;
-    }
+    _analytics.leavePrompt(result ?? 'dismissed');
+    // Stay on the page if the save failed, so nothing typed is lost.
+    if (result == 'save') return _saveToDatabase();
     return result == 'discard';
   }
 
   void _loadCachedVideos() {
+    // A list left in the cache from when the user had Pro must not show.
+    if (_tutorialsLocked) return;
     final cached = _videoCache.getCachedVideos(widget.exercise.name);
     if (cached == null) return;
     final contents = cached['contents'];
@@ -197,7 +413,9 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
   }
 
   Future<void> _loadVideos() async {
+    if (_tutorialsLocked) return;
     if (_videoCache.hasCachedVideos(widget.exercise.name)) {
+      _analytics.tutorialsLoaded(success: true, cached: true);
       setState(() {
         _videoContent = _videoCache.getCachedVideos(widget.exercise.name);
         _isViewing = true;
@@ -217,17 +435,204 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         maxResults: 10,
       );
       _videoCache.cacheVideos(widget.exercise.name, result);
+      final contents = result is Map ? result['contents'] : null;
+      _analytics.tutorialsLoaded(
+          success: true, count: contents is List ? contents.length : null);
+      if (!mounted) return;
       setState(() {
         _videoContent = result;
         _isViewing = true;
         _isLoadingVideos = false;
       });
     } catch (e) {
+      _analytics.tutorialsLoaded(success: false);
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _isLoadingVideos = false;
       });
     }
+  }
+
+  // ── The coach ─────────────────────────────────────────────────────────────
+
+  /// Puts the recommended numbers into the log and opens it to be checked.
+  void _use(SetPrescription p, {required bool alternative}) {
+    final weight = p.weightKg;
+    for (var i = 0; i < _weightCtls.length; i++) {
+      if (weight != null) _weightCtls[i].text = formatKg(weight);
+      _repsCtls[i].text = p.reps;
+    }
+    _coach.used(alternative: alternative);
+    _openLogDialog();
+  }
+
+  Future<void> _addExercises(List<Suggestion> picks, String source) async {
+    final add = widget.onAddExercises;
+    if (add == null || picks.isEmpty) return;
+    final toPlan = await showAddExerciseChoice(
+      context,
+      names: [for (final p in picks) p.exercise.name],
+      canAddToPlan: widget.canAddToPlan?.call(),
+    );
+    if (toPlan == null || !mounted) return;
+    final exercises = [for (final p in picks) p.toExercise()];
+    final outcome = await add(exercises, toPlan: toPlan);
+    if (!mounted) return;
+    _coach.addedToSession(exercises,
+        toPlan: outcome == ExerciseAddOutcome.todayAndPlan, source: source);
+    final what = exercises.length == 1 ? exercises.single.name : '${exercises.length} exercises';
+    _snack(switch (outcome) {
+      ExerciseAddOutcome.today => 'Added $what to today\'s workout.',
+      ExerciseAddOutcome.todayAndPlan => 'Added $what to today and to your plan.',
+      ExerciseAddOutcome.planFailed => 'Added $what to today, but your plan could not be saved.',
+    });
+  }
+
+  void _snack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message, style: GoogleFonts.inter(fontSize: 13)),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  // ── The menu ──────────────────────────────────────────────────────────────
+
+  Future<void> _openMenu() async {
+    final notes = widget.exercise.notes;
+    final choice = await showBodySheet<String>(
+      context,
+      (sheet) => Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SheetHandle(),
+            if (notes != null)
+              _MenuRow(Icons.notes_rounded, 'Technique notes', () => Navigator.of(sheet).pop('notes')),
+            _MenuRow(Icons.history_rounded, 'Full history', () => Navigator.of(sheet).pop('history')),
+            if (widget.onAddExercises != null)
+              _MenuRow(Icons.add_rounded, 'Add an exercise', () => Navigator.of(sheet).pop('add')),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'notes':
+        await _showNotes(notes!);
+      case 'history':
+        await requirePremium(context, PremiumFeature.exerciseHistory, _showFullHistory);
+      case 'add':
+        await requirePremium(context, PremiumFeature.exerciseCoach, _suggestFromMenu);
+    }
+  }
+
+  Future<void> _showNotes(String notes) => showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF0D0F14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Technique notes', style: bodyHeading(17)),
+          content: Text(notes, style: bodyText(14, color: kBodySoft, height: 1.6)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Close', style: bodyText(13, color: kBodyLime, weight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _showFullHistory() async {
+    final history = await _history;
+    if (!mounted) return;
+    if (history == null || history.isEmpty) {
+      _snack(history == null ? 'Your history could not be loaded.' : 'No history for this exercise yet.');
+      return;
+    }
+    showExerciseHistory(context, history, widget.exercise.name, DateTime.now());
+  }
+
+  Future<void> _suggestFromMenu() async {
+    if (_coach.recommendation == null) await _coach.load();
+    await _coach.suggest();
+    final target = _sessionCard.currentContext;
+    if (target != null && target.mounted) {
+      await Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 300), alignment: 0.1);
+    }
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
+  Widget _stats() => FutureBuilder<ExerciseHistory?>(
+        future: _history,
+        builder: (context, snap) {
+          final top = snap.data?.last?.bestSet?.weightKg;
+          final target = widget.exercise.targetKg;
+          return DetailStats(
+            sets: widget.exercise.sets,
+            reps: widget.exercise.reps,
+            lastWeight: top == null || top == 0 ? null : '${formatKg(top)} kg',
+            lastWeightLocked: _historyLocked,
+            target: target == null ? null : '${formatKg(target)} kg',
+            onTapLog: _openLogDialog,
+          );
+        },
+      );
+
+  Widget _media() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            // Recording and rating your own sets: iOS only for now.
+            if (videoToolsSupported) ...[
+              _Tab('My Videos', selected: _tab == 0, locked: _videosLocked, onTap: () => setState(() => _tab = 0)),
+              const SizedBox(width: 24),
+            ],
+            _Tab('Tutorials', selected: _tab == 1, locked: _tutorialsLocked, onTap: () => setState(() => _tab = 1)),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (_tab == 0 && videoToolsSupported)
+          _videosLocked
+              ? const PremiumLockedCard(feature: PremiumFeature.exerciseVideos)
+              : ExerciseVideosSection(
+                  tabbed: true,
+                  exerciseName: widget.exercise.name,
+                  muscles: MuscleCoverage.musclesFor(
+                    name: widget.exercise.name,
+                    notes: widget.exercise.notes ?? '',
+                  ),
+                  workoutDate: widget.workoutDate,
+                  dayLabel: widget.dayLabel,
+                )
+        else
+          TutorialsTab(
+            locked: _tutorialsLocked,
+            isViewing: _isViewing,
+            isLoading: _isLoadingVideos,
+            errorMessage: _errorMessage,
+            videoContent: _videoContent,
+            onLoad: _loadVideos,
+            onVideoTap: (videoId) => requirePremium(
+              context,
+              PremiumFeature.videoTutorial,
+              () async {
+                _analytics.tutorialOpened();
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => YouTubePlayer(videoId: videoId),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -244,790 +649,124 @@ class _ExerciseHeroPageState extends State<ExerciseHeroPage> {
         }
       },
       child: Scaffold(
-      backgroundColor: Colors.black,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.black,
-              Color(0xFF111111),
-              Color(0xFF1C1C1E),
-              Color(0xFF2A2A2A),
-            ],
-            stops: [0.0, 0.35, 0.7, 1.0],
-          ),
-        ),
-        child: SafeArea(
+        backgroundColor: kBodyBg,
+        body: SafeArea(
           child: Column(
             children: [
-              _HeroHeader(exerciseIndex: widget.exerciseIndex),
+              DetailHeader(onMenu: _openMenu),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 8),
-                      _ExerciseTitle(name: widget.exercise.name),
-                      const SizedBox(height: 20),
-                      _StatsCard(
-                        sets: widget.exercise.sets,
-                        reps: widget.exercise.reps,
-                        onTapLog: _openLogDialog,
+                      ExerciseHeading(exercise: widget.exercise),
+                      const SizedBox(height: 16),
+                      _stats(),
+                      const SizedBox(height: 14),
+                      SafetyTipCard(notes: widget.exercise.notes),
+                      const SizedBox(height: 14),
+                      if (_coachLocked)
+                        PremiumLockedCard(feature: PremiumFeature.exerciseCoach, onUnlocked: _coach.load)
+                      else
+                        ListenableBuilder(
+                          listenable: _coach,
+                          builder: (_, __) => CoachCard(vm: _coach, onUse: _use),
+                        ),
+                      const SizedBox(height: 22),
+                      _media(),
+                      const SizedBox(height: 22),
+                      ExerciseHistorySection(
+                        compact: true,
+                        exerciseName: widget.exercise.name,
+                        history: _history,
+                        onRetry: () => _reloadHistory(fresh: true),
+                        locked: _historyLocked,
                       ),
-                      if (widget.exercise.notes != null) ...[
-                        const SizedBox(height: 20),
-                        _InstructionsCard(notes: widget.exercise.notes!),
-                      ],
-                      const SizedBox(height: 20),
-                      const _SafetyTip(),
-                      const SizedBox(height: 28),
-                      _VideoSection(
-                        isViewing: _isViewing,
-                        isLoading: _isLoadingVideos,
-                        errorMessage: _errorMessage,
-                        videoContent: _videoContent,
-                        onLoad: _loadVideos,
-                        // Listing the videos is free; playing one is not.
-                        // Seeing that demonstrations exist is part of the
-                        // pitch for subscribing.
-                        locked: !sl<AccessPolicy>()
-                            .canUse(PremiumFeature.videoTutorial),
-                        onVideoTap: (videoId) => requirePremium(
-                          context,
-                          PremiumFeature.videoTutorial,
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => YouTubePlayer(videoId: videoId),
-                            ),
+                      if (!_coachLocked) ...[
+                        const SizedBox(height: 14),
+                        ListenableBuilder(
+                          key: _sessionCard,
+                          listenable: _coach,
+                          builder: (_, __) => SessionCard(
+                            vm: _coach,
+                            onAdd: widget.onAddExercises == null ? null : _addExercises,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
+                      ],
                     ],
                   ),
                 ),
               ),
-              _CompleteButton(onComplete: widget.onComplete),
+              CompleteExerciseButton(onComplete: _complete),
             ],
           ),
         ),
       ),
-    ), // Scaffold
-    ); // PopScope
-  }
-}
-
-// ── Header ────────────────────────────────────────────────────────────────────
-
-class _HeroHeader extends StatelessWidget {
-  final int exerciseIndex;
-  const _HeroHeader({required this.exerciseIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).maybePop(),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  width: 1,
-                ),
-              ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: _kLime.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: _kLime.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: Text(
-              'Exercise ${exerciseIndex + 1}',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _kLime,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
 
-// ── Title ────────────────────────────────────────────────────────────────────
-
-class _ExerciseTitle extends StatelessWidget {
-  final String name;
-  const _ExerciseTitle({required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      name,
-      style: GoogleFonts.poppins(
-        fontSize: 30,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
-        height: 1.15,
-      ),
-    );
-  }
-}
-
-// ── Stats card ───────────────────────────────────────────────────────────────
-
-class _StatsCard extends StatelessWidget {
-  final int sets;
-  final String reps;
-  final VoidCallback onTapLog;
-
-  const _StatsCard({
-    required this.sets,
-    required this.reps,
-    required this.onTapLog,
-  });
+/// A tab of the videos area, underlined when chosen.
+class _Tab extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool locked;
+  final VoidCallback onTap;
+  const _Tab(this.label, {required this.selected, required this.locked, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTapLog,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _kBorder, width: 1),
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              Expanded(child: _StatColumn(value: '$sets', label: 'Sets')),
-              VerticalDivider(
-                color: Colors.white.withValues(alpha: 0.08),
-                thickness: 1,
-                indent: 8,
-                endIndent: 8,
-              ),
-              Expanded(child: _StatColumn(value: reps, label: 'Reps')),
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: IntrinsicWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.edit_note_rounded,
-                      color: _kLime.withValues(alpha: 0.7),
-                      size: 20,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Log',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _kLime.withValues(alpha: 0.7),
-                      ),
-                    ),
+                    Text(label,
+                        style: bodyHeading(15, color: selected ? Colors.white : kBodyMuted)
+                            .copyWith(fontWeight: selected ? FontWeight.w700 : FontWeight.w600)),
+                    if (locked) ...[
+                      const SizedBox(width: 5),
+                      const Icon(Icons.lock_outline_rounded, size: 13, color: kBodyMuted),
+                    ],
                   ],
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatColumn extends StatelessWidget {
-  final String value;
-  final String label;
-  const _StatColumn({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 40,
-            fontWeight: FontWeight.w800,
-            color: _kLime,
-            height: 1,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: _kDimWhite,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Instructions ─────────────────────────────────────────────────────────────
-
-class _InstructionsCard extends StatelessWidget {
-  final String notes;
-  const _InstructionsCard({required this.notes});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Instructions',
-          style: GoogleFonts.poppins(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: _kCard,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _kBorder, width: 1),
-          ),
-          child: Text(
-            notes,
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.88),
-              height: 1.65,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Safety tip ───────────────────────────────────────────────────────────────
-
-class _SafetyTip extends StatelessWidget {
-  const _SafetyTip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141208),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _kAmber.withValues(alpha: 0.25),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: _kAmber.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.lightbulb_rounded,
-                size: 14,
-                color: _kAmber,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Follow instructions carefully to avoid injury and maximize effectiveness.',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                height: 1.5,
-                color: Colors.white.withValues(alpha: 0.8),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Video section ─────────────────────────────────────────────────────────────
-
-class _VideoSection extends StatelessWidget {
-  final bool isViewing;
-  final bool isLoading;
-  final String? errorMessage;
-  final dynamic videoContent;
-  final VoidCallback onLoad;
-  final void Function(String videoId) onVideoTap;
-
-  /// Marks the section as paid-only. The list still renders — tapping a video
-  /// opens the paywall rather than the player.
-  final bool locked;
-
-  const _VideoSection({
-    required this.isViewing,
-    required this.isLoading,
-    required this.errorMessage,
-    required this.videoContent,
-    required this.onLoad,
-    required this.onVideoTap,
-    this.locked = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(
-              Icons.play_circle_outline_rounded,
-              size: 18,
-              color: _kLime,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Video Tutorials',
-              style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 8),
-            PremiumBadge(visible: locked),
-          ],
-        ),
-        const SizedBox(height: 14),
-        if (!isViewing)
-          _VideoPlaceholder(onLoad: onLoad)
-        else if (isLoading)
-          const _VideoLoading()
-        else if (errorMessage != null)
-          _VideoError(message: errorMessage!, onRetry: onLoad)
-        else if (videoContent != null && videoContent is Map)
-          _VideoList(videoContent: videoContent, onTap: onVideoTap)
-        else
-          const _VideoEmpty(),
-      ],
-    );
-  }
-}
-
-class _VideoPlaceholder extends StatelessWidget {
-  final VoidCallback onLoad;
-  const _VideoPlaceholder({required this.onLoad});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onLoad,
-      child: Container(
-        width: double.infinity,
-        height: 160,
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _kBorder, width: 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: _kLime.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _kLime.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-              ),
-              child: const Icon(
-                Icons.play_arrow_rounded,
-                color: _kLime,
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Load Tutorials',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Tap to fetch related YouTube videos',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: _kDimWhite,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _VideoLoading extends StatelessWidget {
-  const _VideoLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 160,
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder, width: 1),
-      ),
-      child: const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(_kLime),
-          strokeWidth: 2.5,
-        ),
-      ),
-    );
-  }
-}
-
-class _VideoError extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _VideoError({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.red.withValues(alpha: 0.25),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.error_outline_rounded,
-            color: Colors.red.withValues(alpha: 0.8),
-            size: 32,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Failed to load videos',
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            message,
-            style: GoogleFonts.inter(fontSize: 12, color: _kDimWhite),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: onRetry,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              decoration: BoxDecoration(
-                color: _kCard,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _kBorder, width: 1),
-              ),
-              child: Text(
-                'Retry',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _kLime,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VideoEmpty extends StatelessWidget {
-  const _VideoEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 160,
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder, width: 1),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.video_library_outlined,
-            color: Colors.white.withValues(alpha: 0.3),
-            size: 40,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'No videos found',
-            style: GoogleFonts.inter(fontSize: 14, color: _kDimWhite),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VideoList extends StatelessWidget {
-  final dynamic videoContent;
-  final void Function(String videoId) onTap;
-  const _VideoList({required this.videoContent, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final contents = videoContent['contents'] as List<dynamic>?;
-    if (contents == null || contents.isEmpty) return const _VideoEmpty();
-
-    return SizedBox(
-      height: 200,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: contents.length,
-        itemBuilder: (context, i) => Padding(
-          padding: EdgeInsets.only(right: i < contents.length - 1 ? 12 : 0),
-          child: _VideoCard(video: contents[i], onTap: onTap),
-        ),
-      ),
-    );
-  }
-}
-
-class _VideoCard extends StatelessWidget {
-  final dynamic video;
-  final void Function(String videoId) onTap;
-  const _VideoCard({required this.video, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    String videoId = '';
-    String thumbnail = '';
-    String? title;
-
-    try {
-      if (video is Map && video.containsKey('video')) {
-        final data = video['video'] as Map?;
-        if (data != null) {
-          videoId = data['videoId'] as String? ?? '';
-          final thumbs = data['thumbnails'] as List?;
-          if (thumbs != null && thumbs.isNotEmpty) {
-            final t = (thumbs.length > 1 ? thumbs[1] : thumbs[0]) as Map?;
-            thumbnail = t?['url'] as String? ?? '';
-          }
-          title = data['title'] as String?;
-        }
-      }
-    } catch (_) {}
-
-    return GestureDetector(
-      onTap: videoId.isNotEmpty ? () => onTap(videoId) : null,
-      child: Container(
-        width: 260,
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _kBorder, width: 1),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (thumbnail.isNotEmpty)
-                Image.network(
-                  thumbnail,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _thumbFallback(),
-                )
-              else
-                _thumbFallback(),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.75),
-                    ],
-                    stops: const [0.4, 1.0],
-                  ),
-                ),
-              ),
-              Center(
-                child: Container(
-                  width: 52,
-                  height: 52,
+                const SizedBox(height: 6),
+                Container(
+                  height: 3,
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 30,
+                    color: selected ? kBodyLime : Colors.transparent,
+                    borderRadius: BorderRadius.circular(1),
                   ),
                 ),
-              ),
-              if (title != null && title.isNotEmpty)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    child: Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _thumbFallback() => Container(
-        color: _kCard,
-        child: const Center(
-          child: Icon(
-            Icons.video_library_outlined,
-            color: Colors.white24,
-            size: 40,
+              ],
+            ),
           ),
         ),
       );
 }
 
-// ── Complete button ───────────────────────────────────────────────────────────
-
-class _CompleteButton extends StatelessWidget {
-  final VoidCallback onComplete;
-  const _CompleteButton({required this.onComplete});
+class _MenuRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _MenuRow(this.icon, this.label, this.onTap);
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      child: GestureDetector(
-        onTap: onComplete,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 17),
-          decoration: BoxDecoration(
-            color: _kLime,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: _kLime.withValues(alpha: 0.25),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              
-              Text(
-                'Mark Complete',
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.check_rounded,
-                color: Colors.black,
-                size: 18,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ListTile(
+        leading: Icon(icon, color: kBodyLime, size: 20),
+        title: Text(label, style: bodyText(14, weight: FontWeight.w600)),
+        onTap: onTap,
+      );
 }
 
 // ── Workout log dialog ────────────────────────────────────────────────────────
@@ -1039,12 +778,20 @@ class _WorkoutLogDialog extends StatefulWidget {
   final List<TextEditingController> weightCtls;
   final List<TextEditingController> repsCtls;
 
+  /// The sets from the last time this exercise was logged, if any.
+  final List<LoggedSet> previousSets;
+
+  /// Records what is done inside the dialog.
+  final ExerciseAnalytics? analytics;
+
   const _WorkoutLogDialog({
     required this.exerciseName,
     required this.sets,
     required this.targetReps,
     required this.weightCtls,
     required this.repsCtls,
+    this.previousSets = const [],
+    this.analytics,
   });
 
   @override
@@ -1055,8 +802,30 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
   List<TextEditingController> get _weightCtls => widget.weightCtls;
   List<TextEditingController> get _repsCtls => widget.repsCtls;
 
+  /// Last time's set for row [i]. A longer workout reuses the final set rather
+  /// than leaving the extra rows without a hint.
+  LoggedSet? _previousFor(int i) {
+    final prev = widget.previousSets;
+    if (prev.isEmpty) return null;
+    return prev[i < prev.length ? i : prev.length - 1];
+  }
+
+  /// Copy last time's weights and reps into the fields. It only fills what the
+  /// last session recorded, so a bodyweight set leaves the weight box alone.
+  void _fillFromLast() {
+    widget.analytics?.sameAsLast();
+    for (var i = 0; i < widget.sets; i++) {
+      final p = _previousFor(i);
+      if (p == null) continue;
+      if (p.weightText != null) _weightCtls[i].text = p.weightText!;
+      if (p.repsText != null) _repsCtls[i].text = p.repsText!;
+    }
+    setState(() {});
+  }
+
   final stt.SpeechToText _speech = stt.SpeechToText();
-  final _logParser = LogParserService();
+  // Made only when voice logging is used.
+  late final _logParser = LogParserService();
   bool _sttAvailable = false;
   bool _isListening = false;
   bool _isParsing = false;
@@ -1136,6 +905,7 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
       return;
     }
     _userStopped = false;
+    widget.analytics?.voice('started');
     setState(() { _isListening = true; _liveText = ''; _soundLevel = 0; _statusText = ''; });
     await _startSession();
   }
@@ -1160,8 +930,10 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
           _repsCtls[i].text = s.reps!.toString();
         }
       }
+      widget.analytics?.voice('parsed', sets: sets.length);
       setState(() { _isParsing = false; _liveText = ''; });
     } catch (_) {
+      widget.analytics?.voice('failed');
       if (!mounted) return;
       // AI failed — keep the transcript visible so the user can enter manually
       setState(() { _isParsing = false; _statusText = 'Could not parse — please fill in manually'; });
@@ -1178,6 +950,7 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
     }
 
     if (emptySets.isNotEmpty) {
+      widget.analytics?.logIncomplete(emptySets.length);
       showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -1427,17 +1200,36 @@ class _WorkoutLogDialogState extends State<_WorkoutLogDialog> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   physics: const BouncingScrollPhysics(),
                   child: Column(
-                    children: List.generate(
-                      widget.sets,
-                      (i) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _SetRow(
-                          setNumber: i + 1,
-                          weightCtl: _weightCtls[i],
-                          repsCtl: _repsCtls[i],
+                    children: [
+                      if (widget.previousSets.isNotEmpty)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: _fillFromLast,
+                            icon: const Icon(Icons.history_rounded,
+                                size: 16, color: _kLime),
+                            label: Text(
+                              'Same as last time',
+                              style: GoogleFonts.inter(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kLime),
+                            ),
+                          ),
+                        ),
+                      ...List.generate(
+                        widget.sets,
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _SetRow(
+                            setNumber: i + 1,
+                            weightCtl: _weightCtls[i],
+                            repsCtl: _repsCtls[i],
+                            previous: _previousFor(i),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -1587,10 +1379,14 @@ class _SetRow extends StatelessWidget {
   final TextEditingController weightCtl;
   final TextEditingController repsCtl;
 
+  /// What this set was last time; shown as the empty-field hint.
+  final LoggedSet? previous;
+
   const _SetRow({
     required this.setNumber,
     required this.weightCtl,
     required this.repsCtl,
+    this.previous,
   });
 
   @override
@@ -1624,10 +1420,18 @@ class _SetRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // Weight field
-          Expanded(child: _LogField(controller: weightCtl, hint: '0', suffix: 'kg')),
+          Expanded(
+              child: _LogField(
+                  controller: weightCtl,
+                  hint: previous?.weightText ?? '0',
+                  suffix: 'kg')),
           const SizedBox(width: 12),
           // Reps field
-          Expanded(child: _LogField(controller: repsCtl, hint: '0', suffix: 'reps')),
+          Expanded(
+              child: _LogField(
+                  controller: repsCtl,
+                  hint: previous?.repsText ?? '0',
+                  suffix: 'reps')),
         ],
       ),
     );

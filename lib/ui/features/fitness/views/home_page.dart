@@ -12,6 +12,10 @@ import 'package:fitness/ui/core/di.dart';
 import 'package:fitness/ui/core/theme/app_pallet.dart';
 import 'package:fitness/ui/core/widgets/greeting.dart';
 import 'package:fitness/ui/features/fitness/views/saved_workouts_card.dart';
+import 'package:fitness/ui/features/progression/views/progression_entry_section.dart';
+import 'package:fitness/data/models/body/scan_mapper.dart';
+import 'package:fitness/data/repositories/body_tracking_repository.dart';
+import 'package:fitness/ui/features/analytic/view_models/analytics_view_model.dart';
 import 'package:fitness/ui/features/muscle_map/views/muscle_map_card.dart';
 import 'package:fitness/ui/features/fitness/view_models/fitness_view_model.dart';
 import 'package:fitness/ui/features/fitness/views/motivation_schedule_sheet.dart';
@@ -58,7 +62,6 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
   String  _emoji    = GreetingHelper.getGreetingEmoji();
 
   DateTime           _selectedDate    = DateTime.now();
-  final ScrollController _dateScrollCtrl = ScrollController();
 
   final _motivationVm = sl<MotivationViewModel>();
 
@@ -68,7 +71,6 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<FitnessViewModel>().loadFitnessPlans();
-      _scrollToToday();
       _motivationVm.load();
       _maybeRemindTrialEnding();
     });
@@ -85,31 +87,7 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
   @override
   void dispose() {
     _greetingTimer?.cancel();
-    _dateScrollCtrl.dispose();
     super.dispose();
-  }
-
-  void _scrollToToday() {
-    if (!mounted) return;
-    final idx   = _dayIndexFromToday(_selectedDate);
-    final maxEx = _dateScrollCtrl.hasClients
-        ? _dateScrollCtrl.position.maxScrollExtent
-        : 0.0;
-    if (_dateScrollCtrl.hasClients && idx >= 0) {
-      const itemW = 80.0;
-      final offset = idx * itemW - (MediaQuery.of(context).size.width / 2 - itemW / 2);
-      _dateScrollCtrl.animateTo(
-        offset.clamp(0.0, maxEx),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
-  int _dayIndexFromToday(DateTime date) {
-    final t = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final d = DateTime(date.year, date.month, date.day);
-    return d.difference(t).inDays;
   }
 
   String _shortName(String name, {int max = 15}) =>
@@ -231,6 +209,11 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
         image: File(imagePath),
       );
       await BodyScanStorage().save(result, imagePath);
+      // Keep the headline numbers on the server too, for the advice. Best effort.
+      unawaited(sl<BodyTrackingRepository>().recordScan(ScanMapper.toApi(
+        result,
+        weightKg: sl<AnalyticsViewModel>().latestWeight?.weightKg,
+      )));
       if (!mounted) return;
       Navigator.of(context).pop(); // close loading
       Navigator.of(context).push(MaterialPageRoute(
@@ -384,7 +367,6 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
             ),
             _CollapsibleDateStrip(
               selectedDate: _selectedDate,
-              scrollController: _dateScrollCtrl,
               workoutMappings: fitnessVm.workoutMappings,
               completedDates: fitnessVm.completedDates,
               onDateSelected: (date) {
@@ -451,16 +433,17 @@ class _FitnessHomePageState extends State<FitnessHomePage> {
                     const SizedBox(height: 28),
 
                     // ── Muscle map ───────────────────────────────────────────
-                    _SectionLabel(label: 'Muscle Map'),
-                    const SizedBox(height: 12),
+                    // The cards below carry their own titles, so no label here.
                     const MuscleMapCard(),
 
                     const SizedBox(height: 28),
 
-                    // ── Saved workouts ───────────────────────────────────────
-                    _SectionLabel(label: 'My Workout Program'),
-                    const SizedBox(height: 12),
+                    // ── Workout program ──────────────────────────────────────
                     const SavedWorkoutsCard(),
+
+                    // Only when an update is waiting; the programs screen
+                    // always shows where updates stand.
+                    const ProgressionEntrySection(onlyWhenReady: true),
 
                     const SizedBox(height: 110),
                   ],
@@ -1574,11 +1557,19 @@ class _GreetingLine extends StatelessWidget {
   }
 }
 
-// ─── Collapsible date strip / full-month calendar ─────────────────────────────
+// ─── Week card / full-month calendar ──────────────────────────────────────────
+//
+// One card: a "This week" header with the session count, then seven day
+// circles. Completed days are a lime disc with a check, days with a planned
+// workout are a lime ring with a dot (it breathes to invite the tap), the rest
+// are a quiet disc holding the date. The header toggles the full month view.
+
+const _kChip  = Color(0xFF1B2030);
+const _kInk   = Color(0xFF0A0C12);
+const _kMuted = Color(0xFF8C909B);
 
 class _CollapsibleDateStrip extends StatefulWidget {
   final DateTime selectedDate;
-  final ScrollController scrollController;
   final Map<DateTime, dynamic> workoutMappings;
   final Set<DateTime> completedDates;
   final void Function(DateTime) onDateSelected;
@@ -1586,7 +1577,6 @@ class _CollapsibleDateStrip extends StatefulWidget {
 
   const _CollapsibleDateStrip({
     required this.selectedDate,
-    required this.scrollController,
     required this.workoutMappings,
     required this.completedDates,
     required this.onDateSelected,
@@ -1597,15 +1587,12 @@ class _CollapsibleDateStrip extends StatefulWidget {
   State<_CollapsibleDateStrip> createState() => _CollapsibleDateStripState();
 }
 
-class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
-    with SingleTickerProviderStateMixin {
+class _CollapsibleDateStripState extends State<_CollapsibleDateStrip> {
   bool _expanded = false;
   late DateTime _viewMonth;
 
-  static const _kStripHeight    = 88.0;
-  static const _kCalendarHeight = 360.0;
-  static const _kWeekDays       = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  static const _kMonthNames     = [
+  static const _kWeekDays   = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  static const _kMonthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
@@ -1666,6 +1653,11 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
     return d.day == t.day && d.month == t.month && d.year == t.year;
   }
 
+  List<DateTime> _weekDates() {
+    final today = DateTime.now();
+    return List.generate(7, (i) => today.add(Duration(days: i)));
+  }
+
   List<DateTime?> _calendarDays() {
     final first          = DateTime(_viewMonth.year, _viewMonth.month, 1);
     final leadingBlanks  = (first.weekday - 1) % 7;
@@ -1677,33 +1669,81 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
     });
   }
 
-  Widget _buildStrip() {
-    final today = DateTime.now();
-    final dates = List.generate(7, (i) => today.add(Duration(days: i)));
-    return SizedBox(
-      height: _kStripHeight,
-      child: ListView.builder(
-        controller: widget.scrollController,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: dates.length,
-        itemBuilder: (_, i) {
-          final date        = dates[i];
-          final norm        = DateTime(date.year, date.month, date.day);
-          final isSelected  = _isSelected(date);
-          final hasWorkout  = widget.workoutMappings.containsKey(norm);
-          final isCompleted = widget.completedDates.contains(norm);
-          return GestureDetector(
-            onTap: () => _handleDateTap(date),
-            child: _StripCell(
-              date: date,
-              isSelected: isSelected,
-              hasWorkout: hasWorkout,
-              isCompleted: isCompleted,
-            ),
-          );
-        },
+  /// "3 of 4 sessions" for the dates on show: done out of planned.
+  String _summary(Iterable<DateTime> dates) {
+    var planned = 0;
+    var done = 0;
+    for (final d in dates) {
+      final norm = DateTime(d.year, d.month, d.day);
+      if (widget.completedDates.contains(norm)) {
+        done++;
+        planned++;
+      } else if (widget.workoutMappings.containsKey(norm)) {
+        planned++;
+      }
+    }
+    if (planned == 0) return 'No sessions planned';
+    return '$done of $planned ${planned == 1 ? 'session' : 'sessions'}';
+  }
+
+  Widget _buildHeader() {
+    final summary = _summary(
+        _expanded ? _calendarDays().whereType<DateTime>() : _weekDates());
+    return Semantics(
+      button: true,
+      excludeSemantics: true,
+      label: _expanded ? 'Show this week' : 'Show month calendar',
+      value: summary,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _toggleExpanded,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _expanded ? 'Calendar' : 'This week',
+                  style: GoogleFonts.poppins(
+                      fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+              Text(
+                summary,
+                style: GoogleFonts.inter(
+                    fontSize: 12, fontWeight: FontWeight.w500, color: _kMuted),
+              ),
+              const SizedBox(width: 4),
+              AnimatedRotation(
+                duration: const Duration(milliseconds: 220),
+                turns: _expanded ? 0.5 : 0.0,
+                child: const Icon(Icons.keyboard_arrow_down_rounded,
+                    size: 18, color: _kMuted),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildWeek() {
+    return Row(
+      children: [
+        for (final date in _weekDates())
+          Expanded(
+            child: _WeekDayCell(
+              date: date,
+              isSelected: _isSelected(date),
+              isToday: _isToday(date),
+              hasWorkout: widget.workoutMappings
+                  .containsKey(DateTime(date.year, date.month, date.day)),
+              isCompleted: widget.completedDates
+                  .contains(DateTime(date.year, date.month, date.day)),
+              onTap: () => _handleDateTap(date),
+            ),
+          ),
+      ],
     );
   }
 
@@ -1712,19 +1752,25 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
-              _NavArrow(icon: Icons.chevron_left_rounded, onTap: _prevMonth),
+              _NavArrow(
+                  icon: Icons.chevron_left_rounded,
+                  label: 'Previous month',
+                  onTap: _prevMonth),
               Expanded(
                 child: Text(
                   '${_kMonthNames[_viewMonth.month - 1]} ${_viewMonth.year}',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
-                    fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+                      fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
                 ),
               ),
-              _NavArrow(icon: Icons.chevron_right_rounded, onTap: _nextMonth),
+              _NavArrow(
+                  icon: Icons.chevron_right_rounded,
+                  label: 'Next month',
+                  onTap: _nextMonth),
             ],
           ),
         ),
@@ -1733,8 +1779,7 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
             child: Center(
               child: Text(d,
                 style: GoogleFonts.inter(
-                  fontSize: 11, fontWeight: FontWeight.w600,
-                  color: Colors.white.withValues(alpha: 0.35))),
+                  fontSize: 11, fontWeight: FontWeight.w600, color: _kMuted)),
             ),
           )).toList(),
         ),
@@ -1744,27 +1789,24 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 4,
-            childAspectRatio: 1,
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 2,
+            childAspectRatio: 1.1,
           ),
           itemCount: days.length,
           itemBuilder: (_, i) {
             final date = days[i];
             if (date == null) return const SizedBox.shrink();
-            final norm        = DateTime(date.year, date.month, date.day);
-            final isSelected  = _isSelected(date);
-            final isToday     = _isToday(date);
-            final hasWorkout  = widget.workoutMappings.containsKey(norm);
-            final isCompleted = widget.completedDates.contains(norm);
+            final norm = DateTime(date.year, date.month, date.day);
             return GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () => _handleDateTap(date),
               child: _CalendarCell(
                 date: date,
-                isSelected: isSelected,
-                isToday: isToday,
-                hasWorkout: hasWorkout,
-                isCompleted: isCompleted,
+                isSelected: _isSelected(date),
+                isToday: _isToday(date),
+                hasWorkout: widget.workoutMappings.containsKey(norm),
+                isCompleted: widget.completedDates.contains(norm),
               ),
             );
           },
@@ -1772,10 +1814,10 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _LegendDot(color: _kLime, label: 'Training'),
-            const SizedBox(width: 20),
-            _LegendDot(color: Colors.redAccent, label: 'Completed'),
+          children: const [
+            _LegendDot(filled: false, label: 'Training'),
+            SizedBox(width: 20),
+            _LegendDot(filled: true, label: 'Completed'),
           ],
         ),
       ],
@@ -1784,99 +1826,60 @@ class _CollapsibleDateStripState extends State<_CollapsibleDateStrip>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            GestureDetector(
-              onTap: _toggleExpanded,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _expanded
-                      ? _kLime.withValues(alpha: 0.12)
-                      : Colors.white.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _expanded
-                        ? _kLime.withValues(alpha: 0.45)
-                        : Colors.white.withValues(alpha: 0.1),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _expanded ? 'Week' : 'Month',
-                      style: GoogleFonts.inter(
-                        fontSize: 11, fontWeight: FontWeight.w600,
-                        color: _expanded ? _kLime : Colors.white54),
-                    ),
-                    const SizedBox(width: 4),
-                    AnimatedRotation(
-                      duration: const Duration(milliseconds: 220),
-                      turns: _expanded ? 0.5 : 0.0,
-                      child: Icon(Icons.keyboard_arrow_down_rounded,
-                          size: 16,
-                          color: _expanded ? _kLime : Colors.white54),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 320),
-          curve: Curves.easeInOutCubic,
-          height: _expanded ? _kCalendarHeight : _kStripHeight,
-          child: ClipRect(
-            child: AnimatedCrossFade(
-              duration: const Duration(milliseconds: 260),
-              crossFadeState: _expanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              firstChild: _buildStrip(),
-              secondChild: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: _buildCalendar(),
-              ),
-            ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildHeader(),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeInOutCubic,
+            alignment: Alignment.topCenter,
+            child: _expanded ? _buildCalendar() : _buildWeek(),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-// ─── Strip cell ───────────────────────────────────────────────────────────────
+// ─── Week day cell ────────────────────────────────────────────────────────────
 
-class _StripCell extends StatefulWidget {
+class _WeekDayCell extends StatefulWidget {
   final DateTime date;
-  final bool isSelected, hasWorkout, isCompleted;
-  const _StripCell({
+  final bool isSelected, isToday, hasWorkout, isCompleted;
+  final VoidCallback onTap;
+  const _WeekDayCell({
     required this.date,
     required this.isSelected,
+    required this.isToday,
     required this.hasWorkout,
     required this.isCompleted,
+    required this.onTap,
   });
 
   @override
-  State<_StripCell> createState() => _StripCellState();
+  State<_WeekDayCell> createState() => _WeekDayCellState();
 }
 
-class _StripCellState extends State<_StripCell>
+class _WeekDayCellState extends State<_WeekDayCell>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
 
-  /// A date with a planned workout that hasn't been done yet — tapping it
-  /// opens the workout modal, so it gets the glow that invites the tap.
+  static const _letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  static const _names   = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  ];
+
+  /// A planned workout that is not done yet: tapping it opens the workout
+  /// sheet, so its ring breathes to invite the tap.
   bool get _isStartable => widget.hasWorkout && !widget.isCompleted;
 
   @override
@@ -1890,10 +1893,10 @@ class _StripCellState extends State<_StripCell>
   }
 
   @override
-  void didUpdateWidget(covariant _StripCell old) {
+  void didUpdateWidget(covariant _WeekDayCell old) {
     super.didUpdateWidget(old);
-    // Cells are recycled by the ListView, so keep the animation in sync with
-    // whatever date/state this cell now represents.
+    // The strip is rebuilt every day, so keep the animation in step with
+    // whatever date and state this cell now shows.
     if (_isStartable && !_pulse.isAnimating) {
       _pulse.repeat(reverse: true);
     } else if (!_isStartable && _pulse.isAnimating) {
@@ -1908,97 +1911,119 @@ class _StripCellState extends State<_StripCell>
     super.dispose();
   }
 
-  String get _dayLabel =>
-      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][widget.date.weekday - 1];
-
-  Color _borderColor(double t) {
-    if (widget.isSelected)  return Colors.white.withValues(alpha: 0.4);
-    if (widget.isCompleted) return Colors.red.withValues(alpha: 0.8);
-    // Startable dates breathe between a dim and a bright lime border.
-    if (widget.hasWorkout)  return _kLime.withValues(alpha: 0.6 + 0.4 * t);
-    return Colors.white.withValues(alpha: 0.1);
+  Widget _disc(double size, double t) {
+    final Widget disc;
+    if (widget.isCompleted) {
+      disc = Container(
+        width: size, height: size,
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: _kLime),
+        child: Icon(Icons.check_rounded, size: size * 0.56, color: _kInk),
+      );
+    } else if (_isStartable) {
+      disc = Container(
+        width: size, height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+              color: _kLime.withValues(alpha: 0.65 + 0.35 * t), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: _kLime.withValues(alpha: 0.08 + 0.22 * t),
+              blurRadius: 6 + 8 * t,
+            ),
+          ],
+        ),
+        child: Center(
+          child: Container(
+            width: 8, height: 8,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: _kLime),
+          ),
+        ),
+      );
+    } else {
+      disc = Container(
+        width: size, height: size,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: _kChip),
+        child: Text(
+          '${widget.date.day}',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: widget.isSelected || widget.isToday ? Colors.white : _kMuted,
+          ),
+        ),
+      );
+    }
+    // Selection is a thin lime ring around whichever disc is showing.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: widget.isSelected
+              ? _kLime.withValues(alpha: 0.55)
+              : Colors.transparent,
+          width: 1.5,
+        ),
+      ),
+      child: disc,
+    );
   }
-
-  double get _borderWidth =>
-      (widget.isSelected || widget.isCompleted || widget.hasWorkout) ? 2 : 1;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, _) {
-        final t = _isStartable
-            ? Curves.easeInOut.transform(_pulse.value)
-            : 0.0;
-        return Container(
-          width: 60,
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                width: 56, height: 56,
-                decoration: BoxDecoration(
-                  color: widget.isSelected
-                      ? _kLime.withValues(alpha: 0.15)
-                      : _isStartable
-                          ? _kLime.withValues(alpha: 0.04 + 0.06 * t)
-                          : Colors.transparent,
-                  border: Border.all(color: _borderColor(t), width: _borderWidth),
-                  boxShadow: [
-                    if (_isStartable)
-                      BoxShadow(
-                        color: _kLime.withValues(alpha: 0.10 + 0.30 * t),
-                        blurRadius: 8 + 14 * t,
-                        spreadRadius: 1 * t,
+    final status = widget.isCompleted
+        ? ', workout completed'
+        : widget.hasWorkout
+            ? ', workout planned'
+            : '';
+    return Semantics(
+      button: true,
+      selected: widget.isSelected,
+      excludeSemantics: true,
+      label: '${_names[widget.date.weekday - 1]} ${widget.date.day}$status',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final size = (c.maxWidth - 10).clamp(24.0, 32.0);
+              return AnimatedBuilder(
+                animation: _pulse,
+                builder: (context, _) {
+                  final t = _isStartable
+                      ? Curves.easeInOut.transform(_pulse.value)
+                      : 0.0;
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _letters[widget.date.weekday - 1],
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: widget.isSelected
+                              ? _kLime
+                              : widget.isToday
+                                  ? Colors.white
+                                  : _kMuted,
+                        ),
                       ),
-                    if (widget.isSelected)
-                      BoxShadow(
-                        color: _kLime.withValues(alpha: 0.12),
-                        blurRadius: 12, offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(_dayLabel,
-                      style: GoogleFonts.inter(
-                        fontSize: 12, fontWeight: FontWeight.w500,
-                        color: widget.isSelected ? _kLime : Colors.white70)),
-                    const SizedBox(height: 2),
-                    Text('${widget.date.day}',
-                      style: GoogleFonts.inter(
-                        fontSize: 16, fontWeight: FontWeight.bold,
-                        color: widget.isSelected ? _kLime : Colors.white)),
-                  ],
-                ),
-              ),
-              if ((widget.hasWorkout || widget.isCompleted) && !widget.isSelected)
-                Positioned(
-                  top: 4, right: 4,
-                  child: Container(
-                    width: 8, height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: widget.isCompleted ? Colors.red : _kLime,
-                      // Halo expands with the pulse so the marker reads as
-                      // "live" rather than a static status dot.
-                      boxShadow: _isStartable
-                          ? [BoxShadow(
-                              color: _kLime.withValues(alpha: 0.5 * (1 - t)),
-                              blurRadius: 2 + 4 * t,
-                              spreadRadius: 1 + 3 * t)]
-                          : null,
-                    ),
-                  ),
-                ),
-            ],
+                      const SizedBox(height: 8),
+                      _disc(size, t),
+                    ],
+                  );
+                },
+              );
+            },
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -2018,62 +2043,54 @@ class _CalendarCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: isSelected
-            ? _kLime.withValues(alpha: 0.18)
-            : isToday
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isSelected
-              ? _kLime.withValues(alpha: 0.7)
-              : isToday
-                  ? Colors.white.withValues(alpha: 0.25)
-                  : Colors.transparent,
-          width: isSelected ? 1.5 : 1.0,
-        ),
-        boxShadow: isSelected
-            ? [BoxShadow(
-                color: _kLime.withValues(alpha: 0.15),
-                blurRadius: 8, offset: const Offset(0, 2))]
-            : null,
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Text('${date.day}',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w400,
-              color: isSelected
+    final startable = hasWorkout && !isCompleted;
+    final Color border = isSelected
+        ? (isCompleted
+            ? Colors.white.withValues(alpha: 0.6)
+            : _kLime.withValues(alpha: 0.7))
+        : startable
+            ? _kLime
+            : Colors.transparent;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final size = (c.maxHeight < c.maxWidth ? c.maxHeight : c.maxWidth) - 2;
+        return Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            width: size, height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isCompleted
                   ? _kLime
-                  : isToday
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.75))),
-          if (hasWorkout || isCompleted)
-            Positioned(
-              bottom: 3,
-              child: Container(
-                width: 5, height: 5,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isCompleted ? Colors.redAccent : _kLime,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isCompleted ? Colors.redAccent : _kLime)
-                          .withValues(alpha: 0.5),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
+                  : isSelected
+                      ? _kLime.withValues(alpha: 0.12)
+                      : isToday
+                          ? _kChip
+                          : Colors.transparent,
+              border: Border.all(
+                  color: border, width: isSelected || startable ? 1.5 : 1),
+            ),
+            child: Text(
+              '${date.day}',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: isSelected || isToday || isCompleted
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+                color: isCompleted
+                    ? _kInk
+                    : startable
+                        ? _kLime
+                        : isSelected || isToday
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.75),
               ),
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -2082,40 +2099,52 @@ class _CalendarCell extends StatelessWidget {
 
 class _NavArrow extends StatelessWidget {
   final IconData icon;
+  final String label;
   final VoidCallback onTap;
-  const _NavArrow({required this.icon, required this.onTap});
+  const _NavArrow({required this.icon, required this.label, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: 32, height: 32,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    excludeSemantics: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        width: 44, height: 44,
+        child: Center(
+          child: Container(
+            width: 32, height: 32,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: _kChip),
+            child: Icon(icon, color: Colors.white70, size: 20),
+          ),
+        ),
       ),
-      child: Icon(icon, color: Colors.white70, size: 20),
     ),
   );
 }
 
+/// Legend swatch that matches the cells: a ring for training, a disc for done.
 class _LegendDot extends StatelessWidget {
-  final Color color;
+  final bool filled;
   final String label;
-  const _LegendDot({required this.color, required this.label});
+  const _LegendDot({required this.filled, required this.label});
 
   @override
   Widget build(BuildContext context) => Row(
     children: [
       Container(
-        width: 7, height: 7,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        width: 12, height: 12,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: filled ? _kLime : Colors.transparent,
+          border: filled ? null : Border.all(color: _kLime, width: 1.5),
+        ),
       ),
-      const SizedBox(width: 5),
+      const SizedBox(width: 6),
       Text(label,
-        style: GoogleFonts.inter(
-          fontSize: 11, color: Colors.white.withValues(alpha: 0.45))),
+        style: GoogleFonts.inter(fontSize: 11, color: _kMuted)),
     ],
   );
 }

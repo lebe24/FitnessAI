@@ -29,6 +29,97 @@ abstract final class AnalyticsEvents {
   // ── Training ───────────────────────────────────────────────────────────────
   static const workoutSaved = 'workout_saved'; //     exercise_count, duration_mins
   static const workoutCompleted = 'workout_completed'; // duration_mins, streak
+  static const exerciseHistoryOpened = 'exercise_history_opened'; // sessions
+
+  // ── Exercise page ──────────────────────────────────────────────────────────
+  // All carry exercise_index, sets and muscle — never the exercise name.
+  static const exerciseViewed = 'exercise_viewed';
+  static const exerciseHistoryLoaded = 'exercise_history_loaded'; //  status, entries
+  static const exerciseLogOpened = 'exercise_log_opened'; //          had_previous
+  static const exerciseLogVoice = 'exercise_log_voice'; //            result, sets_filled
+  static const exerciseLogSameAsLast = 'exercise_log_same_as_last';
+  static const exerciseLogIncomplete = 'exercise_log_incomplete'; //  missing_sets
+  static const exerciseLogSaved = 'exercise_log_saved'; //            used_voice, used_last_time
+  static const exerciseLogSaveFailed = 'exercise_log_save_failed';
+  static const exerciseLogDismissed = 'exercise_log_dismissed';
+  static const exerciseCompleted = 'exercise_completed'; //          logged, seconds_on_page
+  static const exerciseLeft = 'exercise_left'; //                    logged, seconds_on_page
+  static const exerciseLeavePrompt = 'exercise_leave_prompt'; //     choice
+  static const exerciseTutorialsLoaded = 'exercise_tutorials_loaded'; // success, cached, count
+  static const exerciseTutorialOpened = 'exercise_tutorial_opened';
+
+  // ── The exercise coach ─────────────────────────────────────────────────────
+  // Modes, fixed labels and counts. Never an exercise name, a weight, how sore
+  // someone said they are, or anything the coach wrote.
+  static const exerciseCoachAsked = 'exercise_coach_asked'; //       mode: why | suggest | workout
+  static const exerciseCoachReceived = 'exercise_coach_received'; // mode, from_model, verdict, suggestions
+  static const exerciseCoachFailed = 'exercise_coach_failed'; //     mode, reason
+  static const exerciseCoachUsed = 'exercise_coach_used'; //         option: recommended | alternative
+  static const sessionCheckinAnswered = 'session_checkin_answered';
+  static const extraExerciseAdded = 'extra_exercise_added'; //       count, to_plan, source: suggestion | workout | manual
+  static const extraWorkoutGenerated = 'extra_workout_generated'; // exercises
+
+  // ── The energy bot ─────────────────────────────────────────────────────────
+  // Never a question, the bot's name, body weight or a calorie figure.
+  static const energyChatOpened = 'energy_chat_opened'; //         source: session | finished
+  static const energyLockedTapped = 'energy_locked_tapped';
+  static const energyFinishPrompt = 'energy_finish_prompt'; //     choice: see | not_now
+  static const energyEstimateShown = 'energy_estimate_shown'; //   effort, asked_duration, asked_weight
+  static const energyQuestionAsked = 'energy_question_asked'; //   suggested
+  static const energyAnswerReceived = 'energy_answer_received'; // from_model
+  static const energyAnswerFailed = 'energy_answer_failed'; //     reason
+  static const energyBotCustomised = 'energy_bot_customised'; //   mascot, renamed
+
+  // ── Workout videos ─────────────────────────────────────────────────────────
+  // Counts, scores and fixed labels only — never the exercise name or anything
+  // the AI wrote about the clip.
+  static const exerciseVideoAdded = 'exercise_video_added'; //       source: record | library, duration_s
+  static const exerciseVideoPlayed = 'exercise_video_played';
+  static const exerciseVideoDeleted = 'exercise_video_deleted'; //   analysed
+  static const formAnalysisStarted = 'form_analysis_started'; //     frame_count
+  static const formAnalysisCompleted = 'form_analysis_completed'; // overall_score, confidence, camera_view, duration_ms
+  static const formAnalysisFailed = 'form_analysis_failed'; //       reason
+  static const formAnalysisResultViewed = 'form_analysis_result_viewed'; // overall_score
+  static const muscleVideosOpened = 'muscle_videos_opened'; //       muscle
+
+  // ── Stats tab: goal, weight, measurements, muscles ─────────────────────────
+  // Never the weight, a measurement or a target figure: only that something
+  // happened, and fixed labels such as the goal type.
+  static const analyticsCardTapped = 'analytics_card_tapped'; //     card: body_weight | muscle_development, locked
+  static const goalSet = 'goal_set'; //                               type, has_target_weight, has_target_date, focus_count, replaced
+  static const goalCleared = 'goal_cleared'; //                       type
+  static const weightLogged = 'weight_logged'; //                     source: sheet | quick, backdated, has_note, offline
+  static const measurementsLogged = 'measurements_logged'; //         sites
+  static const goalAdviceRequested = 'goal_advice_requested'; //     forced
+  static const goalAdviceReceived = 'goal_advice_received'; //       status, actions
+  static const goalAdviceFailed = 'goal_advice_failed'; //           reason
+  static const muscleFocusChanged = 'muscle_focus_changed'; //       muscle, focus
+
+  // ── Workout history ────────────────────────────────────────────────────────
+  static const workoutHistoryOpened = 'workout_history_opened'; //             sessions, months
+  static const workoutHistoryMonthSelected = 'workout_history_month_selected'; // all
+  static const workoutSessionOpened = 'workout_session_opened'; //             exercises, has_feedback
+
+  // ── Sharing a workout ──────────────────────────────────────────────────────
+  // Never what is on the picture.
+  static const sessionShareOpened = 'session_share_opened'; //     bests
+  static const sessionShareFinished = 'session_share_finished'; // format: story | post, outcome: shared | dismissed | unavailable
+  static const sessionShareFailed = 'session_share_failed'; //     format
+
+  // ── Workout videos page ────────────────────────────────────────────────────
+  static const workoutVideosOpened = 'workout_videos_opened'; //       count, analysed
+  static const workoutVideosDeletedAll = 'workout_videos_deleted_all'; // count
+
+  // ── Adjusting the plan ─────────────────────────────────────────────────────
+  static const planAdjustSubmitted = 'plan_adjust_submitted'; // goal, experience, days_per_week, changed_*, height_unit, weight_unit
+  static const planAdjustBlocked = 'plan_adjust_blocked'; //     reason: missing_fields | invalid_height
+
+  // ── Smart plan updates and the coach ───────────────────────────────────────
+  static const planUpdateProposed = 'plan_update_proposed'; //           changes, deload
+  static const planUpdateCoachReviewed = 'plan_update_coach_reviewed'; // reviewed, approved, softened, held
+  static const planUpdateApplied = 'plan_update_applied'; //             changes, skipped, automatic
+  static const planUpdateDismissed = 'plan_update_dismissed';
+  static const planUpdateUndone = 'plan_update_undone';
 
   // ── Home screen ────────────────────────────────────────────────────────────
   static const tabViewed = 'tab_viewed'; //                 tab: home | coach | stats | profile

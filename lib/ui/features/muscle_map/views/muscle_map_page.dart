@@ -154,18 +154,25 @@ class _MuscleMapPageState extends State<MuscleMapPage> {
                     if (muscle == null)
                       const _PickPrompt()
                     else
-                      _MuscleVideos(
-                        muscle: muscle,
-                        requested: _videosRequested,
-                        loading: _videosLoading,
-                        error: _videoError,
-                        videos: _videos,
-                        // Listing is free; playing is not, as on the
-                        // exercise page.
-                        locked: !sl<AccessPolicy>()
-                            .canUse(PremiumFeature.videoTutorial),
-                        onLoad: _loadVideos,
-                        onPlay: _playVideo,
+                      // Locked: a card in place of the videos, nothing listed.
+                      ListenableBuilder(
+                        listenable: sl<AccessPolicy>(),
+                        builder: (context, _) =>
+                            !sl<AccessPolicy>().canUse(PremiumFeature.videoTutorial)
+                                ? PremiumLockedCard(
+                                    feature: PremiumFeature.videoTutorial,
+                                    onUnlocked: _loadVideos,
+                                  )
+                                : _MuscleVideos(
+                                    muscle: muscle,
+                                    requested: _videosRequested,
+                                    loading: _videosLoading,
+                                    error: _videoError,
+                                    videos: _videos,
+                                    locked: false,
+                                    onLoad: _loadVideos,
+                                    onPlay: _playVideo,
+                                  ),
                       ),
                     const SizedBox(height: 32),
                   ],

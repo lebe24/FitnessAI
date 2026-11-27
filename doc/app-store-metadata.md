@@ -349,6 +349,20 @@ Notes on the wording, for next time:
         message text or body measurements in an event, and does not use the
         advertising identifier, so no tracking prompt (ATT) is needed.
       The privacy policy (in-app and website) already describes this.
+- [ ] **App Privacy + policy: workout videos (before shipping the build that
+      contains them).** Videos are recorded and stored **only on the device**;
+      only 8–12 small still frames are sent to the AI provider for a form
+      analysis, and they are not kept. Nothing about an analysis is stored in
+      our database. In App Store Connect → App Privacy:
+      - **User Content → Photos or Videos** — collected (the frames); **linked
+        to the user**; purpose **App Functionality**; **not** used for tracking.
+      - Check the AI provider's current data-retention terms before writing
+        "not kept" anywhere public.
+      - Update the privacy policy in the app **and** on the website, word for
+        word the same (proposed wording is in `doc/video_analysis_plan.md`,
+        section 18). Also mention that other people can appear in a frame, and
+        add the camera/microphone/library wording to the review notes' CAMERA
+        AND PHOTOS paragraph (record workout sets).
 - [x] **Price tier confirmed** — the yearly product is **US$79.99**, so the
       ₦129,900 (~US$85) sandbox charge was the right tier converted, not a
       figure out by 10×. The marketing site now advertises the same number.

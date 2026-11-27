@@ -1,3 +1,20 @@
+import 'package:fitness/data/services/energy/bot_settings_store.dart';
+import 'package:fitness/data/services/energy/energy_coach_service.dart';
+import 'package:fitness/ui/features/energy/view_models/bot_settings_controller.dart';
+import 'dart:async';
+import 'package:fitness/domain/models/premium_feature.dart';
+import 'package:fitness/data/models/body/scan_mapper.dart';
+import 'package:fitness/data/repositories/body_tracking_repository.dart';
+import 'package:fitness/data/services/body/body_tracking_remote.dart';
+import 'package:fitness/data/services/body/body_tracking_store.dart';
+import 'package:fitness/data/services/body/legacy_weight.dart';
+import 'package:fitness/data/services/fitness/body_scan_storage.dart';
+import 'package:fitness/data/services/coach/checkin_store.dart';
+import 'package:fitness/data/services/coach/exercise_coach_service.dart';
+import 'package:fitness/data/services/progression/coach_review_service.dart';
+import 'package:fitness/ui/features/analytic/view_models/analytics_view_model.dart';
+import 'package:fitness/data/services/progression/progression_store.dart';
+import 'package:fitness/ui/features/progression/view_models/progression_view_model.dart';
 import 'package:fitness/data/repositories/auth_repository_impl.dart';
 import 'package:fitness/data/repositories/workout_log_repository_impl.dart';
 import 'package:fitness/data/services/workout_log/session_supabase_source.dart';
@@ -86,6 +103,13 @@ import 'package:fitness/ui/features/fitness/view_models/motivation_view_model.da
 import 'package:fitness/data/services/billing/billing_remote_service.dart';
 import 'package:fitness/data/services/billing/access_policy.dart';
 import 'package:fitness/data/services/analytics/analytics_service.dart';
+import 'package:fitness/data/services/workout_log/exercise_history_service.dart';
+import 'package:fitness/data/services/video/exercise_video_storage.dart';
+import 'package:fitness/data/services/video/form_analysis_runner.dart';
+import 'package:fitness/data/services/video/form_analysis_service.dart';
+import 'package:fitness/data/services/video/form_analysis_usage.dart';
+import 'package:fitness/data/services/video/video_import_service.dart';
+import 'package:fitness/data/services/video/video_tools.dart';
 import 'package:fitness/data/services/billing/billing_bootstrap.dart';
 import 'package:fitness/data/services/billing/complimentary_access.dart';
 import 'package:fitness/data/services/billing/paywall_service.dart';
@@ -118,6 +142,33 @@ Future<void> initDI() async {
   // Session reads go straight to Supabase; writes stay on the backend.
   sl.registerLazySingleton<SessionSupabaseSource>(
       () => SessionSupabaseSource(sl<SupabaseClient>()));
+
+  // Past logs for one exercise, shown on the exercise page. Reads straight from
+  // Supabase like the analytics pages, and falls back to the backend if that
+  // fails; null (not empty) means neither answered.
+  sl.registerLazySingleton<ExerciseHistoryService>(() => ExerciseHistoryService(
+        fetch: () async {
+          try {
+            return await sl<SessionSupabaseSource>().listSessions(limit: 200) ??
+                await sl<WorkoutLogRemoteDataSource>().listSessions(limit: 100);
+          } catch (_) {
+            return null;
+          }
+        },
+      ));
+
+  // ── Workout videos ────────────────────────────────────────────────────────
+  // Videos stay on the device; only chosen still frames go to the backend.
+  sl.registerLazySingleton<VideoTools>(() => MethodChannelVideoTools());
+  sl.registerLazySingleton<ExerciseVideoStorage>(() => ExerciseVideoStorage());
+  sl.registerLazySingleton<FormAnalysisService>(() => FormAnalysisService());
+  sl.registerLazySingleton<FormAnalysisUsage>(() => FormAnalysisUsage());
+  sl.registerLazySingleton<VideoImportService>(
+      () => VideoImportService(tools: sl(), storage: sl()));
+  sl.registerLazySingleton<FormAnalysisRunner>(() => FormAnalysisRunner(
+      storage: sl(), tools: sl(), service: sl(), usage: sl()));
+  // Repair after a crash or a cleared file; nothing waits on it.
+  unawaited(sl<ExerciseVideoStorage>().cleanUp());
 
   sl.registerLazySingleton<ComplimentaryAccess>(
       () => ComplimentaryAccess(sl()));
@@ -233,6 +284,39 @@ Future<void> initDI() async {
   sl.registerLazySingleton(() => GetFitnessPlanByIdUsecase(sl()));
   sl.registerLazySingleton(() => DeleteFitnessPlanUsecase(sl()));
   sl.registerLazySingleton(() => UpdateFitnessPlanUsecase(sl()));
+  // One instance: the home screen and the programs screen show the same
+  // update state, and it owns no widgets.
+  sl.registerLazySingleton<CoachReviewer>(() => DioCoachReviewer());
+  sl.registerLazySingleton<ExerciseCoach>(() => DioExerciseCoach());
+  sl.registerLazySingleton<CheckInStore>(() => HiveCheckInStore());
+  // ── The energy bot ────────────────────────────────────────────────────────
+  sl.registerLazySingleton<EnergyResponder>(() => DioEnergyCoach());
+  sl.registerLazySingleton(() => BotSettingsController(HiveBotSettingsStore()));
+  sl.registerLazySingleton(() => ProgressionViewModel(
+        history: sl<ExerciseHistoryService>(),
+        store: HiveProgressionStore(),
+        updatePlan: sl(),
+        coach: sl<CoachReviewer>(),
+        coachAllowed: () => sl<AccessPolicy>().canUse(PremiumFeature.coachReview),
+        activeGoal: () async => (await sl<BodyTrackingRepository>().load()).goal,
+      ));
+
+  // ── Body tracking: goal, weight log, measurements ─────────────────────────
+  sl.registerLazySingleton<BodyTrackingRepository>(() => BodyTrackingRepository(
+        remote: DioBodyTrackingRemote(),
+        store: HiveBodyTrackingStore(),
+        legacyWeightKg: LegacyWeight.readKg,
+        currentUserId: () => sl<GetCurrentUser>().call()?.id,
+      ));
+  sl.registerLazySingleton(() => AnalyticsViewModel(
+        repo: sl<BodyTrackingRepository>(),
+        history: sl<ExerciseHistoryService>(),
+        latestScan: () async {
+          final all = await BodyScanStorage().getAll();
+          return all.isEmpty ? null : ScanMapper.fromStored(all.first);
+        },
+        canUse: (f) => sl<AccessPolicy>().canUse(f),
+      ));
   sl.registerLazySingleton(() => UpdateSyncStatusUsecase(sl()));
   sl.registerLazySingleton(() => GetUnsyncedPlansUsecase(sl()));
 

@@ -10,6 +10,9 @@ import UIKit
     // FlutterAppDelegate automatically registers plugins, but we need to ensure
     // Swift runtime is initialized. Register plugins explicitly before super call.
     GeneratedPluginRegistrant.register(with: self)
+    if let registrar = self.registrar(forPlugin: "BeFitVideoTools") {
+      VideoToolsChannel.register(with: registrar.messenger())
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

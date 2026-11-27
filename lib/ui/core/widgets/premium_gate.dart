@@ -39,7 +39,10 @@ Future<void> requirePremium(
 
   final purchased =
       await sl<PaywallService>().present(source: feature.name);
-  if (purchased && context.mounted) {
+  // Trust the entitlement, not just the paywall's answer: the feature opens only
+  // if access really is there now. A dismissed or failed paywall can never open
+  // it, whatever it reported.
+  if (purchased && access.canUse(feature) && context.mounted) {
     await onGranted();
   }
 }
@@ -119,6 +122,94 @@ class PremiumOverlay extends StatelessWidget {
           child: const PremiumBadge(visible: true),
         ),
       ],
+    );
+  }
+}
+
+
+/// The stand-in for a whole premium section: a card that says what it is and
+/// what it gives, and opens the paywall when tapped.
+///
+/// It is used where showing the real content would give the feature away (a
+/// list of the user's last lifts, a video library), as opposed to
+/// [PremiumBadge], which marks something that is still visible. The sections
+/// that use it watch [AccessPolicy], so a purchase swaps the card for the
+/// content without the page being reopened.
+class PremiumLockedCard extends StatelessWidget {
+  final PremiumFeature feature;
+
+  /// Shown under the title; defaults to the feature's own pitch.
+  final String? message;
+
+  /// Runs once the user has Pro after tapping, if the page needs to do
+  /// something more than rebuild.
+  final VoidCallback? onUnlocked;
+
+  const PremiumLockedCard({
+    super.key,
+    required this.feature,
+    this.message,
+    this.onUnlocked,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '${feature.title}. Pro feature. Tap to unlock.',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () => requirePremium(context, feature, () => onUnlocked?.call()),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111318),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _kLime.withValues(alpha: 0.28)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: _kLime.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_rounded, size: 20, color: _kLime),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      feature.title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      message ?? feature.pitch,
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        height: 1.45,
+                        color: Colors.white.withValues(alpha: 0.55),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const PremiumBadge(visible: true, label: 'UNLOCK'),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
