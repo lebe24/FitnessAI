@@ -83,6 +83,13 @@ Every event also carries `access_tier` (`free` / `trial` / `paid` / `complimenta
 | | `session_checkin_answered` | context fields (the answer is not sent) |
 | | `extra_exercise_added` | `count`, `to_plan`, `source` (suggestion \| workout) |
 | | `extra_workout_generated` | `exercises` |
+| Energy bot | `energy_chat_opened` | `source` (session \| finished) |
+| | `energy_locked_tapped` | none |
+| | `energy_finish_prompt` | `choice` (see \| not_now) |
+| | `energy_estimate_shown` | `effort` (light \| moderate \| hard), `asked_duration`, `asked_weight` |
+| | `energy_question_asked` | `suggested` |
+| | `energy_answer_received` / `energy_answer_failed` | `from_model` / `reason` |
+| | `energy_bot_customised` | `mascot`, `renamed` (never the name) |
 | Sharing a workout | `session_share_opened` | `bests` |
 | | `session_share_finished` | `format` (story \| post), `outcome` (shared \| dismissed \| unavailable) |
 | | `session_share_failed` | `format` |

@@ -66,6 +66,10 @@ enum PremiumFeature {
   /// On the exercise page: what weight and reps to use, whether the session has
   /// enough, and extra exercises to add.
   exerciseCoach,
+
+  /// The bot that estimates a session's energy and chats about it, including
+  /// choosing its name and look.
+  energyChat,
 }
 
 extension PremiumFeatureCopy on PremiumFeature {
@@ -90,6 +94,7 @@ extension PremiumFeatureCopy on PremiumFeature {
         PremiumFeature.goalAdvice => 'Get advice on your goal',
         PremiumFeature.coachReview => 'Have your coach check every change',
         PremiumFeature.exerciseCoach => 'Get coached on every set',
+        PremiumFeature.energyChat => 'See what you burned',
       };
 
   String get pitch => switch (this) {
@@ -127,5 +132,7 @@ extension PremiumFeatureCopy on PremiumFeature {
           'Before your plan changes, your coach reviews each update against your goal and eases off anything too much, too soon.',
         PremiumFeature.exerciseCoach =>
           'See what weight and reps to use today, know when you have done enough, and get extra exercises that fit your goal.',
+        PremiumFeature.energyChat =>
+          'Your own bot works out the energy each workout used and answers your questions about it.',
       };
 }

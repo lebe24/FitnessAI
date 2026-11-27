@@ -1,3 +1,6 @@
+import 'package:fitness/data/services/energy/bot_settings_store.dart';
+import 'package:fitness/data/services/energy/energy_coach_service.dart';
+import 'package:fitness/ui/features/energy/view_models/bot_settings_controller.dart';
 import 'dart:async';
 import 'package:fitness/domain/models/premium_feature.dart';
 import 'package:fitness/data/models/body/scan_mapper.dart';
@@ -286,6 +289,9 @@ Future<void> initDI() async {
   sl.registerLazySingleton<CoachReviewer>(() => DioCoachReviewer());
   sl.registerLazySingleton<ExerciseCoach>(() => DioExerciseCoach());
   sl.registerLazySingleton<CheckInStore>(() => HiveCheckInStore());
+  // ── The energy bot ────────────────────────────────────────────────────────
+  sl.registerLazySingleton<EnergyResponder>(() => DioEnergyCoach());
+  sl.registerLazySingleton(() => BotSettingsController(HiveBotSettingsStore()));
   sl.registerLazySingleton(() => ProgressionViewModel(
         history: sl<ExerciseHistoryService>(),
         store: HiveProgressionStore(),

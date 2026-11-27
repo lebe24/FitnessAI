@@ -1,3 +1,8 @@
+import 'package:fitness/data/models/workout_log/workout_log_model.dart';
+import 'package:fitness/data/services/analytics/energy_analytics.dart';
+import 'package:fitness/ui/features/energy/energy_services.dart';
+import 'package:fitness/ui/features/energy/views/finished_session.dart';
+import 'package:fitness/ui/features/energy/views/workout_complete_dialog.dart';
 import 'package:fitness/data/services/workout_log/exercise_history_service.dart';
 import 'dart:io';
 import 'package:fitness/data/models/equipment_scan_model.dart';
@@ -55,6 +60,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   /// Set once the session is uploaded; "Undo" is not offered after that.
   bool _saved = false;
+
+  /// The session as stored, kept for the energy bot.
+  WorkoutSessionModel? _savedSession;
 
   /// Exercises were added to this day, which the draft has to keep.
   bool _listChanged = false;
@@ -436,6 +444,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
       // nowhere else, so a failed upload keeps the user's progress.
       await WorkoutDraftStorage.clear(workoutDate);
       _saved = true;
+      _savedSession = session;
       // A new session changes every exercise's history.
       sl<ExerciseHistoryService>().invalidate();
       if (mounted) {
@@ -474,6 +483,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
       if (e.notes != null) 'notes': e.notes!,
     }).toList();
 
+    // The sheet can also be swiped away, which finishes the workout too.
+    var done = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -486,11 +497,14 @@ class _WorkoutPageState extends State<WorkoutPage> {
         focus: widget.workoutDay?.focus,
         sessionId: sessionId,
         onDone: () {
+          done = true;
           Navigator.of(context).pop();
           _markStreakComplete(workoutDate, duration.round());
         },
       ),
-    );
+    ).then((_) {
+      if (!done) _markStreakComplete(workoutDate, duration.round());
+    });
   }
 
   void _markStreakComplete(DateTime workoutDate, int durationMins) {
@@ -500,6 +514,26 @@ class _WorkoutPageState extends State<WorkoutPage> {
       durationMins: durationMins,
     );
     _showSnack('Keep the streak alive 🔥');
+    _offerEnergy(durationMins);
+  }
+
+  /// With the workout finished and saved, the bot pops up and takes the user to
+  /// the session to see the energy it used.
+  Future<void> _offerEnergy(int durationMins) async {
+    final saved = _savedSession;
+    final energy = EnergyServices.fromLocator();
+    if (saved == null || energy == null || !energy.allowed()) return;
+    await energy.bot.loaded;
+    if (!mounted) return;
+    final see = await showWorkoutCompleteDialog(
+      context,
+      bot: energy.bot.value,
+      exercises: _localExercises.length,
+      minutes: durationMins,
+    );
+    const EnergyAnalytics().finishPrompt(accepted: see);
+    if (!see || !mounted) return;
+    await openFinishedSession(context, saved: saved);
   }
 
   void _showSnack(String msg, {bool isError = false}) {

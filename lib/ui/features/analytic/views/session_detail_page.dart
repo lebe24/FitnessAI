@@ -1,5 +1,8 @@
 import 'package:fitness/data/models/workout_log/workout_log_model.dart';
 import 'package:fitness/data/services/analytics/analytics.dart';
+import 'package:fitness/domain/energy/energy_session.dart';
+import 'package:fitness/ui/features/energy/energy_services.dart';
+import 'package:fitness/ui/features/energy/views/session_energy_entry.dart';
 import 'package:fitness/domain/models/session_feedback.dart';
 import 'package:fitness/domain/models/session_share.dart';
 import 'package:fitness/domain/models/session_volume.dart';
@@ -21,11 +24,19 @@ class SessionDetailPage extends StatefulWidget {
   /// Every loaded session, used to mark new bests on the share picture.
   final List<WorkoutSessionModel> history;
 
+  /// Open the energy bot straight away, as after finishing a workout.
+  final bool openEnergy;
+
+  /// Stand-ins for tests and previews; the app's own services otherwise.
+  final EnergyServices? energy;
+
   const SessionDetailPage({
     super.key,
     required this.session,
     required this.imperial,
     this.history = const [],
+    this.openEnergy = false,
+    this.energy,
   });
 
   @override
@@ -33,6 +44,8 @@ class SessionDetailPage extends StatefulWidget {
 }
 
 class _SessionDetailPageState extends State<SessionDetailPage> {
+  late final EnergyServices? _energy = widget.energy ?? EnergyServices.fromLocator();
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +70,7 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
     final exercises = SessionVolume.exercisesOf(session);
     final feedback = SessionFeedback.fromMap(session.feedback);
 
-    return BodyPageScaffold(
+    final page = BodyPageScaffold(
       // Nothing to put on a picture without any logged sets.
       floatingActionButton: v.setCount == 0
           ? null
@@ -117,6 +130,22 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
           const SizedBox(height: 4),
           _FeedbackCard(feedback: feedback),
         ],
+      ],
+    );
+
+    final energy = _energy;
+    if (energy == null || !EnergySession.hasWorkout(session)) return page;
+    return Stack(
+      children: [
+        page,
+        Positioned.fill(
+          child: SessionEnergyEntry(
+            services: energy,
+            session: session,
+            imperial: imperial,
+            openNow: widget.openEnergy,
+          ),
+        ),
       ],
     );
   }

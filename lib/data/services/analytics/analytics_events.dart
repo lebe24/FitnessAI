@@ -59,6 +59,17 @@ abstract final class AnalyticsEvents {
   static const extraExerciseAdded = 'extra_exercise_added'; //       count, to_plan, source: suggestion | workout | manual
   static const extraWorkoutGenerated = 'extra_workout_generated'; // exercises
 
+  // ── The energy bot ─────────────────────────────────────────────────────────
+  // Never a question, the bot's name, body weight or a calorie figure.
+  static const energyChatOpened = 'energy_chat_opened'; //         source: session | finished
+  static const energyLockedTapped = 'energy_locked_tapped';
+  static const energyFinishPrompt = 'energy_finish_prompt'; //     choice: see | not_now
+  static const energyEstimateShown = 'energy_estimate_shown'; //   effort, asked_duration, asked_weight
+  static const energyQuestionAsked = 'energy_question_asked'; //   suggested
+  static const energyAnswerReceived = 'energy_answer_received'; // from_model
+  static const energyAnswerFailed = 'energy_answer_failed'; //     reason
+  static const energyBotCustomised = 'energy_bot_customised'; //   mascot, renamed
+
   // ── Workout videos ─────────────────────────────────────────────────────────
   // Counts, scores and fixed labels only — never the exercise name or anything
   // the AI wrote about the clip.
